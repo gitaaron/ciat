@@ -1,0 +1,14 @@
+{
+  "name": "ciat-root",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
+    "api": "cd backend && npm run api",
+    "web": "cd frontend && npm run dev",
+    "dev": "concurrently -n api,web -c green,cyan \"npm:api\" \"npm:web\"",
+    "reapply": "cd backend && npm run reapply"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

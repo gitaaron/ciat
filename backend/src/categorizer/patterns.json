@@ -1,0 +1,26 @@
+[
+  {
+    "category": "fixed_costs",
+    "match_type": "regex",
+    "pattern": "\\bTORONTO\\s*HYDRO\\b",
+    "priority": 500,
+    "enabled": true,
+    "explain": "Utility bill"
+  },
+  {
+    "category": "guilt_free",
+    "match_type": "contains",
+    "pattern": "STARBUCKS",
+    "priority": 300,
+    "enabled": true,
+    "explain": "Coffee shop"
+  },
+  {
+    "category": "guilt_free",
+    "match_type": "contains",
+    "pattern": "AMZN",
+    "priority": 200,
+    "enabled": true,
+    "explain": "Amazon purchase"
+  }
+]
