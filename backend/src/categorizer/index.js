@@ -64,11 +64,74 @@ function matches(rule, ctx) {
 }
 
 function mlGuess(tx) {
-  // Placeholder: route "CASH" to guilt_free; "RENT" to fixed_costs; "RRSP" to investments
   const m = normalize(tx.name || tx.description || '');
-  if (m.includes('RENT')) return { category: 'fixed_costs', source: 'ml', explain: 'ML stub: RENT → fixed_costs' };
-  if (m.includes('RRSP') or m.includes('TFSA')) return { category: 'investments', source: 'ml', explain: 'ML stub: contributions' };
-  if (m.includes('CASH')) return { category: 'guilt_free', source: 'ml', explain: 'ML stub: cash → guilt_free' };
+  const amount = Math.abs(Number(tx.amount || 0));
+  
+  // Fixed costs patterns
+  const fixedCostsPatterns = [
+    'RENT', 'MORTGAGE', 'UTILITY', 'ELECTRIC', 'GAS', 'WATER', 'SEWER', 'TRASH',
+    'INSURANCE', 'CAR INSURANCE', 'HEALTH INSURANCE', 'HOME INSURANCE',
+    'PHONE', 'INTERNET', 'CABLE', 'STREAMING', 'NETFLIX', 'SPOTIFY',
+    'SUBSCRIPTION', 'MEMBERSHIP', 'GYM', 'FITNESS'
+  ];
+  
+  // Investment patterns
+  const investmentPatterns = [
+    'RRSP', 'TFSA', '401K', 'IRA', 'INVESTMENT', 'STOCK', 'BOND', 'ETF',
+    'MUTUAL FUND', 'RETIREMENT', 'PENSION', 'CONTRIBUTION'
+  ];
+  
+  // Guilt-free spending patterns
+  const guiltFreePatterns = [
+    'CASH', 'ATM', 'WITHDRAWAL', 'CASHBACK', 'GROCERY', 'FOOD', 'RESTAURANT',
+    'COFFEE', 'LUNCH', 'DINNER', 'BREAKFAST', 'SNACK', 'DRINK'
+  ];
+  
+  // Short-term savings patterns
+  const shortTermPatterns = [
+    'SAVINGS', 'EMERGENCY', 'VACATION', 'TRAVEL', 'HOLIDAY', 'GIFT', 'PRESENT',
+    'WEDDING', 'BIRTHDAY', 'CHRISTMAS', 'HOLIDAY'
+  ];
+  
+  // Check patterns
+  for (const pattern of fixedCostsPatterns) {
+    if (m.includes(pattern)) {
+      return { category: 'fixed_costs', source: 'ml', explain: `ML: ${pattern} → fixed_costs` };
+    }
+  }
+  
+  for (const pattern of investmentPatterns) {
+    if (m.includes(pattern)) {
+      return { category: 'investments', source: 'ml', explain: `ML: ${pattern} → investments` };
+    }
+  }
+  
+  for (const pattern of guiltFreePatterns) {
+    if (m.includes(pattern)) {
+      return { category: 'guilt_free', source: 'ml', explain: `ML: ${pattern} → guilt_free` };
+    }
+  }
+  
+  for (const pattern of shortTermPatterns) {
+    if (m.includes(pattern)) {
+      return { category: 'short_term_savings', source: 'ml', explain: `ML: ${pattern} → short_term_savings` };
+    }
+  }
+  
+  // Amount-based heuristics
+  if (amount > 1000) {
+    // Large amounts are likely fixed costs or investments
+    if (m.includes('PAYMENT') || m.includes('BILL')) {
+      return { category: 'fixed_costs', source: 'ml', explain: 'ML: Large payment → fixed_costs' };
+    }
+    return { category: 'investments', source: 'ml', explain: 'ML: Large amount → investments' };
+  }
+  
+  if (amount < 50) {
+    // Small amounts are likely guilt-free spending
+    return { category: 'guilt_free', source: 'ml', explain: 'ML: Small amount → guilt_free' };
+  }
+  
   return null;
 }
 

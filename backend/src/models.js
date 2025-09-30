@@ -7,6 +7,12 @@ export const Accounts = {
   },
   create(name) {
     return db.prepare('INSERT INTO accounts (name) VALUES (?)').run(name);
+  },
+  findByName(name) {
+    return db.prepare('SELECT * FROM accounts WHERE name = ?').get(name);
+  },
+  findById(id) {
+    return db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
   }
 };
 

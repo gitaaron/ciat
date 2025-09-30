@@ -29,5 +29,11 @@ export default {
   async setCategory(id, payload) {
     const { data } = await axios.post(apiBase + `/transactions/${id}/category`, payload)
     return data
+  },
+  async analyzeFiles(files) {
+    const form = new FormData()
+    files.forEach(file => form.append('files', file))
+    const { data } = await axios.post(apiBase + '/import/analyze', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
   }
 }

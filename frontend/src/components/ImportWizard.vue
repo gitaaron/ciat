@@ -1,25 +1,24 @@
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import api from './api.js'
 
 const props = defineProps({ accounts: Array })
 const emit = defineEmits(['refresh-accounts'])
 
 const newAccount = ref('')
-const step = ref(1) // 1: file selection, 2: review, 3: complete
+const step = ref(1) // 1: file selection, 2: account assignment, 3: review, 4: complete
+const files = ref([])
+const fileAnalysis = ref([])
 const filesByAccount = ref(new Map()) // Map<accountId, File[]>
 const previewsByAccount = ref(new Map()) // Map<accountId, preview[]>
 const isDragOver = ref(false)
 const processing = ref(false)
+const currentCategoryStep = ref(0) // 0: fixed, 1: investments, 2: guilt_free, 3: short_term
+const categorySteps = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings']
+const categoryStepNames = ['Fixed Costs', 'Investments', 'Guilt Free', 'Short Term Savings']
 
-const totalFiles = computed(() => {
-  let total = 0
-  for (const files of filesByAccount.value.values()) {
-    total += files.length
-  }
-  return total
-})
+const totalFiles = computed(() => files.value.length)
 
 const totalTransactions = computed(() => {
   let total = 0
@@ -28,6 +27,46 @@ const totalTransactions = computed(() => {
   }
   return total
 })
+
+const currentCategoryTransactions = computed(() => {
+  const allTransactions = []
+  for (const preview of previewsByAccount.value.values()) {
+    allTransactions.push(...preview)
+  }
+  return allTransactions.filter(tx => 
+    !tx.ignore && 
+    tx.category === categorySteps[currentCategoryStep.value]
+  )
+})
+
+const hasMoreCategories = computed(() => {
+  return currentCategoryStep.value < categorySteps.length - 1
+})
+
+const hasPreviousCategories = computed(() => {
+  return currentCategoryStep.value > 0
+})
+
+const allFilesAssigned = computed(() => {
+  return fileAnalysis.value.every((analysis, index) => {
+    return getCurrentAccountId(index) !== null
+  })
+})
+
+function getCurrentAccountId(fileIndex) {
+  const file = files.value[fileIndex]
+  for (const [accountId, accountFiles] of filesByAccount.value) {
+    if (accountFiles.includes(file)) {
+      return accountId
+    }
+  }
+  return null
+}
+
+function getAccountName(accountId) {
+  const account = props.accounts.find(a => a.id === accountId)
+  return account ? account.name : 'Unknown Account'
+}
 
 async function addAccount() {
   if (!newAccount.value) return
@@ -50,77 +89,102 @@ function handleDrop(e) {
   e.preventDefault()
   isDragOver.value = false
   
-  const files = Array.from(e.dataTransfer.files).filter(file => 
+  const droppedFiles = Array.from(e.dataTransfer.files).filter(file => 
     file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
   )
   
-  if (files.length === 0) {
+  if (droppedFiles.length === 0) {
     alert('Please drop CSV files only')
     return
   }
   
-  // For now, we'll need to ask user to assign files to accounts
-  // In a more advanced version, we could try to auto-detect from filename
-  assignFilesToAccounts(files)
+  files.value = [...files.value, ...droppedFiles]
+  analyzeFiles()
 }
 
-function assignFilesToAccounts(files) {
-  // Clear existing files
-  filesByAccount.value.clear()
+function handleFileSelect(e) {
+  const selectedFiles = Array.from(e.target.files).filter(file => 
+    file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
+  )
   
-  // If no accounts exist, create a default assignment
-  if (props.accounts.length === 0) {
-    alert('Please create an account first before importing files.')
+  if (selectedFiles.length === 0) {
+    alert('Please select CSV files only')
     return
   }
   
-  // For now, assign all files to the first account
-  // In a more advanced version, we could:
-  // 1. Auto-detect from filename patterns
-  // 2. Show a dialog to let user assign each file
-  // 3. Use file metadata or content analysis
-  const defaultAccountId = props.accounts[0].id
+  files.value = [...files.value, ...selectedFiles]
+  analyzeFiles()
+}
+
+async function analyzeFiles() {
+  if (files.value.length === 0) return
   
-  for (const file of files) {
-    if (!filesByAccount.value.has(defaultAccountId)) {
-      filesByAccount.value.set(defaultAccountId, [])
+  processing.value = true
+  try {
+    const result = await api.analyzeFiles(files.value)
+    fileAnalysis.value = result.analysis
+    
+    // Auto-assign files based on suggestions
+    filesByAccount.value.clear()
+    for (const analysis of fileAnalysis.value) {
+      const file = files.value.find(f => f.name === analysis.filename)
+      if (file) {
+        const accountId = analysis.suggestedAccount?.id || props.accounts[0]?.id
+        if (accountId) {
+          if (!filesByAccount.value.has(accountId)) {
+            filesByAccount.value.set(accountId, [])
+          }
+          filesByAccount.value.get(accountId).push(file)
+        }
+      }
     }
-    filesByAccount.value.get(defaultAccountId).push(file)
+    
+    step.value = 2
+  } catch (error) {
+    console.error('Error analyzing files:', error)
+    alert('Error analyzing files: ' + error.message)
+  } finally {
+    processing.value = false
   }
 }
 
-function removeFile(accountId, fileIndex) {
-  const files = filesByAccount.value.get(accountId)
-  if (files) {
-    files.splice(fileIndex, 1)
-    if (files.length === 0) {
-      filesByAccount.value.delete(accountId)
+function removeFile(fileIndex) {
+  files.value.splice(fileIndex, 1)
+  fileAnalysis.value.splice(fileIndex, 1)
+  
+  // Remove from filesByAccount
+  for (const [accountId, accountFiles] of filesByAccount.value) {
+    const index = accountFiles.findIndex(f => f === files.value[fileIndex])
+    if (index !== -1) {
+      accountFiles.splice(index, 1)
+      if (accountFiles.length === 0) {
+        filesByAccount.value.delete(accountId)
+      }
+      break
     }
   }
 }
 
-function assignFileToAccount(file, accountId) {
-  if (!filesByAccount.value.has(accountId)) {
-    filesByAccount.value.set(accountId, [])
-  }
-  filesByAccount.value.get(accountId).push(file)
-}
-
-function reassignFile(file, fromAccountId, toAccountId, fileIndex) {
+function reassignFile(fileIndex, newAccountId) {
+  const file = files.value[fileIndex]
+  
   // Remove from current account
-  const fromFiles = filesByAccount.value.get(fromAccountId)
-  if (fromFiles) {
-    fromFiles.splice(fileIndex, 1)
-    if (fromFiles.length === 0) {
-      filesByAccount.value.delete(fromAccountId)
+  for (const [accountId, accountFiles] of filesByAccount.value) {
+    const index = accountFiles.findIndex(f => f === file)
+    if (index !== -1) {
+      accountFiles.splice(index, 1)
+      if (accountFiles.length === 0) {
+        filesByAccount.value.delete(accountId)
+      }
+      break
     }
   }
   
   // Add to new account
-  if (!filesByAccount.value.has(toAccountId)) {
-    filesByAccount.value.set(toAccountId, [])
+  if (!filesByAccount.value.has(newAccountId)) {
+    filesByAccount.value.set(newAccountId, [])
   }
-  filesByAccount.value.get(toAccountId).push(file)
+  filesByAccount.value.get(newAccountId).push(file)
 }
 
 async function processAllFiles() {
@@ -131,10 +195,10 @@ async function processAllFiles() {
   
   try {
     // Process each account's files
-    for (const [accountId, files] of filesByAccount.value) {
+    for (const [accountId, accountFiles] of filesByAccount.value) {
       const accountPreviews = []
       
-      for (const file of files) {
+      for (const file of accountFiles) {
         try {
           const res = await api.importCSV(accountId, file)
           accountPreviews.push(...res.preview)
@@ -149,12 +213,25 @@ async function processAllFiles() {
       }
     }
     
-    step.value = 2
+    step.value = 3
+    currentCategoryStep.value = 0
   } catch (error) {
     console.error('Error processing files:', error)
     alert('Error processing files: ' + error.message)
   } finally {
     processing.value = false
+  }
+}
+
+function nextCategory() {
+  if (hasMoreCategories.value) {
+    currentCategoryStep.value++
+  }
+}
+
+function previousCategory() {
+  if (hasPreviousCategories.value) {
+    currentCategoryStep.value--
   }
 }
 
@@ -173,15 +250,18 @@ async function commitAllImports() {
     }
     
     // Clear everything
+    files.value = []
+    fileAnalysis.value = []
     filesByAccount.value.clear()
     previewsByAccount.value.clear()
-    step.value = 3
+    step.value = 4
     
     alert(`Import complete! ${totalImported} transactions imported.`)
     
     // Reset after a delay
     setTimeout(() => {
       step.value = 1
+      currentCategoryStep.value = 0
     }, 2000)
     
   } catch (error) {
@@ -193,9 +273,12 @@ async function commitAllImports() {
 }
 
 function resetImport() {
+  files.value = []
+  fileAnalysis.value = []
   filesByAccount.value.clear()
   previewsByAccount.value.clear()
   step.value = 1
+  currentCategoryStep.value = 0
 }
 </script>
 
@@ -230,7 +313,7 @@ function resetImport() {
             type="file" 
             multiple 
             accept=".csv,text/csv" 
-            @change="e => assignFilesToAccounts(Array.from(e.target.files))"
+            @change="handleFileSelect"
             style="display: none;"
             ref="fileInput"
           />
@@ -240,84 +323,132 @@ function resetImport() {
         </div>
       </div>
 
-      <!-- File Assignment -->
-      <div v-if="filesByAccount.size > 0" class="file-assignment">
-        <h3>Files to Import ({{ totalFiles }} files)</h3>
-        
-        <div v-for="[accountId, files] in filesByAccount" :key="accountId" class="account-files">
-          <div class="account-header">
-            <h4>{{ props.accounts.find(a => a.id === accountId)?.name || 'Unknown Account' }}</h4>
-            <span class="file-count">{{ files.length }} file(s)</span>
-          </div>
-          
-          <div class="file-list">
-            <div v-for="(file, index) in files" :key="index" class="file-item">
-              <span class="file-name">{{ file.name }}</span>
-              <span class="file-size">({{ (file.size / 1024).toFixed(1) }} KB)</span>
-              <select 
-                :value="accountId" 
-                @change="reassignFile(file, accountId, $event.target.value, index)"
-                class="account-select"
-              >
-                <option v-for="account in props.accounts" :key="account.id" :value="account.id">
-                  {{ account.name }}
-                </option>
-              </select>
-              <button @click="removeFile(accountId, index)" class="remove-btn">×</button>
-            </div>
+      <!-- File List -->
+      <div v-if="files.length > 0" class="file-list-section">
+        <h3>Selected Files ({{ totalFiles }} files)</h3>
+        <div class="file-list">
+          <div v-for="(file, index) in files" :key="index" class="file-item">
+            <span class="file-name">{{ file.name }}</span>
+            <span class="file-size">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+            <button @click="removeFile(index)" class="remove-btn">×</button>
           </div>
         </div>
-
+        
         <div class="action-buttons">
-          <button @click="processAllFiles" :disabled="processing || totalFiles === 0" class="btn btn-primary">
-            {{ processing ? 'Processing...' : 'Process All Files' }}
+          <button @click="analyzeFiles" :disabled="processing || files.length === 0" class="btn btn-primary">
+            {{ processing ? 'Analyzing...' : 'Analyze Files' }}
           </button>
           <button @click="resetImport" class="btn btn-secondary">Reset</button>
         </div>
       </div>
     </div>
 
-    <!-- Step 2: Review -->
+    <!-- Step 2: Account Assignment -->
     <div v-if="step === 2">
-      <div class="review-header">
-        <h3>Review Transactions ({{ totalTransactions }} total)</h3>
+      <div class="assignment-header">
+        <h3>Assign Files to Accounts</h3>
         <button @click="resetImport" class="btn btn-secondary">Back to Files</button>
       </div>
 
-      <div v-for="[accountId, preview] in previewsByAccount" :key="accountId" class="account-review">
-        <h4>{{ props.accounts.find(a => a.id === accountId)?.name || 'Unknown Account' }} ({{ preview.length }} transactions)</h4>
-        
+      <div class="file-assignment">
+        <div v-for="(analysis, index) in fileAnalysis" :key="index" class="file-assignment-item">
+          <div class="file-info">
+            <h4>{{ analysis.filename }}</h4>
+            <p class="file-size">{{ (files[index].size / 1024).toFixed(1) }} KB</p>
+            <div v-if="analysis.suggestedAccount" class="suggestion">
+              <span class="suggestion-label">Suggested:</span>
+              <span class="suggestion-account">{{ analysis.suggestedAccount.name }}</span>
+              <span class="confidence">({{ Math.round(analysis.confidence * 100) }}% confidence)</span>
+            </div>
+            <div v-else class="suggestion">
+              <span class="suggestion-label">Suggested name:</span>
+              <span class="suggestion-name">{{ analysis.suggestedName }}</span>
+            </div>
+          </div>
+          
+          <div class="assignment-controls">
+            <select 
+              :value="getCurrentAccountId(index)" 
+              @change="reassignFile(index, $event.target.value)"
+              class="account-select"
+            >
+              <option value="">Select Account</option>
+              <option v-for="account in props.accounts" :key="account.id" :value="account.id">
+                {{ account.name }}
+              </option>
+            </select>
+            <button @click="removeFile(index)" class="remove-btn">×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button @click="processAllFiles" :disabled="processing || !allFilesAssigned" class="btn btn-primary">
+          {{ processing ? 'Processing...' : 'Process All Files' }}
+        </button>
+        <button @click="resetImport" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Review by Category -->
+    <div v-if="step === 3">
+      <div class="review-header">
+        <h3>Review Transactions by Category</h3>
+        <div class="category-navigation">
+          <button @click="previousCategory" :disabled="!hasPreviousCategories" class="btn btn-secondary">
+            Previous
+          </button>
+          <span class="category-step">
+            {{ categoryStepNames[currentCategoryStep] }} 
+            ({{ currentCategoryTransactions.length }} transactions)
+          </span>
+          <button @click="nextCategory" :disabled="!hasMoreCategories" class="btn btn-secondary">
+            Next
+          </button>
+        </div>
+      </div>
+
+      <div v-if="currentCategoryTransactions.length > 0" class="category-review">
         <div class="table-container">
           <table class="transactions-table">
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Account</th>
                 <th>Name</th>
                 <th>Amount</th>
                 <th>Type</th>
                 <th>Category</th>
-                <th>Source</th>
+                <th>Note</th>
                 <th>Ignore</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(r, i) in preview" :key="i">
-                <td>{{ r.date }}</td>
-                <td>{{ r.name }}</td>
-                <td class="amount">{{ Number(r.amount).toFixed(2) }}</td>
-                <td class="type">{{ r.inflow ? 'Income' : 'Expense' }}</td>
+              <tr v-for="(tx, i) in currentCategoryTransactions" :key="i">
+                <td>{{ tx.date }}</td>
+                <td>{{ getAccountName(tx.account_id) }}</td>
+                <td>{{ tx.name }}</td>
+                <td class="amount">{{ Number(tx.amount).toFixed(2) }}</td>
+                <td class="type">{{ tx.inflow ? 'Income' : 'Expense' }}</td>
                 <td>
-                  <select v-model="r.category" class="category-select">
+                  <select v-model="tx.category" class="category-select">
                     <option value="">(none)</option>
-                    <option value="guilt_free">guilt_free</option>
-                    <option value="short_term_savings">short_term_savings</option>
-                    <option value="fixed_costs">fixed_costs</option>
-                    <option value="investments">investments</option>
+                    <option value="fixed_costs">Fixed Costs</option>
+                    <option value="investments">Investments</option>
+                    <option value="guilt_free">Guilt Free</option>
+                    <option value="short_term_savings">Short Term Savings</option>
                   </select>
                 </td>
-                <td class="source">{{ r.category_source }}</td>
+                <td>
+                  <input 
+                    v-model="tx.note" 
+                    type="text" 
+                    placeholder="Add note..." 
+                    class="note-input"
+                  />
+                </td>
                 <td class="ignore">
-                  <input type="checkbox" v-model="r.ignore" />
+                  <input type="checkbox" v-model="tx.ignore" />
                 </td>
               </tr>
             </tbody>
@@ -325,16 +456,32 @@ function resetImport() {
         </div>
       </div>
 
+      <div v-else class="no-transactions">
+        <p>No transactions found for {{ categoryStepNames[currentCategoryStep] }}.</p>
+      </div>
+
       <div class="action-buttons">
-        <button @click="commitAllImports" :disabled="processing" class="btn btn-primary">
+        <button 
+          v-if="hasMoreCategories" 
+          @click="nextCategory" 
+          class="btn btn-secondary"
+        >
+          Next Category
+        </button>
+        <button 
+          v-else
+          @click="commitAllImports" 
+          :disabled="processing" 
+          class="btn btn-primary"
+        >
           {{ processing ? 'Importing...' : 'Import All Transactions' }}
         </button>
         <button @click="resetImport" class="btn btn-secondary">Cancel</button>
       </div>
     </div>
 
-    <!-- Step 3: Complete -->
-    <div v-if="step === 3" class="complete-step">
+    <!-- Step 4: Complete -->
+    <div v-if="step === 4" class="complete-step">
       <div class="success-icon">✅</div>
       <h3>Import Complete!</h3>
       <p>All transactions have been successfully imported.</p>
@@ -659,5 +806,117 @@ function resetImport() {
   margin: 0;
   color: #666;
   font-size: 16px;
+}
+
+.file-list-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.assignment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.file-assignment {
+  margin-bottom: 24px;
+}
+
+.file-assignment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+}
+
+.file-info h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.file-info .file-size {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.suggestion {
+  font-size: 14px;
+}
+
+.suggestion-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.suggestion-account {
+  color: #007bff;
+  font-weight: 600;
+  margin: 0 8px;
+}
+
+.suggestion-name {
+  color: #28a745;
+  font-weight: 600;
+  margin: 0 8px;
+}
+
+.confidence {
+  color: #666;
+  font-size: 12px;
+}
+
+.assignment-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-navigation {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.category-step {
+  font-weight: 600;
+  color: #333;
+  padding: 8px 16px;
+  background: #e3f2fd;
+  border-radius: 20px;
+  border: 1px solid #bbdefb;
+}
+
+.category-review {
+  margin-bottom: 24px;
+}
+
+.no-transactions {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.note-input {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  min-width: 150px;
 }
 </style>

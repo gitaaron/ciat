@@ -8,6 +8,7 @@ import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule } from './categorizer/index.js';
+import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
 
 const app = express();
@@ -61,6 +62,27 @@ app.post('/api/transactions/:id/category', (req, res) => {
   }
 });
 
+// Analyze files and suggest account mappings
+app.post('/api/import/analyze', upload.array('files'), (req, res) => {
+  const files = req.files || [];
+  const accounts = Accounts.all();
+  
+  const analysis = files.map(file => {
+    const suggestedAccount = findBestAccountMatch(file.originalname, accounts);
+    const suggestedName = suggestAccountName(file.originalname);
+    
+    return {
+      filename: file.originalname,
+      size: file.size,
+      suggestedAccount: suggestedAccount?.account || null,
+      confidence: suggestedAccount?.score || 0,
+      suggestedName: suggestedName
+    };
+  });
+
+  res.json({ analysis, accounts });
+});
+
 // Import CSV
 app.post('/api/import/csv', upload.single('file'), (req, res) => {
   const account_id = Number(req.body.account_id);
@@ -80,7 +102,14 @@ app.post('/api/import/csv', upload.single('file'), (req, res) => {
   });
 
   // Filter out duplicates already saved
-  const deduped = preview.filter(r => !db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash));
+  const deduped = preview.filter(r => {
+    const existing = db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash);
+    if (existing) {
+      console.log(`Skipping duplicate transaction: ${r.name} - ${r.amount} on ${r.date}`);
+      return false;
+    }
+    return true;
+  });
 
   res.json({ preview: deduped });
 });

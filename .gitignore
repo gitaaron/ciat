@@ -1,3 +1,6 @@
+# Vim
+*.swp
+*.swo
 
 # Node / frontend
 node_modules/
