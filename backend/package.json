@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "api": "node src/server.js",
-    "reapply": "node scripts/reapplyCategories.js"
+    "reapply": "node scripts/reapplyCategories.js",
+    "db": "node src/cli.js"
   },
   "dependencies": {
     "better-sqlite3": "^9.6.0",
+    "commander": "^12.0.0",
     "csv-parse": "^5.5.6",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.2",

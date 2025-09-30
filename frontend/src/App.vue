@@ -5,6 +5,7 @@ import ImportWizard from './components/ImportWizard.vue'
 import TransactionsTable from './components/TransactionsTable.vue'
 import PieChart from './components/PieChart.vue'
 import LineChart from './components/LineChart.vue'
+import DatabaseVersions from './components/DatabaseVersions.vue'
 import api from './components/api.js'
 
 const accounts = ref([])
@@ -23,6 +24,7 @@ onMounted(loadAccounts)
       <button @click="selected='transactions'">Transactions</button>
       <button @click="selected='import'">Import</button>
       <button @click="selected='charts'">Charts</button>
+      <button @click="selected='versions'">Database Versions</button>
     </nav>
 
     <div v-if="selected==='import'">
@@ -30,6 +32,9 @@ onMounted(loadAccounts)
     </div>
     <div v-else-if="selected==='transactions'">
       <TransactionsTable />
+    </div>
+    <div v-else-if="selected==='versions'">
+      <DatabaseVersions />
     </div>
     <div v-else>
       <PieChart />

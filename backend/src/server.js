@@ -8,6 +8,7 @@ import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule } from './categorizer/index.js';
+import { versioner } from './versioning.js';
 
 const app = express();
 app.use(cors());
@@ -111,5 +112,83 @@ app.post('/api/import/commit', (req, res) => {
   res.json({ ok: true, saved, skipped });
 });
 
+// Database versioning endpoints
+app.get('/api/versions', (_req, res) => {
+  try {
+    const versions = versioner.listVersions();
+    res.json(versions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/versions', (req, res) => {
+  try {
+    const { description } = req.body;
+    const versionId = versioner.createVersion(description || 'Manual version');
+    res.json({ ok: true, versionId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/versions/:id/revert', (req, res) => {
+  try {
+    const { id } = req.params;
+    const metadata = versioner.revertToVersion(id);
+    res.json({ ok: true, metadata });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/versions/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    versioner.deleteVersion(id);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/versions/status', (_req, res) => {
+  try {
+    const currentHash = versioner.calculateDatabaseHash();
+    const versions = versioner.listVersions();
+    const latestVersion = versions[0];
+    
+    res.json({
+      currentHash,
+      totalVersions: versions.length,
+      latestVersion: latestVersion || null,
+      isUpToDate: latestVersion ? latestVersion.hash === currentHash : true
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Initialize versioning on server start
+const initializeVersioning = async () => {
+  try {
+    // Create initial version if no versions exist
+    const versions = versioner.listVersions();
+    if (versions.length === 0) {
+      console.log('Creating initial database version...');
+      versioner.createVersion('Initial database state');
+    }
+    
+    // Start watching for changes
+    versioner.startWatching(5000);
+    console.log('Database versioning initialized');
+  } catch (error) {
+    console.error('Failed to initialize versioning:', error);
+  }
+};
+
 const PORT = process.env.PORT || 5174;
-app.listen(PORT, () => console.log('API listening on ' + PORT));
+app.listen(PORT, () => {
+  console.log('API listening on ' + PORT);
+  initializeVersioning();
+});
