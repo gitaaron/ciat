@@ -7,7 +7,7 @@ import { Accounts, Transactions } from './models.js';
 import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule } from './categorizer/index.js';
+import { guessCategory, addUserRule, reapplyCategories } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -47,7 +47,7 @@ app.get('/api/transactions', (req, res) => {
 });
 
 // Update category (manual override → new user rule)
-app.post('/api/transactions/:id/category', (req, res) => {
+app.post('/api/transactions/:id/category', async (req, res) => {
   const id = Number(req.params.id);
   const { category, pattern, match_type, explain } = req.body;
   try {
@@ -55,7 +55,7 @@ app.post('/api/transactions/:id/category', (req, res) => {
     Transactions.updateCategory(id, category, explain || 'Manual override', 'manual', true);
     // 2) persist a new user rule that should win in future
     if (pattern && match_type) {
-      addUserRule({ category, match_type, pattern, explain: explain || 'From user override' });
+      await addUserRule({ category, match_type, pattern, explain: explain || 'From user override' });
     }
     res.json({ ok: true });
   } catch (e) {
@@ -79,10 +79,10 @@ app.post('/api/rules/preview', (req, res) => {
 });
 
 // Create new rule with confirmation
-app.post('/api/rules', (req, res) => {
+app.post('/api/rules', async (req, res) => {
   const { category, match_type, pattern, explain } = req.body;
   try {
-    const ruleId = addUserRule({ category, match_type, pattern, explain: explain || 'User created rule' });
+    const ruleId = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule' });
     res.json({ ok: true, ruleId });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -107,6 +107,16 @@ app.delete('/api/rules/:id', (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: String(e) });
+  }
+});
+
+// Manually trigger reapply categories
+app.post('/api/reapply-categories', async (req, res) => {
+  try {
+    const result = await reapplyCategories();
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
   }
 });
 

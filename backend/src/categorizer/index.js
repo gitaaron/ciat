@@ -142,7 +142,7 @@ function mlGuess(tx) {
   return null;
 }
 
-export function addUserRule({ category, match_type, pattern, explain }) {
+export async function addUserRule({ category, match_type, pattern, explain }) {
   const rules = loadJSON('rules.json');
   const priority = Math.max(1000, ...rules.map(r => r.priority || 0)) + 1; // always win
   const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -159,5 +159,29 @@ export function addUserRule({ category, match_type, pattern, explain }) {
   };
   rules.push(newRule);
   saveJSON('rules.json', rules);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
   return ruleId;
+}
+
+export async function reapplyCategories() {
+  // Import db here to avoid circular dependency
+  const { db } = await import('../db.js');
+  
+  const rows = db.prepare(`SELECT id, name, description FROM transactions WHERE manual_override=0`).all();
+  let updated = 0;
+  
+  for (const r of rows) {
+    const guess = guessCategory(r);
+    if (guess && guess.category) {
+      db.prepare(`UPDATE transactions SET category=?, category_source=?, category_explain=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+        .run(guess.category, guess.source, guess.explain, r.id);
+      updated++;
+    }
+  }
+  
+  console.log(`Reapplied categories to ${updated} transactions.`);
+  return { updated, total: rows.length };
 }
