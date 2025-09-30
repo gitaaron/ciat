@@ -31,19 +31,40 @@ It should provide the following:
 
 It should have a way to import my previous transactions from all of my accounts at once using common banking file formats.
 
-    * after importing it:
+    * when importing transactions, I should be able to drag/drop all files for each account onto the page at once
 
-        * determines the account that the transaction file that is being imported from by providing me with a dropdown of options (I also will need the ability to create the accounts)
+    * after importing transactions:
 
-        * tries to come up with a best guess of what category each transaction should belongs to
+        * prompt to select the account that the transaction file that is being imported from by providing me with a dropdown of options
+
+            * I also will need the ability to create the accounts
+
+            * use string matching to guess the filename account mapping in the future
+
+        * try to come up with a best guess of what category each transaction should belongs to (based on category guessing algorithm)
+
 
         * handles the fact that a transaction may be coming out of one account and into another account (eg/ paying off credit card) and so ignores them
 
-        * shows me the list of transactions that have not already been imported to review before importing where I can correct a category if needed then hit save
-
         * handles the fact that I may import the same transaction more than once
 
-        * I should be able to add a note to the transaction that is also searchable later
+        * shows me the list of transactions that have not already been imported to review before importing where I can correct a category if needed then hit save
+
+            * shows transaction for each category step by step starting in the following order: fixed, investments, guilt free, short term
+
+            * I should be able to add a note to the transaction that is also searchable later
+
+
+    * the categorization algorithm that is applied from cmd line is the same as the categorization applied during import
+
+## New Category Wizard
+
+* when a new categorization override rule is created then all transactions that change according to the new rule are presented for review before saving the new rule
+
+    * the user has the ability to update the rule or create a list of rules where the most recently created ones take the highest precedence
+
+
+## Persistence
 
 It should persist all data to disk so that if the app is restarted or browser is refreshed then all previously recorded data to use the app is not lost.
 
@@ -76,7 +97,6 @@ There should be a cmd line script that can be run to reapply category guessing t
 - **explain**: Short human-readable reason
 
 
-
 ### New merchants not found by category guessing algorithm
 
 * go to chatGPT api and ask it to guess the right category
@@ -105,8 +125,6 @@ Accuracy improves over time:
 - **Low-latency & explainable**: Rules are simple, readable, and return a short “why” string.
 - **Incremental**: Start with exact/contains/regex rules; expand to amount/frequency when needed.
 - **Safe**: Avoid retroactively breaking prior classifications; store versions and timestamps.
-
-
 
 ## Targets for each category
 
