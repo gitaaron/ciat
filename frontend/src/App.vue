@@ -6,6 +6,8 @@ import TransactionsTable from './components/TransactionsTable.vue'
 import PieChart from './components/PieChart.vue'
 import LineChart from './components/LineChart.vue'
 import DatabaseVersions from './components/DatabaseVersions.vue'
+import NewCategoryWizard from './components/NewCategoryWizard.vue'
+import RuleManager from './components/RuleManager.vue'
 import api from './components/api.js'
 
 const accounts = ref([])
@@ -23,6 +25,8 @@ onMounted(loadAccounts)
     <nav style="display:flex; gap:8px; margin: 8px 0 16px;">
       <button @click="selected='transactions'">Transactions</button>
       <button @click="selected='import'">Import</button>
+      <button @click="selected='new-rule'">New Category Rule</button>
+      <button @click="selected='rules'">Manage Rules</button>
       <button @click="selected='charts'">Charts</button>
       <button @click="selected='versions'">Database Versions</button>
     </nav>
@@ -32,6 +36,12 @@ onMounted(loadAccounts)
     </div>
     <div v-else-if="selected==='transactions'">
       <TransactionsTable />
+    </div>
+    <div v-else-if="selected==='new-rule'">
+      <NewCategoryWizard @close="selected='transactions'" />
+    </div>
+    <div v-else-if="selected==='rules'">
+      <RuleManager @create-new="selected='new-rule'" />
     </div>
     <div v-else-if="selected==='versions'">
       <DatabaseVersions />

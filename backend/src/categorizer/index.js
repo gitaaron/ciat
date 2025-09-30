@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function loadJSON(name) {
+export function loadJSON(name) {
   const p = path.join(__dirname, name);
   if (!fs.existsSync(p)) return [];
   return JSON.parse(fs.readFileSync(p, 'utf-8'));
@@ -22,7 +22,14 @@ function normalize(s='') {
 }
 
 export function guessCategory(tx) {
-  const rules = loadJSON('rules.json').filter(r => r.enabled !== false).sort((a,b)=>b.priority-a.priority);
+  const rules = loadJSON('rules.json').filter(r => r.enabled !== false).sort((a,b) => {
+    // First sort by priority (highest first)
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    // If same priority, most recent wins (by created_at or updated_at)
+    const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
+    const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
   const patterns = loadJSON('patterns.json').filter(r => r.enabled !== false).sort((a,b)=>b.priority-a.priority);
 
   const merchant = normalize(tx.name || '');
@@ -138,6 +145,19 @@ function mlGuess(tx) {
 export function addUserRule({ category, match_type, pattern, explain }) {
   const rules = loadJSON('rules.json');
   const priority = Math.max(1000, ...rules.map(r => r.priority || 0)) + 1; // always win
-  rules.push({ category, match_type, pattern, priority, enabled: true, explain: explain || 'User override' , updated_at: new Date().toISOString() });
+  const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const newRule = { 
+    id: ruleId,
+    category, 
+    match_type, 
+    pattern, 
+    priority, 
+    enabled: true, 
+    explain: explain || 'User override',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString() 
+  };
+  rules.push(newRule);
   saveJSON('rules.json', rules);
+  return ruleId;
 }

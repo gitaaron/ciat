@@ -35,5 +35,22 @@ export default {
     files.forEach(file => form.append('files', file))
     const { data } = await axios.post(apiBase + '/import/analyze', form, { headers: { 'Content-Type': 'multipart/form-data' } })
     return data
+  },
+  // Rule management APIs
+  async previewRule(ruleData) {
+    const { data } = await axios.post(apiBase + '/rules/preview', ruleData)
+    return data
+  },
+  async createRule(ruleData) {
+    const { data } = await axios.post(apiBase + '/rules', ruleData)
+    return data
+  },
+  async getRules() {
+    const { data } = await axios.get(apiBase + '/rules')
+    return data
+  },
+  async deleteRule(ruleId) {
+    const { data } = await axios.delete(apiBase + `/rules/${ruleId}`)
+    return data
   }
 }

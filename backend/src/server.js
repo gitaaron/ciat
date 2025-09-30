@@ -8,6 +8,7 @@ import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule } from './categorizer/index.js';
+import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
 
@@ -56,6 +57,53 @@ app.post('/api/transactions/:id/category', (req, res) => {
     if (pattern && match_type) {
       addUserRule({ category, match_type, pattern, explain: explain || 'From user override' });
     }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Preview rule impact - show which transactions would be affected
+app.post('/api/rules/preview', (req, res) => {
+  const { category, match_type, pattern, explain } = req.body;
+  try {
+    const affectedTransactions = Transactions.previewRuleImpact({ category, match_type, pattern });
+    res.json({ 
+      affectedTransactions,
+      rule: { category, match_type, pattern, explain },
+      count: affectedTransactions.length
+    });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Create new rule with confirmation
+app.post('/api/rules', (req, res) => {
+  const { category, match_type, pattern, explain } = req.body;
+  try {
+    const ruleId = addUserRule({ category, match_type, pattern, explain: explain || 'User created rule' });
+    res.json({ ok: true, ruleId });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// List all rules
+app.get('/api/rules', (req, res) => {
+  try {
+    const rules = loadJSON('rules.json');
+    res.json(rules);
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Delete rule
+app.delete('/api/rules/:id', (req, res) => {
+  try {
+    const ruleId = req.params.id;
+    // Implementation would depend on how rules are stored
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: String(e) });
