@@ -1,14 +1,15 @@
 # Can I Afford That? (CIAT)
 
-CIAT is a family budgeting app based off of Remit Sethi's 'IWT' system.
+CIAT is a family budgeting app inspired by Remit Sethi's 'IWT' system.
 
 Based on the following specs:
 
+- Import flow for CSV transactions, 
+- Categorization engine (rules + patterns), user overrides with feedback loop.
+- Transfer-pair detection and dedupe.
+- CLI to reapply categories to transactions
 - Node/Express API (`npm run api`) with SQLite persistence.
 - Vite + Vue 3 frontend with D3 for charts.
-- Import flow for CSV transactions, categorization engine (rules + patterns), user overrides with feedback loop.
-- Transfer-pair detection and dedupe.
-- CLI to reapply categories to transactions that were not manually overridden.
 
 See `product/REQUIREMENTS.md` for a full description.
 
@@ -18,8 +19,8 @@ See `product/REQUIREMENTS.md` for a full description.
 # in project root
 npm install
 npm run dev    # runs API and Web together
-# API at http://localhost:5174/api
-# Web at http://localhost:5173
+# API at http://localhost:5176/api
+# Web at http://localhost:5175
 ```
 
 Or run separately:

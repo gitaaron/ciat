@@ -274,7 +274,7 @@ const initializeVersioning = async () => {
   }
 };
 
-const PORT = process.env.PORT || 5174;
+const PORT = process.env.PORT || 5176;
 app.listen(PORT, () => {
   console.log('API listening on ' + PORT);
   initializeVersioning();
