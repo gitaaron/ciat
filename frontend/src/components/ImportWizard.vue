@@ -4,7 +4,7 @@ import { ref, computed, watch } from 'vue'
 import api from './api.js'
 
 const props = defineProps({ accounts: Array })
-const emit = defineEmits(['refresh-accounts'])
+const emit = defineEmits(['refresh-accounts', 'import-complete'])
 
 const newAccount = ref('')
 const step = ref(1) // 1: file selection, 2: account assignment, 3: review, 4: complete
@@ -257,6 +257,9 @@ async function commitAllImports() {
     step.value = 4
     
     alert(`Import complete! ${totalImported} transactions imported.`)
+    
+    // Emit import complete event
+    emit('import-complete')
     
     // Reset after a delay
     setTimeout(() => {
