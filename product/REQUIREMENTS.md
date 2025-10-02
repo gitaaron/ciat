@@ -64,6 +64,8 @@ It should have a way to import my previous transactions from all of my accounts 
     * the user has the ability to update the rule or create a list of rules where the most recently created ones take the highest precedence
 
 
+* after new rule(s) are created reapply the categorization over all transactions so that they are in agreement with latest categorization rules
+
 ## Persistence
 
 It should persist all data to disk so that if the app is restarted or browser is refreshed then all previously recorded data to use the app is not lost.
