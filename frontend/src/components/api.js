@@ -15,7 +15,7 @@ export default {
     const form = new FormData()
     form.append('account_id', String(account_id))
     form.append('file', file)
-    const { data } = await axios.post(apiBase + '/import/csv', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    const { data } = await axios.post(apiBase + '/import/transactions', form, { headers: { 'Content-Type': 'multipart/form-data' } })
     return data
   },
   async commitImport(items) {

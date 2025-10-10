@@ -19,3 +19,6 @@ backend/data/ciat.sqlite
 
 # Local caches
 *.cache
+
+# Ignore transactions dir (my personal transactions)
+transactions

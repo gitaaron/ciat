@@ -68,6 +68,19 @@ function getAccountName(accountId) {
   return account ? account.name : 'Unknown Account'
 }
 
+function getFileFormat(filename) {
+  const ext = filename.toLowerCase().split('.').pop()
+  switch (ext) {
+    case 'csv':
+      return 'CSV'
+    case 'qfx':
+    case 'ofx':
+      return 'QFX'
+    default:
+      return ext.toUpperCase()
+  }
+}
+
 async function addAccount() {
   if (!newAccount.value) return
   await api.createAccount(newAccount.value)
@@ -89,12 +102,13 @@ function handleDrop(e) {
   e.preventDefault()
   isDragOver.value = false
   
-  const droppedFiles = Array.from(e.dataTransfer.files).filter(file => 
-    file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
-  )
+  const droppedFiles = Array.from(e.dataTransfer.files).filter(file => {
+    const filename = file.name.toLowerCase()
+    return filename.endsWith('.csv') || filename.endsWith('.qfx') || filename.endsWith('.ofx')
+  })
   
   if (droppedFiles.length === 0) {
-    alert('Please drop CSV files only')
+    alert('Please drop CSV or QFX files only')
     return
   }
   
@@ -103,12 +117,13 @@ function handleDrop(e) {
 }
 
 function handleFileSelect(e) {
-  const selectedFiles = Array.from(e.target.files).filter(file => 
-    file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
-  )
+  const selectedFiles = Array.from(e.target.files).filter(file => {
+    const filename = file.name.toLowerCase()
+    return filename.endsWith('.csv') || filename.endsWith('.qfx') || filename.endsWith('.ofx')
+  })
   
   if (selectedFiles.length === 0) {
-    alert('Please select CSV files only')
+    alert('Please select CSV or QFX files only')
     return
   }
   
@@ -310,12 +325,12 @@ function resetImport() {
       >
         <div class="drop-content">
           <div class="drop-icon">📁</div>
-          <h3>Drop CSV files here</h3>
+          <h3>Drop CSV or QFX files here</h3>
           <p>Or click to select files</p>
           <input 
             type="file" 
             multiple 
-            accept=".csv,text/csv" 
+            accept=".csv,.qfx,.ofx,text/csv" 
             @change="handleFileSelect"
             style="display: none;"
             ref="fileInput"
@@ -333,6 +348,7 @@ function resetImport() {
           <div v-for="(file, index) in files" :key="index" class="file-item">
             <span class="file-name">{{ file.name }}</span>
             <span class="file-size">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+            <span class="file-format">{{ getFileFormat(file.name) }}</span>
             <button @click="removeFile(index)" class="remove-btn">×</button>
           </div>
         </div>
@@ -358,6 +374,7 @@ function resetImport() {
           <div class="file-info">
             <h4>{{ analysis.filename }}</h4>
             <p class="file-size">{{ (files[index].size / 1024).toFixed(1) }} KB</p>
+            <p class="file-format">{{ analysis.formatDisplayName || getFileFormat(analysis.filename) }}</p>
             <div v-if="analysis.suggestedAccount" class="suggestion">
               <span class="suggestion-label">Suggested:</span>
               <span class="suggestion-account">{{ analysis.suggestedAccount.name }}</span>
@@ -649,6 +666,16 @@ function resetImport() {
 .file-size {
   color: #666;
   font-size: 14px;
+}
+
+.file-format {
+  background: #e9ecef;
+  color: #495057;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
 .remove-btn {

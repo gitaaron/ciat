@@ -1,13 +1,13 @@
 # Drag & Drop Import Feature
 
-The CIAT application now supports drag and drop functionality for importing multiple CSV files at once, with the ability to assign files to different accounts.
+The CIAT application now supports drag and drop functionality for importing multiple CSV and QFX files at once, with the ability to assign files to different accounts.
 
 ## Features
 
 ### 🎯 **Drag & Drop Interface**
 - **Visual Drop Zone**: Large, intuitive drop area with visual feedback
-- **Multiple File Support**: Drop multiple CSV files simultaneously
-- **File Type Validation**: Automatically filters for CSV files only
+- **Multiple File Support**: Drop multiple CSV or QFX files simultaneously
+- **File Type Validation**: Automatically filters for CSV and QFX files only
 - **Alternative Selection**: Click to select files if drag & drop isn't preferred
 
 ### 📁 **File Management**
@@ -24,12 +24,12 @@ The CIAT application now supports drag and drop functionality for importing mult
 ## How to Use
 
 ### Step 1: Prepare Your Files
-1. Ensure all your CSV files are in the correct format
+1. Ensure all your CSV or QFX files are in the correct format
 2. Have your accounts set up in the system
 
 ### Step 2: Import Files
 1. Navigate to the **Import** tab
-2. **Drag and drop** your CSV files onto the drop zone, OR
+2. **Drag and drop** your CSV or QFX files onto the drop zone, OR
 3. **Click "Select Files"** to choose files from your computer
 4. Files will be automatically assigned to your first account
 
@@ -49,6 +49,7 @@ The CIAT application now supports drag and drop functionality for importing mult
 
 ### Drop Zone
 - **Visual Feedback**: Changes color and scales when files are dragged over
+- **Supported Formats**: CSV (comma or tab delimited) and QFX (Quicken file format)
 - **Clear Instructions**: Shows what to do and what file types are accepted
 - **File Counter**: Displays total number of files selected
 

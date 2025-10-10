@@ -6,6 +6,8 @@ import { db } from './db.js';
 import { Accounts, Transactions } from './models.js';
 import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV } from './utils/parseCSV.js';
+import { parseTransactionsQFX } from './utils/parseQFX.js';
+import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule, reapplyCategories } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
@@ -128,10 +130,15 @@ app.post('/api/import/analyze', upload.array('files'), (req, res) => {
   const analysis = files.map(file => {
     const suggestedAccount = findBestAccountMatch(file.originalname, accounts);
     const suggestedName = suggestAccountName(file.originalname);
+    const format = detectFileFormat(file.originalname, file.buffer);
+    const isSupported = isSupportedFormat(format);
     
     return {
       filename: file.originalname,
       size: file.size,
+      format: format,
+      formatDisplayName: getFormatDisplayName(format),
+      isSupported: isSupported,
       suggestedAccount: suggestedAccount?.account || null,
       confidence: suggestedAccount?.score || 0,
       suggestedName: suggestedName
@@ -141,35 +148,77 @@ app.post('/api/import/analyze', upload.array('files'), (req, res) => {
   res.json({ analysis, accounts });
 });
 
-// Import CSV
-app.post('/api/import/csv', upload.single('file'), (req, res) => {
+// Import transactions (CSV or QFX)
+app.post('/api/import/transactions', upload.single('file'), async (req, res) => {
   const account_id = Number(req.body.account_id);
   if (!account_id) return res.status(400).json({ error: 'account_id required' });
-  const rows = parseTransactionsCSV(req.file.buffer).map(r => ({
-    ...r,
-    account_id,
-    hash: txHash({ ...r, account_id })
-  }));
-
-  // Transfer detection (pre-save)
-  const ignore = detectTransfers(rows);
-
-  const preview = rows.map(r => {
-    const guess = guessCategory(r);
-    return { ...r, ...guess, ignore: ignore.has(r.hash) };
-  });
-
-  // Filter out duplicates already saved
-  const deduped = preview.filter(r => {
-    const existing = db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash);
-    if (existing) {
-      console.log(`Skipping duplicate transaction: ${r.name} - ${r.amount} on ${r.date}`);
-      return false;
+  
+  try {
+    const format = detectFileFormat(req.file.originalname, req.file.buffer);
+    
+    if (!isSupportedFormat(format)) {
+      return res.status(400).json({ 
+        error: `Unsupported file format: ${format}. Supported formats: CSV, QFX` 
+      });
     }
-    return true;
-  });
+    
+    let rows;
+    
+    if (format === 'csv') {
+      rows = parseTransactionsCSV(req.file.buffer);
+    } else if (format === 'qfx') {
+      rows = await parseTransactionsQFX(req.file.buffer);
+    }
+    
+    // Add account_id and hash to each transaction
+    const processedRows = rows.map(r => ({
+      ...r,
+      account_id,
+      hash: txHash({ ...r, account_id })
+    }));
 
-  res.json({ preview: deduped });
+    // Transfer detection (pre-save)
+    const ignore = detectTransfers(processedRows);
+
+    const preview = processedRows.map(r => {
+      const guess = guessCategory(r);
+      return { ...r, ...guess, ignore: ignore.has(r.hash) };
+    });
+
+    // Filter out duplicates already saved
+    const deduped = preview.filter(r => {
+      const existing = db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash);
+      if (existing) {
+        console.log(`Skipping duplicate transaction: ${r.name} - ${r.amount} on ${r.date}`);
+        return false;
+      }
+      return true;
+    });
+
+    res.json({ 
+      preview: deduped,
+      format: format,
+      formatDisplayName: getFormatDisplayName(format),
+      totalTransactions: rows.length,
+      newTransactions: deduped.length,
+      duplicatesSkipped: rows.length - deduped.length
+    });
+    
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ 
+      error: `Failed to import file: ${error.message}` 
+    });
+  }
+});
+
+// Legacy CSV endpoint for backward compatibility
+app.post('/api/import/csv', upload.single('file'), async (req, res) => {
+  // Redirect to the new generic endpoint
+  req.url = '/api/import/transactions';
+  req.method = 'POST';
+  // The generic endpoint will handle the request
+  return app._router.handle(req, res);
 });
 
 // Save imported preview
