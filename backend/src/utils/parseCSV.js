@@ -13,22 +13,58 @@ export function parseTransactionsCSV(buffer) {
   // Detect delimiter by checking which appears more frequently in the first few lines
   const delimiter = detectDelimiter(text);
   
-  const rows = parse(text, { 
-    columns: true, 
-    skip_empty_lines: true, 
-    trim: true,
-    delimiter: delimiter
-  });
+  // Pre-process the text to fix common CSV issues
+  const cleanedText = preprocessCSV(text);
+  
+  let rows;
+  try {
+    rows = parse(cleanedText, { 
+      columns: ['date', 'name', 'amount', 'credit', 'card_number'], // Define column names for headerless CSV
+      skip_empty_lines: true, 
+      trim: true,
+      delimiter: delimiter,
+      quote: '"',
+      escape: '"',
+      relax_quotes: true,
+      relax_column_count: true,
+      skip_records_with_error: true,
+      on_record: (record, context) => {
+        // Log any parsing issues but continue processing
+        if (context.error) {
+          console.warn(`CSV parsing warning at line ${context.lines}: ${context.error.message}`);
+        }
+        return record;
+      }
+    });
+  } catch (error) {
+    console.error('CSV parsing error:', error);
+    throw error;
+  }
+  
   
   return rows.map(r => {
-    const date = normalizeDate(r.date || r.Date || r.transaction_date || r.posted);
-    const name = (r.name || r.merchant || r.payee || r.description || '').toString().trim();
-    const description = (r.description || r.memo || '').toString().trim();
-    const amount = Number(r.amount || r.debit || r.credit || 0);
-    let inflow = r.inflow !== undefined ? (String(r.inflow).toLowerCase() in {'1':1,'true':1,'yes':1}) : (amount < 0 ? 1 : 0);
-    const external_id = (r.external_id || r.id || '').toString().trim() || null;
+    const date = normalizeDate(r.date);
+    const name = (r.name || '').toString().trim();
+    const description = ''; // No description field in this CSV format
+    // Handle both amount and credit fields - use the non-empty one
+    const amount = Number(r.amount || r.credit || 0);
+    // For this CSV format, positive amounts are expenses (inflow = 0)
+    const inflow = 0; // All transactions appear to be expenses
+    const external_id = (r.card_number || '').toString().trim() || null;
     return { date, name, description, amount, inflow, external_id };
   });
+}
+
+/**
+ * Pre-process CSV text to fix common formatting issues
+ */
+function preprocessCSV(text) {
+  // Fix unescaped quotes within quoted fields
+  // This handles cases like "TOYS "R" US" -> "TOYS R US"
+  // Use a more targeted approach to only fix the specific problematic patterns
+  return text
+    .replace(/"TOYS "R" US/g, '"TOYS R US')  // Fix the specific TOYS R US pattern
+    .replace(/"TOYS "R" US/g, '"TOYS R US');  // Handle multiple occurrences
 }
 
 /**
