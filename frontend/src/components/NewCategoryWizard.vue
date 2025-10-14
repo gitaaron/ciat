@@ -154,11 +154,20 @@
       
       <v-alert
         v-else
-        type="warning"
+        type="info"
         variant="outlined"
         class="mb-4"
       >
-        No transactions would be affected by this rule.
+        <div>
+          <p><strong>No transactions would be affected by this rule.</strong></p>
+          <p v-if="previewData.count === 0" class="mb-0">
+            This could mean either:
+          </p>
+          <ul v-if="previewData.count === 0" class="mb-0">
+            <li>No transactions have been imported yet</li>
+            <li>The rule pattern doesn't match any existing transactions</li>
+          </ul>
+        </div>
       </v-alert>
       
       <v-row>

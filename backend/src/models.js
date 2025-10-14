@@ -58,15 +58,17 @@ export const Transactions = {
   },
   previewRuleImpact({ category, match_type, pattern }) {
     // Get all transactions that would be affected by this rule
+    // Use LEFT JOIN to handle cases where there might be no accounts
     const allTransactions = db.prepare(`
-      SELECT t.*, a.name as account_name 
+      SELECT t.*, COALESCE(a.name, 'Unknown Account') as account_name 
       FROM transactions t 
-      JOIN accounts a ON a.id=t.account_id 
+      LEFT JOIN accounts a ON a.id=t.account_id 
       ORDER BY t.date DESC
     `).all();
     
     const affected = [];
     const normalize = (s = '') => s.toUpperCase().trim();
+    const normalizedPattern = normalize(pattern);
     
     for (const tx of allTransactions) {
       const merchant = normalize(tx.name || '');
@@ -75,10 +77,10 @@ export const Transactions = {
       
       switch (match_type) {
         case 'exact':
-          matches = merchant === pattern || description === pattern;
+          matches = merchant === normalizedPattern || description === normalizedPattern;
           break;
         case 'contains':
-          matches = merchant.includes(pattern) || description.includes(pattern);
+          matches = merchant.includes(normalizedPattern) || description.includes(normalizedPattern);
           break;
         case 'regex':
           try {
