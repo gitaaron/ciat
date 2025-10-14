@@ -22,8 +22,22 @@ async function draw() {
 onMounted(draw)
 </script>
 <template>
-  <div>
-    <h3>Category Breakdown (Pie)</h3>
-    <div ref="el"></div>
-  </div>
+  <v-card>
+    <v-card-title class="text-h6">
+      <v-icon left>mdi-chart-pie</v-icon>
+      Category Breakdown (Pie)
+    </v-card-title>
+    <v-card-text>
+      <div ref="el" class="chart-container"></div>
+    </v-card-text>
+  </v-card>
 </template>
+
+<style scoped>
+.chart-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+</style>

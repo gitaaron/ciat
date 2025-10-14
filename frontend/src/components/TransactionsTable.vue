@@ -24,57 +24,160 @@ async function overrideCategory(row) {
 </script>
 
 <template>
-  <div>
-    <h2>Transactions</h2>
-    <div style="display:flex; gap:8px; flex-wrap: wrap; margin-bottom:8px;">
-      <input v-model="q" placeholder="Search name/amount/note" />
-      <input v-model="start" placeholder="Start (YYYY-MM-DD)" />
-      <input v-model="end" placeholder="End (YYYY-MM-DD)" />
-      <select v-model="category">
-        <option value="">All categories</option>
-        <option value="guilt_free">guilt_free</option>
-        <option value="short_term_savings">short_term_savings</option>
-        <option value="fixed_costs">fixed_costs</option>
-        <option value="investments">investments</option>
-      </select>
-      <select v-model="sort">
-        <option value="date">date</option>
-        <option value="amount">amount</option>
-        <option value="name">name</option>
-      </select>
-      <select v-model="order">
-        <option value="DESC">DESC</option>
-        <option value="ASC">ASC</option>
-      </select>
-    </div>
+  <v-card>
+    <v-card-title class="text-h5">
+      <v-icon left>mdi-format-list-bulleted</v-icon>
+      Transactions
+    </v-card-title>
 
-    <table border="1" cellpadding="6">
-      <thead>
-        <tr>
-          <th>Date</th><th>Account</th><th>Name</th><th>Description</th><th>Amount</th><th>Inflow</th><th>Category</th><th>Explain</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="r in rows" :key="r.id">
-          <td>{{ r.date }}</td>
-          <td>{{ r.account_name }}</td>
-          <td>{{ r.name }}</td>
-          <td>{{ r.description }}</td>
-          <td>{{ Number(r.amount).toFixed(2) }}</td>
-          <td>{{ r.inflow ? 'Income' : 'Expense' }}</td>
-          <td>
-            <select v-model="r.category">
-              <option value="">(none)</option>
-              <option value="guilt_free">guilt_free</option>
-              <option value="short_term_savings">short_term_savings</option>
-              <option value="fixed_costs">fixed_costs</option>
-              <option value="investments">investments</option>
-            </select>
-          </td>
-          <td>{{ r.category_explain }}</td>
-          <td><button @click="overrideCategory(r)">Save</button></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <v-card-text>
+      <!-- Filters -->
+      <v-row class="mb-4">
+        <v-col cols="12" md="3">
+          <v-text-field
+            v-model="q"
+            label="Search name/amount/note"
+            variant="outlined"
+            density="compact"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+          />
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-text-field
+            v-model="start"
+            label="Start Date"
+            placeholder="YYYY-MM-DD"
+            variant="outlined"
+            density="compact"
+            type="date"
+          />
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-text-field
+            v-model="end"
+            label="End Date"
+            placeholder="YYYY-MM-DD"
+            variant="outlined"
+            density="compact"
+            type="date"
+          />
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-select
+            v-model="category"
+            :items="[
+              { title: 'All categories', value: '' },
+              { title: 'Guilt Free', value: 'guilt_free' },
+              { title: 'Short Term Savings', value: 'short_term_savings' },
+              { title: 'Fixed Costs', value: 'fixed_costs' },
+              { title: 'Investments', value: 'investments' }
+            ]"
+            item-title="title"
+            item-value="value"
+            label="Category"
+            variant="outlined"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="12" md="2">
+          <v-select
+            v-model="sort"
+            :items="[
+              { title: 'Date', value: 'date' },
+              { title: 'Amount', value: 'amount' },
+              { title: 'Name', value: 'name' }
+            ]"
+            item-title="title"
+            item-value="value"
+            label="Sort by"
+            variant="outlined"
+            density="compact"
+          />
+        </v-col>
+        <v-col cols="12" md="1">
+          <v-select
+            v-model="order"
+            :items="[
+              { title: 'DESC', value: 'DESC' },
+              { title: 'ASC', value: 'ASC' }
+            ]"
+            item-title="title"
+            item-value="value"
+            label="Order"
+            variant="outlined"
+            density="compact"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Data Table -->
+      <v-data-table
+        :headers="[
+          { title: 'Date', key: 'date', sortable: true },
+          { title: 'Account', key: 'account_name', sortable: true },
+          { title: 'Name', key: 'name', sortable: true },
+          { title: 'Description', key: 'description', sortable: true },
+          { title: 'Amount', key: 'amount', sortable: true },
+          { title: 'Type', key: 'inflow', sortable: true },
+          { title: 'Category', key: 'category', sortable: false },
+          { title: 'Explain', key: 'category_explain', sortable: false },
+          { title: 'Actions', key: 'actions', sortable: false }
+        ]"
+        :items="rows"
+        class="elevation-1"
+      >
+        <template v-slot:item.amount="{ item }">
+          <span class="font-weight-medium">
+            ${{ Number(item.amount).toFixed(2) }}
+          </span>
+        </template>
+        
+        <template v-slot:item.inflow="{ item }">
+          <v-chip
+            :color="item.inflow ? 'success' : 'error'"
+            size="small"
+            variant="outlined"
+          >
+            {{ item.inflow ? 'Income' : 'Expense' }}
+          </v-chip>
+        </template>
+        
+        <template v-slot:item.category="{ item }">
+          <v-select
+            v-model="item.category"
+            :items="[
+              { title: '(none)', value: '' },
+              { title: 'Guilt Free', value: 'guilt_free' },
+              { title: 'Short Term Savings', value: 'short_term_savings' },
+              { title: 'Fixed Costs', value: 'fixed_costs' },
+              { title: 'Investments', value: 'investments' }
+            ]"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="compact"
+            hide-details
+            style="min-width: 150px;"
+          />
+        </template>
+        
+        <template v-slot:item.category_explain="{ item }">
+          <span class="text-caption">{{ item.category_explain }}</span>
+        </template>
+        
+        <template v-slot:item.actions="{ item }">
+          <v-btn
+            @click="overrideCategory(item)"
+            color="primary"
+            variant="outlined"
+            size="small"
+          >
+            <v-icon left>mdi-content-save</v-icon>
+            Save
+          </v-btn>
+        </template>
+      </v-data-table>
+    </v-card-text>
+  </v-card>
 </template>

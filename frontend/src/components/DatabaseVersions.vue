@@ -1,58 +1,145 @@
 <template>
-  <div class="database-versions">
-    <h2>Database Versions</h2>
-    
-    <div class="status-bar">
-      <div class="status-item">
-        <strong>Total Versions:</strong> {{ status.totalVersions }}
-      </div>
-      <div class="status-item">
-        <strong>Status:</strong> 
-        <span :class="status.isUpToDate ? 'status-ok' : 'status-warning'">
-          {{ status.isUpToDate ? 'Up to date' : 'Uncommitted changes' }}
-        </span>
-      </div>
-      <div class="status-item">
-        <strong>Latest:</strong> {{ latestVersionInfo }}
-      </div>
-    </div>
+  <v-card>
+    <v-card-title class="text-h5">
+      <v-icon left>mdi-database</v-icon>
+      Database Versions
+    </v-card-title>
 
-    <div class="actions">
-      <button @click="createVersion" :disabled="loading" class="btn btn-primary">
-        Create Version
-      </button>
-      <button @click="loadVersions" :disabled="loading" class="btn btn-secondary">
-        Refresh
-      </button>
-    </div>
+    <v-card-text>
+      <!-- Status Bar -->
+      <v-card variant="outlined" class="mb-4">
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="4">
+              <v-chip color="info" variant="outlined" size="large">
+                <v-icon left>mdi-counter</v-icon>
+                Total Versions: {{ status.totalVersions }}
+              </v-chip>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-chip 
+                :color="status.isUpToDate ? 'success' : 'warning'" 
+                variant="outlined" 
+                size="large"
+              >
+                <v-icon left>{{ status.isUpToDate ? 'mdi-check' : 'mdi-alert' }}</v-icon>
+                {{ status.isUpToDate ? 'Up to date' : 'Uncommitted changes' }}
+              </v-chip>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-chip color="primary" variant="outlined" size="large">
+                <v-icon left>mdi-clock</v-icon>
+                Latest: {{ latestVersionInfo }}
+              </v-chip>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
 
-    <div v-if="loading" class="loading">Loading versions...</div>
-    
-    <div v-else-if="versions.length === 0" class="empty">
-      No versions found. Create your first version to get started.
-    </div>
-    
-    <div v-else class="versions-list">
-      <div v-for="version in versions" :key="version.id" class="version-item">
-        <div class="version-header">
-          <div class="version-id">{{ version.id.substring(0, 20) }}...</div>
-          <div class="version-actions">
-            <button @click="revertVersion(version.id)" class="btn btn-warning btn-sm">
-              Revert
-            </button>
-            <button @click="deleteVersion(version.id)" class="btn btn-danger btn-sm">
-              Delete
-            </button>
-          </div>
-        </div>
-        <div class="version-details">
-          <div class="version-timestamp">{{ formatTimestamp(version.timestamp) }}</div>
-          <div class="version-description">{{ version.description || 'No description' }}</div>
-          <div class="version-size">{{ formatSize(version.size) }}</div>
-        </div>
-      </div>
-    </div>
-  </div>
+      <!-- Actions -->
+      <v-row class="mb-4">
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="createVersion"
+            :disabled="loading"
+            :loading="loading"
+            color="primary"
+            block
+          >
+            <v-icon left>mdi-plus</v-icon>
+            Create Version
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="loadVersions"
+            :disabled="loading"
+            :loading="loading"
+            color="secondary"
+            variant="outlined"
+            block
+          >
+            <v-icon left>mdi-refresh</v-icon>
+            Refresh
+          </v-btn>
+        </v-col>
+      </v-row>
+
+      <!-- Loading State -->
+      <v-progress-linear
+        v-if="loading"
+        indeterminate
+        color="primary"
+        class="mb-4"
+      />
+
+      <!-- Empty State -->
+      <v-alert
+        v-else-if="versions.length === 0"
+        type="info"
+        variant="outlined"
+        class="text-center"
+      >
+        No versions found. Create your first version to get started.
+      </v-alert>
+      
+      <!-- Versions List -->
+      <v-card
+        v-else
+        variant="outlined"
+        v-for="version in versions"
+        :key="version.id"
+        class="mb-3"
+      >
+        <v-card-title class="text-h6">
+          <v-icon left>mdi-database</v-icon>
+          {{ version.id.substring(0, 20) }}...
+        </v-card-title>
+        
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="4">
+              <v-chip color="info" variant="outlined">
+                <v-icon left>mdi-clock</v-icon>
+                {{ formatTimestamp(version.timestamp) }}
+              </v-chip>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-chip color="secondary" variant="outlined">
+                <v-icon left>mdi-text</v-icon>
+                {{ version.description || 'No description' }}
+              </v-chip>
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-chip color="primary" variant="outlined">
+                <v-icon left>mdi-file</v-icon>
+                {{ formatSize(version.size) }}
+              </v-chip>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-btn
+            @click="revertVersion(version.id)"
+            color="warning"
+            variant="outlined"
+          >
+            <v-icon left>mdi-undo</v-icon>
+            Revert
+          </v-btn>
+          <v-btn
+            @click="deleteVersion(version.id)"
+            color="error"
+            variant="outlined"
+          >
+            <v-icon left>mdi-delete</v-icon>
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup>
@@ -154,148 +241,3 @@ function formatSize(bytes) {
 onMounted(loadVersions)
 </script>
 
-<style scoped>
-.database-versions {
-  max-width: 800px;
-}
-
-.status-bar {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.status-ok {
-  color: #28a745;
-  font-weight: bold;
-}
-
-.status-warning {
-  color: #ffc107;
-  font-weight: bold;
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #0056b3;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-  border-color: #6c757d;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #545b62;
-}
-
-.btn-warning {
-  background: #ffc107;
-  color: #212529;
-  border-color: #ffc107;
-}
-
-.btn-warning:hover:not(:disabled) {
-  background: #e0a800;
-}
-
-.btn-danger {
-  background: #dc3545;
-  color: white;
-  border-color: #dc3545;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #c82333;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-.loading, .empty {
-  text-align: center;
-  padding: 40px;
-  color: #6c757d;
-}
-
-.versions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.version-item {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-  background: white;
-}
-
-.version-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.version-id {
-  font-family: monospace;
-  font-weight: bold;
-  color: #495057;
-}
-
-.version-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.version-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 16px;
-  font-size: 14px;
-  color: #6c757d;
-}
-
-.version-description {
-  font-style: italic;
-}
-</style>

@@ -1,142 +1,249 @@
 <template>
-  <div class="new-category-wizard">
-    <h2>New Category Rule Wizard</h2>
+  <v-card>
+      <v-card-title class="text-h5">
+        <v-icon left>mdi-plus-circle</v-icon>
+        New Category Rule Wizard
+      </v-card-title>
+      
     
     <!-- Step 1: Rule Creation Form -->
-    <div v-if="step === 1" class="step">
-      <h3>Step 1: Create New Rule</h3>
-      <form @submit.prevent="previewRule" class="rule-form">
-        <div class="form-group">
-          <label for="category">Category:</label>
-          <select id="category" v-model="ruleForm.category" required>
-            <option value="">Select a category</option>
-            <option value="guilt_free">Guilt Free</option>
-            <option value="short_term_savings">Short Term Savings</option>
-            <option value="fixed_costs">Fixed Costs</option>
-            <option value="investments">Investments</option>
-          </select>
-        </div>
+    <v-card-text v-if="step === 1">
+      <!-- Simple step indicator instead of stepper -->
+      <v-chip color="primary" class="mb-4">
+        Step 1 of 3: Create Rule
+      </v-chip>
+
+      <v-form @submit.prevent="previewRule">
+        <v-row>
+          <v-col cols="12" md="6">
+            <v-select
+              v-model="ruleForm.category"
+              :items="[
+                { title: 'Select a category', value: '' },
+                { title: 'Guilt Free', value: 'guilt_free' },
+                { title: 'Short Term Savings', value: 'short_term_savings' },
+                { title: 'Fixed Costs', value: 'fixed_costs' },
+                { title: 'Investments', value: 'investments' }
+              ]"
+              item-title="title"
+              item-value="value"
+              label="Category"
+              variant="outlined"
+              required
+            />
+          </v-col>
+          
+          <v-col cols="12" md="6">
+            <v-select
+              v-model="ruleForm.match_type"
+              :items="[
+                { title: 'Select match type', value: '' },
+                { title: 'Exact Match', value: 'exact' },
+                { title: 'Contains', value: 'contains' },
+                { title: 'Regular Expression', value: 'regex' }
+              ]"
+              item-title="title"
+              item-value="value"
+              label="Match Type"
+              variant="outlined"
+              required
+            />
+          </v-col>
+        </v-row>
         
-        <div class="form-group">
-          <label for="match_type">Match Type:</label>
-          <select id="match_type" v-model="ruleForm.match_type" required>
-            <option value="">Select match type</option>
-            <option value="exact">Exact Match</option>
-            <option value="contains">Contains</option>
-            <option value="regex">Regular Expression</option>
-          </select>
-        </div>
+        <v-row>
+          <v-col cols="12">
+            <v-text-field
+              v-model="ruleForm.pattern"
+              :placeholder="getPatternPlaceholder()"
+              :hint="getPatternHelp()"
+              label="Pattern"
+              variant="outlined"
+              required
+              persistent-hint
+            />
+          </v-col>
+        </v-row>
         
-        <div class="form-group">
-          <label for="pattern">Pattern:</label>
-          <input 
-            id="pattern" 
-            v-model="ruleForm.pattern" 
-            type="text" 
-            required 
-            :placeholder="getPatternPlaceholder()"
-          />
-          <small class="help-text">{{ getPatternHelp() }}</small>
-        </div>
+        <v-row>
+          <v-col cols="12">
+            <v-text-field
+              v-model="ruleForm.explain"
+              label="Explanation (optional)"
+              placeholder="Why this rule exists"
+              variant="outlined"
+            />
+          </v-col>
+        </v-row>
         
-        <div class="form-group">
-          <label for="explain">Explanation (optional):</label>
-          <input 
-            id="explain" 
-            v-model="ruleForm.explain" 
-            type="text" 
-            placeholder="Why this rule exists"
-          />
-        </div>
-        
-        <div class="form-actions">
-          <button type="submit" :disabled="!isFormValid || loading">
-            {{ loading ? 'Previewing...' : 'Preview Rule Impact' }}
-          </button>
-        </div>
-      </form>
-    </div>
+        <v-row>
+          <v-col cols="12">
+            <v-btn
+              type="submit"
+              :disabled="!isFormValid || loading"
+              :loading="loading"
+              color="primary"
+              size="large"
+              block
+            >
+              <v-icon left>mdi-eye</v-icon>
+              {{ loading ? 'Previewing...' : 'Preview Rule Impact' }}
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-form>
+    </v-card-text>
     
     <!-- Step 2: Preview Affected Transactions -->
-    <div v-if="step === 2" class="step">
-      <h3>Step 2: Review Affected Transactions</h3>
+    <v-card-text v-if="step === 2">
+      <!-- Simple step indicator -->
+      <v-chip color="primary" class="mb-4">
+        Step 2 of 3: Preview Impact
+      </v-chip>
       
-      <div class="preview-summary">
-        <p><strong>Rule:</strong> {{ ruleForm.match_type }} "{{ ruleForm.pattern }}" → {{ ruleForm.category }}</p>
-        <p><strong>Affected Transactions:</strong> {{ previewData.count }} total</p>
-        <p><strong>Would Change:</strong> {{ changedCount }} transactions</p>
-      </div>
-      
-      <div v-if="previewData.affectedTransactions.length > 0" class="transactions-preview">
-        <h4>Affected Transactions:</h4>
-        <div class="table-container">
-          <table border="1" cellpadding="6">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Account</th>
-                <th>Name</th>
-                <th>Amount</th>
-                <th>Current Category</th>
-                <th>New Category</th>
-                <th>Change</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr 
-                v-for="tx in previewData.affectedTransactions" 
-                :key="tx.id"
-                :class="{ 'would-change': tx.wouldChange }"
-              >
-                <td>{{ tx.date }}</td>
-                <td>{{ tx.account_name }}</td>
-                <td>{{ tx.name }}</td>
-                <td>{{ Number(tx.amount).toFixed(2) }}</td>
-                <td>{{ tx.currentCategory || '(none)' }}</td>
-                <td>{{ tx.newCategory }}</td>
-                <td>
-                  <span v-if="tx.wouldChange" class="change-indicator">✓</span>
-                  <span v-else class="no-change">-</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <v-alert type="info" variant="outlined" class="mb-4">
+        <div>
+          <p><strong>Rule:</strong> {{ ruleForm.match_type }} "{{ ruleForm.pattern }}" → {{ ruleForm.category }}</p>
+          <p><strong>Affected Transactions:</strong> {{ previewData.count }} total</p>
+          <p><strong>Would Change:</strong> {{ changedCount }} transactions</p>
         </div>
-      </div>
+      </v-alert>
       
-      <div v-else class="no-transactions">
-        <p>No transactions would be affected by this rule.</p>
-      </div>
+      <v-card v-if="previewData.affectedTransactions.length > 0" variant="outlined" class="mb-4">
+        <v-card-title class="text-h6">
+          <v-icon left>mdi-format-list-bulleted</v-icon>
+          Affected Transactions
+        </v-card-title>
+        <v-card-text>
+          <v-data-table
+            :headers="[
+              { title: 'Date', key: 'date', sortable: true },
+              { title: 'Account', key: 'account_name', sortable: true },
+              { title: 'Name', key: 'name', sortable: true },
+              { title: 'Amount', key: 'amount', sortable: true },
+              { title: 'Current Category', key: 'currentCategory', sortable: false },
+              { title: 'New Category', key: 'newCategory', sortable: false },
+              { title: 'Change', key: 'wouldChange', sortable: false }
+            ]"
+            :items="previewData.affectedTransactions"
+            class="elevation-1"
+          >
+            <template v-slot:item.amount="{ item }">
+              <span class="font-weight-medium">
+                ${{ Number(item.amount).toFixed(2) }}
+              </span>
+            </template>
+            
+            <template v-slot:item.currentCategory="{ item }">
+              {{ item.currentCategory || '(none)' }}
+            </template>
+            
+            <template v-slot:item.newCategory="{ item }">
+              <v-chip color="primary" size="small" variant="outlined">
+                {{ item.newCategory }}
+              </v-chip>
+            </template>
+            
+            <template v-slot:item.wouldChange="{ item }">
+              <v-icon v-if="item.wouldChange" color="success">mdi-check</v-icon>
+              <v-icon v-else color="grey">mdi-minus</v-icon>
+            </template>
+          </v-data-table>
+        </v-card-text>
+      </v-card>
       
-      <div class="form-actions">
-        <button @click="step = 1" class="secondary">Back to Edit Rule</button>
-        <button @click="createRule" :disabled="loading" class="primary">
-          {{ loading ? 'Creating...' : 'Create Rule' }}
-        </button>
-      </div>
-    </div>
+      <v-alert
+        v-else
+        type="warning"
+        variant="outlined"
+        class="mb-4"
+      >
+        No transactions would be affected by this rule.
+      </v-alert>
+      
+      <v-row>
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="step = 1"
+            color="secondary"
+            variant="outlined"
+            block
+          >
+            <v-icon left>mdi-arrow-left</v-icon>
+            Back to Edit Rule
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="createRule"
+            :disabled="loading"
+            :loading="loading"
+            color="primary"
+            block
+          >
+            <v-icon left>mdi-plus</v-icon>
+            {{ loading ? 'Creating...' : 'Create Rule' }}
+          </v-btn>
+        </v-col>
+      </v-row>
+    </v-card-text>
     
     <!-- Step 3: Success -->
-    <div v-if="step === 3" class="step">
-      <h3>Rule Created Successfully!</h3>
-      <div class="success-message">
-        <p>Your new categorization rule has been created and will take precedence over existing rules.</p>
-        <p><strong>Rule ID:</strong> {{ createdRuleId }}</p>
-        <p><strong>Affected:</strong> {{ previewData.count }} transactions</p>
-      </div>
+    <v-card-text v-if="step === 3">
+      <!-- Simple step indicator -->
+      <v-chip color="success" class="mb-4">
+        Step 3 of 3: Complete
+      </v-chip>
+
+      <v-card variant="outlined" class="text-center mb-4">
+        <v-card-text class="pa-8">
+          <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>
+          <h3 class="text-h4 mb-2 text-success">Rule Created Successfully!</h3>
+          <v-alert type="success" variant="outlined" class="text-left">
+            <p>Your new categorization rule has been created and will take precedence over existing rules.</p>
+            <p><strong>Rule ID:</strong> {{ createdRuleId }}</p>
+            <p><strong>Affected:</strong> {{ previewData.count }} transactions</p>
+          </v-alert>
+        </v-card-text>
+      </v-card>
       
-      <div class="form-actions">
-        <button @click="resetWizard" class="primary">Create Another Rule</button>
-        <button @click="$emit('close')" class="secondary">Close Wizard</button>
-      </div>
-    </div>
+      <v-row>
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="resetWizard"
+            color="primary"
+            block
+          >
+            <v-icon left>mdi-plus</v-icon>
+            Create Another Rule
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="6">
+          <v-btn
+            @click="$emit('close')"
+            color="secondary"
+            variant="outlined"
+            block
+          >
+            <v-icon left>mdi-close</v-icon>
+            Close Wizard
+          </v-btn>
+        </v-col>
+      </v-row>
+    </v-card-text>
     
     <!-- Error Display -->
-    <div v-if="error" class="error-message">
-      <p>{{ error }}</p>
-      <button @click="error = null">Dismiss</button>
-    </div>
-  </div>
+    <v-card-text v-if="error">
+      <v-alert
+        type="error"
+        variant="outlined"
+        closable
+        @click:close="error = null"
+      >
+        {{ error }}
+      </v-alert>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup>
@@ -149,6 +256,7 @@ const step = ref(1)
 const loading = ref(false)
 const error = ref(null)
 const createdRuleId = ref(null)
+
 
 const ruleForm = ref({
   category: '',
@@ -241,157 +349,3 @@ function resetWizard() {
 }
 </script>
 
-<style scoped>
-.new-category-wizard {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.step {
-  background: #f9f9f9;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.rule-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.form-group label {
-  font-weight: bold;
-}
-
-.form-group input,
-.form-group select {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.help-text {
-  color: #666;
-  font-size: 12px;
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.form-actions button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.form-actions button.primary {
-  background: #007bff;
-  color: white;
-}
-
-.form-actions button.secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.form-actions button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.preview-summary {
-  background: #e9ecef;
-  padding: 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.preview-summary p {
-  margin: 4px 0;
-}
-
-.transactions-preview {
-  margin-bottom: 20px;
-}
-
-.table-container {
-  max-height: 400px;
-  overflow-y: auto;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-}
-
-th {
-  background: #f8f9fa;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-tr.would-change {
-  background: #fff3cd;
-}
-
-.change-indicator {
-  color: #28a745;
-  font-weight: bold;
-}
-
-.no-change {
-  color: #6c757d;
-}
-
-.no-transactions {
-  text-align: center;
-  padding: 40px;
-  color: #6c757d;
-}
-
-.success-message {
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
-  padding: 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.error-message {
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
-  padding: 16px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.error-message button {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 8px;
-}
-</style>

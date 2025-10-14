@@ -1,6 +1,6 @@
 
 import axios from 'axios'
-const apiBase = (typeof __API__ !== 'undefined' ? __API__ : 'http://localhost:5176') + '/api'
+const apiBase = (typeof __API__ !== 'undefined' ? __API__ : 'http://localhost:3000') + '/api'
 
 export default {
   async getAccounts() {
