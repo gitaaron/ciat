@@ -108,11 +108,16 @@ function handleDrop(e) {
   })
   
   if (droppedFiles.length === 0) {
-    alert('Please drop CSV or QFX files only')
+    alert('Please drop a CSV or QFX file only')
     return
   }
   
-  files.value = [...files.value, ...droppedFiles]
+  if (droppedFiles.length > 1) {
+    alert('Please drop only one file at a time')
+    return
+  }
+  
+  files.value = [droppedFiles[0]] // Only keep the first file
   analyzeFiles()
 }
 
@@ -123,11 +128,16 @@ function handleFileSelect(e) {
   })
   
   if (selectedFiles.length === 0) {
-    alert('Please select CSV or QFX files only')
+    alert('Please select a CSV or QFX file only')
     return
   }
   
-  files.value = [...files.value, ...selectedFiles]
+  if (selectedFiles.length > 1) {
+    alert('Please select only one file at a time')
+    return
+  }
+  
+  files.value = [selectedFiles[0]] // Only keep the first file
   analyzeFiles()
 }
 
@@ -139,18 +149,14 @@ async function analyzeFiles() {
     const result = await api.analyzeFiles(files.value)
     fileAnalysis.value = result.analysis
     
-    // Auto-assign files based on suggestions
+    // Auto-assign file based on suggestions
     filesByAccount.value.clear()
-    for (const analysis of fileAnalysis.value) {
-      const file = files.value.find(f => f.name === analysis.filename)
-      if (file) {
-        const accountId = analysis.suggestedAccount?.id || props.accounts[0]?.id
-        if (accountId) {
-          if (!filesByAccount.value.has(accountId)) {
-            filesByAccount.value.set(accountId, [])
-          }
-          filesByAccount.value.get(accountId).push(file)
-        }
+    const analysis = fileAnalysis.value[0] // Only one file now
+    const file = files.value[0] // Only one file now
+    if (file && analysis) {
+      const accountId = analysis.suggestedAccount?.id || props.accounts[0]?.id
+      if (accountId) {
+        filesByAccount.value.set(accountId, [file])
       }
     }
     
@@ -164,42 +170,17 @@ async function analyzeFiles() {
 }
 
 function removeFile(fileIndex) {
-  files.value.splice(fileIndex, 1)
-  fileAnalysis.value.splice(fileIndex, 1)
-  
-  // Remove from filesByAccount
-  for (const [accountId, accountFiles] of filesByAccount.value) {
-    const index = accountFiles.findIndex(f => f === files.value[fileIndex])
-    if (index !== -1) {
-      accountFiles.splice(index, 1)
-      if (accountFiles.length === 0) {
-        filesByAccount.value.delete(accountId)
-      }
-      break
-    }
-  }
+  files.value = []
+  fileAnalysis.value = []
+  filesByAccount.value.clear()
 }
 
 function reassignFile(fileIndex, newAccountId) {
   const file = files.value[fileIndex]
   
-  // Remove from current account
-  for (const [accountId, accountFiles] of filesByAccount.value) {
-    const index = accountFiles.findIndex(f => f === file)
-    if (index !== -1) {
-      accountFiles.splice(index, 1)
-      if (accountFiles.length === 0) {
-        filesByAccount.value.delete(accountId)
-      }
-      break
-    }
-  }
-  
-  // Add to new account
-  if (!filesByAccount.value.has(newAccountId)) {
-    filesByAccount.value.set(newAccountId, [])
-  }
-  filesByAccount.value.get(newAccountId).push(file)
+  // Clear current assignment and assign to new account
+  filesByAccount.value.clear()
+  filesByAccount.value.set(newAccountId, [file])
 }
 
 async function processAllFiles() {
@@ -209,30 +190,23 @@ async function processAllFiles() {
   previewsByAccount.value.clear()
   
   try {
-    // Process each account's files
+    // Process the single file
     for (const [accountId, accountFiles] of filesByAccount.value) {
-      const accountPreviews = []
-      
-      for (const file of accountFiles) {
-        try {
-          const res = await api.importCSV(accountId, file)
-          accountPreviews.push(...res.preview)
-        } catch (error) {
-          console.error(`Error processing file ${file.name}:`, error)
-          alert(`Error processing file ${file.name}: ${error.message}`)
-        }
-      }
-      
-      if (accountPreviews.length > 0) {
-        previewsByAccount.value.set(accountId, accountPreviews)
+      const file = accountFiles[0] // Only one file now
+      try {
+        const res = await api.importCSV(accountId, file)
+        previewsByAccount.value.set(accountId, res.preview)
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error)
+        alert(`Error processing file ${file.name}: ${error.message}`)
       }
     }
     
     step.value = 3
     currentCategoryStep.value = 0
   } catch (error) {
-    console.error('Error processing files:', error)
-    alert('Error processing files: ' + error.message)
+    console.error('Error processing file:', error)
+    alert('Error processing file: ' + error.message)
   } finally {
     processing.value = false
   }
@@ -352,11 +326,10 @@ function resetImport() {
       >
         <v-card-text class="text-center pa-8">
           <v-icon size="64" color="primary" class="mb-4">mdi-file-upload</v-icon>
-          <h3 class="text-h6 mb-2">Drop CSV or QFX files here</h3>
-          <p class="text-body-2 mb-4">Or click to select files</p>
+          <h3 class="text-h6 mb-2">Drop CSV or QFX file here</h3>
+          <p class="text-body-2 mb-4">Or click to select file</p>
           <input 
             type="file" 
-            multiple 
             accept=".csv,.qfx,.ofx,text/csv" 
             @change="handleFileSelect"
             style="display: none;"
@@ -368,7 +341,7 @@ function resetImport() {
             variant="outlined"
           >
             <v-icon left>mdi-folder-open</v-icon>
-            Select Files
+            Select File
           </v-btn>
         </v-card-text>
       </v-card>
@@ -377,7 +350,7 @@ function resetImport() {
       <v-card v-if="files.length > 0" variant="outlined">
         <v-card-title class="text-h6">
           <v-icon left>mdi-file-document</v-icon>
-          Selected Files ({{ totalFiles }} files)
+          Selected File ({{ totalFiles }} file)
         </v-card-title>
         <v-card-text>
           <v-list>
@@ -440,11 +413,11 @@ function resetImport() {
     <v-card-text v-if="step === 2">
       <v-card-title class="text-h6 mb-4">
         <v-icon left>mdi-account-arrow-right</v-icon>
-        Assign Files to Accounts
+        Assign File to Account
         <v-spacer />
         <v-btn @click="resetImport" color="secondary" variant="outlined">
           <v-icon left>mdi-arrow-left</v-icon>
-          Back to Files
+          Back to File
         </v-btn>
       </v-card-title>
 
@@ -514,7 +487,7 @@ function resetImport() {
             block
           >
             <v-icon left>mdi-cog</v-icon>
-            {{ processing ? 'Processing...' : 'Process All Files' }}
+            {{ processing ? 'Processing...' : 'Process File' }}
           </v-btn>
         </v-col>
         <v-col cols="12" sm="6">
