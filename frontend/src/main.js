@@ -26,6 +26,11 @@ const vuetify = createVuetify({
       },
     },
   },
+  defaults: {
+    global: {
+      fontFamily: 'Poppins, sans-serif',
+    },
+  },
 })
 
 createApp(App).use(vuetify).mount('#app')

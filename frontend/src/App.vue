@@ -121,3 +121,25 @@ onMounted(async () => {
   </v-app>
 </template>
 
+<style>
+/* Global font family for all text elements */
+* {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Ensure Vuetify components use Poppins */
+.v-application {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Apply to all text elements */
+h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, label, a {
+  font-family: 'Poppins', sans-serif !important;
+}
+
+/* Vuetify specific overrides */
+.v-btn, .v-card, .v-list, .v-tab, .v-chip, .v-text-field, .v-select, .v-autocomplete {
+  font-family: 'Poppins', sans-serif !important;
+}
+</style>
+
