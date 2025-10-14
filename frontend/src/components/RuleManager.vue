@@ -159,7 +159,9 @@ function refreshRules() {
 
 function formatDate(dateString) {
   if (!dateString) return 'Unknown'
-  return new Date(dateString).toLocaleDateString()
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return 'Unknown'
+  return date.toLocaleDateString()
 }
 
 function getItemKey(item) {

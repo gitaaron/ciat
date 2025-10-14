@@ -36,6 +36,10 @@ async function handleImportComplete() {
   await checkTransactions()
 }
 
+async function handleAccountsUpdated() {
+  await loadAccounts()
+}
+
 onMounted(async () => {
   await loadAccounts()
   await checkTransactions()

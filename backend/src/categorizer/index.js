@@ -166,6 +166,25 @@ export async function addUserRule({ category, match_type, pattern, explain }) {
   return ruleId;
 }
 
+export async function deleteUserRule(ruleId) {
+  const rules = loadJSON('rules.json');
+  const initialLength = rules.length;
+  
+  // Filter out the rule with the matching ID
+  const updatedRules = rules.filter(rule => rule.id !== ruleId);
+  
+  if (updatedRules.length === initialLength) {
+    throw new Error(`Rule with ID ${ruleId} not found`);
+  }
+  
+  saveJSON('rules.json', updatedRules);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { deleted: true, ruleId };
+}
+
 export async function reapplyCategories() {
   // Import db here to avoid circular dependency
   const { db } = await import('../db.js');

@@ -13,6 +13,15 @@ export const Accounts = {
   },
   findById(id) {
     return db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+  },
+  update(id, name) {
+    return db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(name, id);
+  },
+  delete(id) {
+    return db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
+  },
+  getTransactionCount(id) {
+    return db.prepare('SELECT COUNT(*) as count FROM transactions WHERE account_id = ?').get(id);
   }
 };
 

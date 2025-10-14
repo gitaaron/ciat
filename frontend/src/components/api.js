@@ -1,6 +1,6 @@
 
 import axios from 'axios'
-const apiBase = (typeof __API__ !== 'undefined' ? __API__ : 'http://localhost:3000') + '/api'
+const apiBase = (typeof __API__ !== 'undefined' ? __API__ : 'http://localhost:5176') + '/api'
 
 export default {
   async getAccounts() {
@@ -9,6 +9,14 @@ export default {
   },
   async createAccount(name) {
     const { data } = await axios.post(apiBase + '/accounts', { name })
+    return data
+  },
+  async updateAccount(id, name) {
+    const { data } = await axios.put(apiBase + `/accounts/${id}`, { name })
+    return data
+  },
+  async deleteAccount(id) {
+    const { data } = await axios.delete(apiBase + `/accounts/${id}`)
     return data
   },
   async importCSV(account_id, file) {

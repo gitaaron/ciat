@@ -9,7 +9,7 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule, reapplyCategories } from './categorizer/index.js';
+import { guessCategory, addUserRule, deleteUserRule, reapplyCategories } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -28,6 +28,39 @@ app.post('/api/accounts', (req, res) => {
   const { name } = req.body;
   try {
     Accounts.create(name);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+app.put('/api/accounts/:id', (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  try {
+    const result = Accounts.update(id, name);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+app.delete('/api/accounts/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    // Check if account has transactions
+    const transactionCount = Accounts.getTransactionCount(id);
+    if (transactionCount.count > 0) {
+      return res.status(400).json({ 
+        error: `Cannot delete account with ${transactionCount.count} transactions. Please delete or reassign transactions first.` 
+      });
+    }
+    
+    const result = Accounts.delete(id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -102,11 +135,11 @@ app.get('/api/rules', (req, res) => {
 });
 
 // Delete rule
-app.delete('/api/rules/:id', (req, res) => {
+app.delete('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
-    // Implementation would depend on how rules are stored
-    res.json({ ok: true });
+    const result = await deleteUserRule(ruleId);
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
