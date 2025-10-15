@@ -49,3 +49,11 @@ All data persists to `backend/data/ciat.sqlite` (gitignored). You can version th
 ## Notes
 - Rules live in `backend/src/categorizer/rules.json` and `patterns.json`. User overrides create new rules (highest priority and timestamped), keeping an **explain** field for transparency.
 - The ML step is stubbed with a placeholder that you can swap out for a local model or API later.
+
+
+## Contributing
+
+- Keep docs **concise, consistent, and friendly**.
+- Prefer **small, focused feature files** over giant specs.
+- When adding a new feature, **update the corresponding feature doc in product/features** and link related areas.
+
