@@ -9,7 +9,7 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule, deleteUserRule, reapplyCategories } from './categorizer/index.js';
+import { guessCategory, addUserRule, deleteUserRule, reapplyCategories, getAllRules, getRulesUsedInImport } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -124,8 +124,29 @@ app.post('/api/rules', async (req, res) => {
   }
 });
 
-// List all rules
+// Preview rule impact
+app.post('/api/rules/preview', (req, res) => {
+  try {
+    const { category, match_type, pattern } = req.body;
+    const affected = Transactions.previewRuleImpact({ category, match_type, pattern });
+    res.json(affected);
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// List all rules (both user rules and patterns)
 app.get('/api/rules', (req, res) => {
+  try {
+    const allRules = getAllRules();
+    res.json(allRules);
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// List only user rules
+app.get('/api/rules/user', (req, res) => {
   try {
     const rules = loadJSON('rules.json');
     res.json(rules);
@@ -228,13 +249,17 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       return true;
     });
 
+    // Get rules used in this import
+    const usedRules = getRulesUsedInImport(deduped);
+    
     res.json({ 
       preview: deduped,
       format: format,
       formatDisplayName: getFormatDisplayName(format),
       totalTransactions: rows.length,
       newTransactions: deduped.length,
-      duplicatesSkipped: rows.length - deduped.length
+      duplicatesSkipped: rows.length - deduped.length,
+      usedRules: usedRules
     });
     
   } catch (error) {

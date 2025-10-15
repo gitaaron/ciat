@@ -2,6 +2,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from './api.js'
+import RulesReview from './RulesReview.vue'
 
 const props = defineProps({ accounts: Array })
 const emit = defineEmits(['refresh-accounts', 'import-complete'])
@@ -10,6 +11,7 @@ const newAccount = ref('')
 const step = ref(1) // 1: file selection, 2: account assignment, 3: review, 4: complete
 const creating = ref(false)
 const createError = ref('')
+const createForm = ref(null)
 const editingAccount = ref(null)
 const editAccountName = ref('')
 const editError = ref('')
@@ -22,6 +24,7 @@ const files = ref([])
 const fileAnalysis = ref([])
 const filesByAccount = ref(new Map()) // Map<accountId, File[]>
 const previewsByAccount = ref(new Map()) // Map<accountId, preview[]>
+const usedRules = ref([])
 const isDragOver = ref(false)
 const processing = ref(false)
 const currentCategoryStep = ref(0) // 0: fixed, 1: investments, 2: guilt_free, 3: short_term
@@ -107,6 +110,10 @@ async function addAccount() {
   try {
     await api.createAccount(newAccount.value.trim())
     newAccount.value = ''
+    // Reset form validation state
+    if (createForm.value) {
+      createForm.value.resetValidation()
+    }
     await emit('refresh-accounts')
   } catch (error) {
     createError.value = error.response?.data?.error || 'Failed to create account'
@@ -280,6 +287,7 @@ async function processAllFiles() {
   
   processing.value = true
   previewsByAccount.value.clear()
+  usedRules.value = []
   
   try {
     // Process the single file
@@ -288,6 +296,11 @@ async function processAllFiles() {
       try {
         const res = await api.importCSV(accountId, file)
         previewsByAccount.value.set(accountId, res.preview)
+        
+        // Store used rules from the import
+        if (res.usedRules) {
+          usedRules.value = res.usedRules
+        }
       } catch (error) {
         console.error(`Error processing file ${file.name}:`, error)
         alert(`Error processing file ${file.name}: ${error.message}`)
@@ -361,8 +374,22 @@ function resetImport() {
   fileAnalysis.value = []
   filesByAccount.value.clear()
   previewsByAccount.value.clear()
+  usedRules.value = []
   step.value = 1
   currentCategoryStep.value = 0
+}
+
+function handleRulesCommit() {
+  commitAllImports()
+}
+
+function handleRulesCancel() {
+  resetImport()
+}
+
+function handleRefreshRules() {
+  // Refresh rules by reprocessing the import
+  processAllFiles()
 }
 </script>
 
@@ -692,172 +719,15 @@ function resetImport() {
       </v-row>
     </v-card-text>
 
-    <!-- Step 3: Review by Category -->
+    <!-- Step 3: Review Rules -->
     <v-card-text v-if="step === 3">
-      <v-card-title class="text-h6 mb-4">
-        <v-icon left>mdi-eye</v-icon>
-        Review Transactions by Category
-      </v-card-title>
-
-      <v-card variant="outlined" class="mb-4">
-        <v-card-text>
-          <v-row class="align-center mb-4">
-            <v-col cols="auto">
-              <v-btn
-                @click="previousCategory"
-                :disabled="!hasPreviousCategories"
-                color="secondary"
-                variant="outlined"
-              >
-                <v-icon left>mdi-chevron-left</v-icon>
-                Previous
-              </v-btn>
-            </v-col>
-            <v-col>
-              <v-chip
-                color="primary"
-                variant="outlined"
-                size="large"
-                class="text-h6"
-              >
-                {{ categoryStepNames[currentCategoryStep] }} 
-                ({{ currentCategoryTransactions.length }} transactions)
-              </v-chip>
-            </v-col>
-            <v-col cols="auto">
-              <v-btn
-                @click="nextCategory"
-                :disabled="!hasMoreCategories"
-                color="secondary"
-                variant="outlined"
-              >
-                Next
-                <v-icon right>mdi-chevron-right</v-icon>
-              </v-btn>
-            </v-col>
-          </v-row>
-
-          <v-data-table
-            v-if="currentCategoryTransactions.length > 0"
-            :headers="[
-              { title: 'Date', key: 'date', sortable: true },
-              { title: 'Account', key: 'account', sortable: true },
-              { title: 'Name', key: 'name', sortable: true },
-              { title: 'Amount', key: 'amount', sortable: true },
-              { title: 'Type', key: 'type', sortable: true },
-              { title: 'Category', key: 'category', sortable: false },
-              { title: 'Note', key: 'note', sortable: false },
-              { title: 'Ignore', key: 'ignore', sortable: false }
-            ]"
-            :items="currentCategoryTransactions"
-            class="elevation-1"
-          >
-            <template v-slot:item.account="{ item }">
-              {{ getAccountName(item.account_id) }}
-            </template>
-            
-            <template v-slot:item.amount="{ item }">
-              <span class="font-weight-medium">
-                ${{ Number(item.amount).toFixed(2) }}
-              </span>
-            </template>
-            
-            <template v-slot:item.type="{ item }">
-              <v-chip
-                :color="item.inflow ? 'success' : 'error'"
-                size="small"
-                variant="outlined"
-              >
-                {{ item.inflow ? 'Income' : 'Expense' }}
-              </v-chip>
-            </template>
-            
-            <template v-slot:item.category="{ item }">
-              <v-select
-                v-model="item.category"
-                :items="[
-                  { title: '(none)', value: '' },
-                  { title: 'Fixed Costs', value: 'fixed_costs' },
-                  { title: 'Investments', value: 'investments' },
-                  { title: 'Guilt Free', value: 'guilt_free' },
-                  { title: 'Short Term Savings', value: 'short_term_savings' }
-                ]"
-                item-title="title"
-                item-value="value"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="min-width: 150px;"
-              />
-            </template>
-            
-            <template v-slot:item.note="{ item }">
-              <v-text-field
-                v-model="item.note"
-                placeholder="Add note..."
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="min-width: 150px;"
-              />
-            </template>
-            
-            <template v-slot:item.ignore="{ item }">
-              <v-checkbox
-                v-model="item.ignore"
-                hide-details
-                density="compact"
-              />
-            </template>
-          </v-data-table>
-
-          <v-alert
-            v-else
-            type="info"
-            variant="outlined"
-            class="text-center"
-          >
-            No transactions found for {{ categoryStepNames[currentCategoryStep] }}.
-          </v-alert>
-        </v-card-text>
-      </v-card>
-
-      <v-row>
-        <v-col cols="12" sm="4">
-          <v-btn
-            v-if="hasMoreCategories"
-            @click="nextCategory"
-            color="secondary"
-            variant="outlined"
-            block
-          >
-            <v-icon left>mdi-chevron-right</v-icon>
-            Next Category
-          </v-btn>
-          <v-btn
-            v-else
-            @click="commitAllImports"
-            :disabled="processing"
-            :loading="processing"
-            color="primary"
-            block
-          >
-            <v-icon left>mdi-import</v-icon>
-            {{ processing ? 'Importing...' : 'Import All Transactions' }}
-          </v-btn>
-        </v-col>
-        <v-col cols="12" sm="4">
-          <v-btn
-            @click="resetImport"
-            color="secondary"
-            variant="outlined"
-            block
-          >
-            <v-icon left>mdi-cancel</v-icon>
-            Cancel
-          </v-btn>
-        </v-col>
-      </v-row>
+      <RulesReview
+        :used-rules="usedRules"
+        :accounts="accounts"
+        @commit="handleRulesCommit"
+        @cancel="handleRulesCancel"
+        @refresh-rules="handleRefreshRules"
+      />
     </v-card-text>
 
     <!-- Step 4: Complete -->

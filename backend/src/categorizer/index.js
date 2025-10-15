@@ -40,19 +40,31 @@ export function guessCategory(tx) {
   // 1) Rules (user-first precedence)
   for (const r of rules) {
     if (matches(r, { merchant_normalized, description_normalized })) {
-      return { category: r.category, source: 'rule', explain: r.explain || 'User rule match' };
+      return { 
+        category: r.category, 
+        source: 'rule', 
+        explain: r.explain || 'User rule match',
+        rule_id: r.id,
+        rule_type: 'user_rule'
+      };
     }
   }
   // 2) Pattern matching
   for (const r of patterns) {
     if (matches(r, { merchant_normalized, description_normalized })) {
-      return { category: r.category, source: 'pattern', explain: r.explain || 'Pattern match' };
+      return { 
+        category: r.category, 
+        source: 'pattern', 
+        explain: r.explain || 'Pattern match',
+        rule_id: r.pattern, // Use pattern as identifier for patterns
+        rule_type: 'pattern'
+      };
     }
   }
   // 3) ML (stub)
   const ml = mlGuess(tx);
-  if (ml) return ml;
-  return { category: null, source: 'none', explain: 'No match' };
+  if (ml) return { ...ml, rule_type: 'ml' };
+  return { category: null, source: 'none', explain: 'No match', rule_type: 'none' };
 }
 
 function matches(rule, ctx) {
@@ -203,4 +215,53 @@ export async function reapplyCategories() {
   
   console.log(`Reapplied categories to ${updated} transactions.`);
   return { updated, total: rows.length };
+}
+
+export function getAllRules() {
+  const rules = loadJSON('rules.json');
+  const patterns = loadJSON('patterns.json');
+  
+  // Combine rules and patterns with type information
+  const allRules = [
+    ...rules.map(r => ({ ...r, type: 'user_rule' })),
+    ...patterns.map(p => ({ ...p, type: 'pattern', id: p.pattern }))
+  ];
+  
+  return allRules;
+}
+
+export function getRulesUsedInImport(transactions) {
+  const rules = loadJSON('rules.json');
+  const patterns = loadJSON('patterns.json');
+  const usedRules = new Map();
+  
+  for (const tx of transactions) {
+    if (tx.rule_id && tx.rule_type) {
+      const key = `${tx.rule_type}:${tx.rule_id}`;
+      if (!usedRules.has(key)) {
+        let rule;
+        if (tx.rule_type === 'user_rule') {
+          rule = rules.find(r => r.id === tx.rule_id);
+        } else if (tx.rule_type === 'pattern') {
+          rule = patterns.find(p => p.pattern === tx.rule_id);
+        }
+        
+        if (rule) {
+          usedRules.set(key, {
+            ...rule,
+            type: tx.rule_type,
+            transactions: []
+          });
+        }
+      }
+      
+      // Add transaction to the rule
+      const rule = usedRules.get(key);
+      if (rule) {
+        rule.transactions.push(tx);
+      }
+    }
+  }
+  
+  return Array.from(usedRules.values());
 }

@@ -28,6 +28,8 @@ It should provide the following:
 
         * line graphs showing breakdown of spending by month
 
+        * I should be able to add a note to the transaction that is also searchable later
+
 
 It should have a way to import my previous transactions from all of my accounts at once using common banking file formats.
 

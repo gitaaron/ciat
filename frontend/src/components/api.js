@@ -60,5 +60,9 @@ export default {
   async deleteRule(ruleId) {
     const { data } = await axios.delete(apiBase + `/rules/${ruleId}`)
     return data
+  },
+  async previewRule(ruleData) {
+    const { data } = await axios.post(apiBase + '/rules/preview', ruleData)
+    return data
   }
 }
