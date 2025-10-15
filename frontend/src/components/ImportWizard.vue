@@ -667,13 +667,14 @@ function handleRefreshRules() {
                     <v-select
                       :model-value="getCurrentAccountId(index)"
                       @update:model-value="reassignFile(index, $event)"
-                      :items="props.accounts"
+                      :items="props.accounts.length === 0 ? [{ id: null, name: 'No Account Available' }] : props.accounts"
                       item-title="name"
                       item-value="id"
                       label="Select Account"
                       variant="outlined"
                       density="compact"
                       style="min-width: 200px;"
+                      :disabled="props.accounts.length === 0"
                     />
                   </v-col>
                   <v-col cols="auto">

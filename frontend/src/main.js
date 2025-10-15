@@ -15,15 +15,15 @@ const vuetify = createVuetify({
     themes: {
       light: {
         colors: {
-          primary: '#843246',      // Dark burgundy - main brand color
-          secondary: '#FD7646',    // Orange - secondary actions
-          accent: '#5ABCB4',       // Teal - accent elements
-          error: '#843246',        // Dark burgundy for errors (maintains consistency)
-          info: '#5ABCB4',         // Teal for info
-          success: '#75C18F',      // Mint green for success
-          warning: '#FDBD79',      // Light peach for warnings
-          background: '#FDBD79',   // Light peach background
-          surface: '#FDBD79',      // Light peach surface
+          primary: '#0088a1',
+          secondary: '#ee9b02',
+          accent: '#02eecb',
+          error: '#843246',
+          info: '#5ABCB4',
+          success: '#75C18F',
+          warning: '#FDBD79',
+          background: '#b3ecfb',
+          surface: '#e8ebfd',
         },
       },
     },
