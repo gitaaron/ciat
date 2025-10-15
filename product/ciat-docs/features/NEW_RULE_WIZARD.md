@@ -1,0 +1,22 @@
+# New Rule Wizard
+
+### Overview
+A guided flow to create/edit rules based on user overrides, preview affected transactions, and reapply categorization.
+
+### User Goals
+- Turn a one‑off correction into a reusable rule.
+- Preview the impact before committing changes.
+
+### Functional Requirements
+- When a new override rule is created, **present all impacted transactions for review** before saving.【19†REQUIREMENTS.md】
+- Allow updating the rule or creating **multiple rules**; **most recent takes highest precedence**.【19†REQUIREMENTS.md】
+- After saving, **reapply categorization across all transactions** to align with the latest rules.【19†REQUIREMENTS.md】
+- **Bug behavior**: If preview is requested with **no transactions imported**, do not error; indicate that the rule currently affects **0 transactions**.
+
+### UI Considerations
+- Provide “Expand” to view transactions affected by a rule.
+
+### See Also
+- [User Overrides](./USER_OVERRIDES.md)
+- [Transaction Management](./TRANSACTION_MANAGEMENT.md)
+- [Import Transactions](./IMPORT_TRANSACTIONS.md)
