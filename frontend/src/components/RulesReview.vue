@@ -18,6 +18,19 @@ const editingRule = ref(null)
 const deletingRule = ref(null)
 const rulePreview = ref([])
 const showPreview = ref(false)
+const editForm = ref({
+  category: '',
+  match_type: '',
+  pattern: '',
+  explain: ''
+})
+const saving = ref(false)
+
+const matchTypes = [
+  { value: 'exact', label: 'Exact Match' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'regex', label: 'Regular Expression' }
+]
 
 const currentCategoryRules = computed(() => {
   if (!props.usedRules) return []
@@ -76,6 +89,12 @@ function previousCategory() {
 
 async function editRule(rule) {
   editingRule.value = rule
+  editForm.value = {
+    category: rule.category,
+    match_type: rule.match_type,
+    pattern: rule.pattern,
+    explain: rule.explain || ''
+  }
   await previewRuleImpact(rule)
 }
 
@@ -103,7 +122,12 @@ async function confirmDeleteRule() {
   if (!deletingRule.value) return
   
   try {
-    await api.deleteRule(deletingRule.value.id)
+    // For pattern rules, use pattern: prefix, for user rules use the id directly
+    const ruleId = deletingRule.value.type === 'pattern' 
+      ? `pattern:${deletingRule.value.id}` 
+      : deletingRule.value.id
+    
+    await api.deleteRule(ruleId)
     showPreview.value = false
     deletingRule.value = null
     // Refresh the rules by emitting an event
@@ -114,9 +138,38 @@ async function confirmDeleteRule() {
   }
 }
 
+async function saveRule() {
+  if (!editingRule.value) return
+  
+  saving.value = true
+  try {
+    // For pattern rules, use pattern: prefix, for user rules use the id directly
+    const ruleId = editingRule.value.type === 'pattern' 
+      ? `pattern:${editingRule.value.id}` 
+      : editingRule.value.id
+    
+    await api.updateRule(ruleId, editForm.value)
+    showPreview.value = false
+    editingRule.value = null
+    // Refresh the rules by emitting an event
+    emit('refresh-rules')
+  } catch (error) {
+    console.error('Error updating rule:', error)
+    alert('Error updating rule: ' + error.message)
+  } finally {
+    saving.value = false
+  }
+}
+
 function cancelEdit() {
   editingRule.value = null
   showPreview.value = false
+  editForm.value = {
+    category: '',
+    match_type: '',
+    pattern: '',
+    explain: ''
+  }
 }
 
 function cancelDelete() {
@@ -143,23 +196,6 @@ function formatDate(dateString) {
   })
 }
 
-function getRuleTypeLabel(type) {
-  switch (type) {
-    case 'user_rule': return 'User Rule'
-    case 'pattern': return 'Pattern'
-    case 'ml': return 'ML'
-    default: return 'Unknown'
-  }
-}
-
-function getRuleTypeColor(type) {
-  switch (type) {
-    case 'user_rule': return 'primary'
-    case 'pattern': return 'secondary'
-    case 'ml': return 'info'
-    default: return 'default'
-  }
-}
 </script>
 
 <template>
@@ -216,14 +252,6 @@ function getRuleTypeColor(type) {
             class="mb-3"
           >
             <v-card-title class="d-flex align-center">
-              <v-chip
-                :color="getRuleTypeColor(rule.type)"
-                size="small"
-                class="mr-3"
-              >
-                {{ getRuleTypeLabel(rule.type) }}
-              </v-chip>
-              
               <div class="flex-grow-1">
                 <div class="text-h6">{{ rule.pattern }}</div>
                 <div class="text-caption text-medium-emphasis">
@@ -244,7 +272,6 @@ function getRuleTypeColor(type) {
                 </v-btn>
                 
                 <v-btn
-                  v-if="rule.type === 'user_rule'"
                   @click="editRule(rule)"
                   icon="mdi-pencil"
                   variant="text"
@@ -253,7 +280,6 @@ function getRuleTypeColor(type) {
                 />
                 
                 <v-btn
-                  v-if="rule.type === 'user_rule'"
                   @click="deleteRule(rule)"
                   icon="mdi-delete"
                   variant="text"
@@ -352,10 +378,64 @@ function getRuleTypeColor(type) {
       <v-card>
         <v-card-title class="text-h6">
           <v-icon left color="warning">mdi-eye</v-icon>
-          Rule Impact Preview
+          {{ editingRule ? 'Edit Rule' : 'Rule Impact Preview' }}
         </v-card-title>
         
         <v-card-text>
+          <!-- Edit Form -->
+          <v-form v-if="editingRule" class="mb-4">
+            <v-row>
+              <v-col cols="12" sm="6">
+                <v-select
+                  v-model="editForm.category"
+                  :items="categorySteps"
+                  :item-title="(item, index) => categoryStepNames[index]"
+                  :item-value="(item) => item"
+                  label="Category"
+                  variant="outlined"
+                  density="compact"
+                />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-select
+                  v-model="editForm.match_type"
+                  :items="matchTypes"
+                  item-title="label"
+                  item-value="value"
+                  label="Match Type"
+                  variant="outlined"
+                  density="compact"
+                />
+              </v-col>
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="editForm.pattern"
+                  label="Pattern"
+                  variant="outlined"
+                  density="compact"
+                  hint="Enter the text pattern to match against transaction names/descriptions"
+                  persistent-hint
+                />
+              </v-col>
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="editForm.explain"
+                  label="Explanation (Optional)"
+                  variant="outlined"
+                  density="compact"
+                  hint="Optional explanation for this rule"
+                  persistent-hint
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+          
           <v-alert
             v-if="deletingRule"
             type="warning"
@@ -422,6 +502,15 @@ function getRuleTypeColor(type) {
             @click="cancelEdit(); cancelDelete()"
           >
             Cancel
+          </v-btn>
+          <v-btn
+            v-if="editingRule"
+            color="primary"
+            :loading="saving"
+            @click="saveRule"
+          >
+            <v-icon left>mdi-content-save</v-icon>
+            Save Rule
           </v-btn>
           <v-btn
             v-if="deletingRule"

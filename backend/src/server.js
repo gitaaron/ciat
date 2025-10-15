@@ -9,7 +9,7 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule, deleteUserRule, reapplyCategories, getAllRules, getRulesUsedInImport } from './categorizer/index.js';
+import { guessCategory, addUserRule, updateUserRule, convertPatternToUserRule, deleteUserRule, deletePatternRule, toggleUserRule, togglePatternRule, reapplyCategories, getAllRules, getRulesUsedInImport } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -155,12 +155,66 @@ app.get('/api/rules/user', (req, res) => {
   }
 });
 
+// Update rule
+app.put('/api/rules/:id', async (req, res) => {
+  try {
+    const ruleId = req.params.id;
+    const { category, match_type, pattern, explain } = req.body;
+    
+    // Check if this is a pattern rule (no id in the request, using pattern as id)
+    if (ruleId.startsWith('pattern:')) {
+      // This is a pattern rule, convert it to a user rule
+      const patternId = ruleId.replace('pattern:', '');
+      const result = await convertPatternToUserRule(patternId, { category, match_type, pattern, explain });
+      res.json({ ok: true, ...result });
+    } else {
+      // This is a user rule, update it normally
+      const result = await updateUserRule(ruleId, { category, match_type, pattern, explain });
+      res.json({ ok: true, ...result });
+    }
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Toggle rule enabled/disabled
+app.patch('/api/rules/:id/toggle', async (req, res) => {
+  try {
+    const ruleId = req.params.id;
+    const { enabled } = req.body;
+    
+    // Check if this is a pattern rule
+    if (ruleId.startsWith('pattern:')) {
+      // This is a pattern rule
+      const patternId = ruleId.replace('pattern:', '');
+      const result = await togglePatternRule(patternId, enabled);
+      res.json({ ok: true, ...result });
+    } else {
+      // This is a user rule
+      const result = await toggleUserRule(ruleId, enabled);
+      res.json({ ok: true, ...result });
+    }
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
 // Delete rule
 app.delete('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
-    const result = await deleteUserRule(ruleId);
-    res.json({ ok: true, ...result });
+    
+    // Check if this is a pattern rule
+    if (ruleId.startsWith('pattern:')) {
+      // This is a pattern rule
+      const patternId = ruleId.replace('pattern:', '');
+      const result = await deletePatternRule(patternId);
+      res.json({ ok: true, ...result });
+    } else {
+      // This is a user rule
+      const result = await deleteUserRule(ruleId);
+      res.json({ ok: true, ...result });
+    }
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }

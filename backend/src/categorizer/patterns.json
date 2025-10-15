@@ -20,7 +20,7 @@
     "match_type": "contains",
     "pattern": "AMZN",
     "priority": 200,
-    "enabled": true,
+    "enabled": false,
     "explain": "Amazon purchase"
   }
 ]

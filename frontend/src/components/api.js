@@ -57,6 +57,14 @@ export default {
     const { data } = await axios.get(apiBase + '/rules')
     return data
   },
+  async updateRule(ruleId, ruleData) {
+    const { data } = await axios.put(apiBase + `/rules/${ruleId}`, ruleData)
+    return data
+  },
+  async toggleRule(ruleId, enabled) {
+    const { data } = await axios.patch(apiBase + `/rules/${ruleId}/toggle`, { enabled })
+    return data
+  },
   async deleteRule(ruleId) {
     const { data } = await axios.delete(apiBase + `/rules/${ruleId}`)
     return data

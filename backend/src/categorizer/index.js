@@ -178,6 +178,70 @@ export async function addUserRule({ category, match_type, pattern, explain }) {
   return ruleId;
 }
 
+export async function updateUserRule(ruleId, { category, match_type, pattern, explain }) {
+  const rules = loadJSON('rules.json');
+  const ruleIndex = rules.findIndex(rule => rule.id === ruleId);
+  
+  if (ruleIndex === -1) {
+    throw new Error(`Rule with ID ${ruleId} not found`);
+  }
+  
+  // Update the rule
+  rules[ruleIndex] = {
+    ...rules[ruleIndex],
+    category,
+    match_type,
+    pattern,
+    explain: explain || rules[ruleIndex].explain,
+    updated_at: new Date().toISOString()
+  };
+  
+  saveJSON('rules.json', rules);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { updated: true, ruleId, rule: rules[ruleIndex] };
+}
+
+export async function convertPatternToUserRule(patternId, { category, match_type, pattern, explain }) {
+  const patterns = loadJSON('patterns.json');
+  const userRules = loadJSON('rules.json');
+  
+  // Find the pattern rule
+  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
+  if (patternIndex === -1) {
+    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
+  }
+  
+  // Disable the original pattern rule
+  patterns[patternIndex].enabled = false;
+  saveJSON('patterns.json', patterns);
+  
+  // Create a new user rule with the updated values
+  const priority = Math.max(1000, ...userRules.map(r => r.priority || 0)) + 1; // always win
+  const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const newRule = { 
+    id: ruleId,
+    category, 
+    match_type, 
+    pattern, 
+    priority, 
+    enabled: true, 
+    explain: explain || 'Converted from pattern rule',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString() 
+  };
+  
+  userRules.push(newRule);
+  saveJSON('rules.json', userRules);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { converted: true, ruleId, rule: newRule };
+}
+
 export async function deleteUserRule(ruleId) {
   const rules = loadJSON('rules.json');
   const initialLength = rules.length;
@@ -195,6 +259,61 @@ export async function deleteUserRule(ruleId) {
   await reapplyCategories();
   
   return { deleted: true, ruleId };
+}
+
+export async function deletePatternRule(patternId) {
+  const patterns = loadJSON('patterns.json');
+  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
+  
+  if (patternIndex === -1) {
+    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
+  }
+  
+  // Disable the pattern rule instead of deleting it
+  patterns[patternIndex].enabled = false;
+  saveJSON('patterns.json', patterns);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { deleted: true, patternId };
+}
+
+export async function toggleUserRule(ruleId, enabled) {
+  const rules = loadJSON('rules.json');
+  const ruleIndex = rules.findIndex(rule => rule.id === ruleId);
+  
+  if (ruleIndex === -1) {
+    throw new Error(`Rule with ID ${ruleId} not found`);
+  }
+  
+  // Update the enabled status
+  rules[ruleIndex].enabled = enabled;
+  rules[ruleIndex].updated_at = new Date().toISOString();
+  saveJSON('rules.json', rules);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { toggled: true, ruleId, enabled, rule: rules[ruleIndex] };
+}
+
+export async function togglePatternRule(patternId, enabled) {
+  const patterns = loadJSON('patterns.json');
+  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
+  
+  if (patternIndex === -1) {
+    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
+  }
+  
+  // Update the enabled status
+  patterns[patternIndex].enabled = enabled;
+  saveJSON('patterns.json', patterns);
+  
+  // Automatically reapply categorization to all non-manually-overridden transactions
+  await reapplyCategories();
+  
+  return { toggled: true, patternId, enabled, rule: patterns[patternIndex] };
 }
 
 export async function reapplyCategories() {

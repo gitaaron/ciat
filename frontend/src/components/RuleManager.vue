@@ -42,15 +42,39 @@
             class="elevation-1"
           >
             <template v-slot:item.enabled="{ item }">
-              <v-chip :color="item.enabled ? 'success' : 'error'" size="small">
+              <v-btn
+                @click="toggleRule(item)"
+                :color="item.enabled ? 'success' : 'error'"
+                size="small"
+                variant="outlined"
+              >
                 {{ item.enabled ? 'Enabled' : 'Disabled' }}
-              </v-chip>
+              </v-btn>
             </template>
             
             <template v-slot:item.actions="{ item }">
-              <v-btn @click="deleteRule(item)" color="error" size="small">
-                Delete
-              </v-btn>
+              <div class="d-flex flex-column ga-2 py-4">
+                <v-btn 
+                  @click="editRule(item)" 
+                  color="primary" 
+                  size="small"
+                  variant="outlined"
+                  block
+                >
+                  <v-icon left>mdi-pencil</v-icon>
+                  Edit
+                </v-btn>
+                <v-btn 
+                  @click="deleteRule(item)" 
+                  color="error" 
+                  size="small"
+                  variant="outlined"
+                  block
+                >
+                  <v-icon left>mdi-delete</v-icon>
+                  Delete
+                </v-btn>
+              </div>
             </template>
           </v-data-table>
         </v-card-text>
@@ -94,6 +118,88 @@
       </v-alert>
     </v-card-text>
   </v-card>
+
+  <!-- Edit Rule Dialog -->
+  <v-dialog v-model="showEditDialog" max-width="600">
+    <v-card>
+      <v-card-title class="text-h6">
+        <v-icon left color="primary">mdi-pencil</v-icon>
+        Edit Rule
+      </v-card-title>
+      
+      <v-card-text>
+        <v-form class="mb-4">
+          <v-row>
+            <v-col cols="12" sm="6">
+              <v-select
+                v-model="editForm.category"
+                :items="categorySteps"
+                :item-title="(item, index) => categoryStepNames[index]"
+                :item-value="(item) => item"
+                label="Category"
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-select
+                v-model="editForm.match_type"
+                :items="matchTypes"
+                item-title="label"
+                item-value="value"
+                label="Match Type"
+                variant="outlined"
+                density="compact"
+              />
+            </v-col>
+          </v-row>
+          
+          <v-row>
+            <v-col cols="12">
+              <v-text-field
+                v-model="editForm.pattern"
+                label="Pattern"
+                variant="outlined"
+                density="compact"
+                hint="Enter the text pattern to match against transaction names/descriptions"
+                persistent-hint
+              />
+            </v-col>
+          </v-row>
+          
+          <v-row>
+            <v-col cols="12">
+              <v-text-field
+                v-model="editForm.explain"
+                label="Explanation (Optional)"
+                variant="outlined"
+                density="compact"
+                hint="Optional explanation for this rule"
+                persistent-hint
+              />
+            </v-col>
+          </v-row>
+        </v-form>
+      </v-card-text>
+      
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          @click="cancelEdit"
+        >
+          Cancel
+        </v-btn>
+        <v-btn
+          color="primary"
+          :loading="saving"
+          @click="saveRule"
+        >
+          <v-icon left>mdi-content-save</v-icon>
+          Save Rule
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
@@ -105,6 +211,24 @@ const emit = defineEmits(['create-new'])
 const rules = ref([])
 const loading = ref(false)
 const error = ref(null)
+const editingRule = ref(null)
+const editForm = ref({
+  category: '',
+  match_type: '',
+  pattern: '',
+  explain: ''
+})
+const saving = ref(false)
+const showEditDialog = ref(false)
+
+const matchTypes = [
+  { value: 'exact', label: 'Exact Match' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'regex', label: 'Regular Expression' }
+]
+
+const categorySteps = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings']
+const categoryStepNames = ['Fixed Costs', 'Investments', 'Guilt Free', 'Short Term Savings']
 
 const sortedRules = computed(() => {
   return [...rules.value].sort((a, b) => {
@@ -130,11 +254,59 @@ async function loadRules() {
   }
 }
 
+async function editRule(rule) {
+  editingRule.value = rule
+  editForm.value = {
+    category: rule.category,
+    match_type: rule.match_type,
+    pattern: rule.pattern,
+    explain: rule.explain || ''
+  }
+  showEditDialog.value = true
+}
+
+async function saveRule() {
+  if (!editingRule.value) return
+  
+  saving.value = true
+  try {
+    // For pattern rules, use pattern: prefix, for user rules use the id directly
+    const ruleId = editingRule.value.type === 'pattern' 
+      ? `pattern:${editingRule.value.id}` 
+      : editingRule.value.id
+    
+    await api.updateRule(ruleId, editForm.value)
+    showEditDialog.value = false
+    editingRule.value = null
+    await loadRules()
+  } catch (err) {
+    console.error('Error updating rule:', err)
+    error.value = 'Error updating rule: ' + err.message
+  } finally {
+    saving.value = false
+  }
+}
+
+function cancelEdit() {
+  editingRule.value = null
+  showEditDialog.value = false
+  editForm.value = {
+    category: '',
+    match_type: '',
+    pattern: '',
+    explain: ''
+  }
+}
+
 async function toggleRule(rule) {
   try {
-    // For now, we'll need to implement this in the backend
-    // This is a placeholder for the toggle functionality
-    error.value = 'Toggle functionality not yet implemented'
+    // For pattern rules, use pattern: prefix, for user rules use the id directly
+    const ruleId = rule.type === 'pattern' 
+      ? `pattern:${rule.id}` 
+      : rule.id
+    
+    await api.toggleRule(ruleId, !rule.enabled)
+    await loadRules()
   } catch (err) {
     error.value = err.response?.data?.error || 'Failed to toggle rule'
   }
