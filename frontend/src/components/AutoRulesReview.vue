@@ -173,7 +173,7 @@
                 <div v-else class="rule-details">
                   <div class="rule-stats">
                     <span class="stat">
-                      <strong>{{ rule.frequency }}</strong> occurrences
+                      <strong>{{ ruleFrequencies.get(rule.id) || 0 }}</strong> occurrences
                     </span>
                     <span class="stat">
                       <strong>{{ Math.round(rule.confidence * 100) }}%</strong> confidence
@@ -185,13 +185,13 @@
                       {{ rule.source }}
                     </span>
                   </div>
-                  <p class="rule-explanation">{{ rule.explain }}</p>
+                  <p class="rule-explanation">{{ ruleExplanations.get(rule.id) || rule.explain }}</p>
                 </div>
 
                 <!-- Expanded Transactions View -->
                 <div v-if="expandedRules.includes(rule.id)" class="rule-transactions">
                   <div class="transactions-header">
-                    <span>All matching transactions ({{ getPreviewCount(rule.id) }} total):</span>
+                    <span>All matching transactions ({{ rulePreviewCounts.get(rule.id) || 0 }} total):</span>
                     <button 
                       class="btn btn-sm btn-secondary" 
                       @click="toggleExpanded(rule.id)"
@@ -201,7 +201,7 @@
                   </div>
                   <div class="transactions-list">
                     <div 
-                      v-for="match in getAllMatches(rule.id)" 
+                      v-for="match in (ruleMatches.get(rule.id) || [])" 
                       :key="match.id"
                       class="transaction-item"
                     >
@@ -354,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import api from './api.js'
 import MultiLabelSelector from './MultiLabelSelector.vue'
 
@@ -388,6 +388,43 @@ const createRuleParent = ref(null)
 const snackMessage = ref('')
 const showSnack = ref(false)
 const rulesContainer = ref(null)
+
+// Reactive data for rule statistics
+const ruleFrequencies = ref(new Map())
+const ruleExplanations = ref(new Map())
+const rulePreviewCounts = ref(new Map())
+const ruleMatches = ref(new Map())
+
+// Function to update all rule statistics
+async function updateRuleStatistics() {
+  const allRules = [...newRules.value, ...(props.autoRules?.rules || [])]
+  
+  for (const rule of allRules) {
+    try {
+      const frequency = await getCurrentFrequency(rule.id)
+      const explanation = await getCurrentExplanation(rule)
+      const previewCount = await getPreviewCount(rule.id)
+      const matches = await getAllMatches(rule.id)
+      
+      ruleFrequencies.value.set(rule.id, frequency)
+      ruleExplanations.value.set(rule.id, explanation)
+      rulePreviewCounts.value.set(rule.id, previewCount)
+      ruleMatches.value.set(rule.id, matches)
+    } catch (error) {
+      console.error(`Error updating statistics for rule ${rule.id}:`, error)
+    }
+  }
+}
+
+// Watch for changes in rules and update statistics
+watch([() => props.autoRules, newRules], async () => {
+  await updateRuleStatistics()
+}, { deep: true })
+
+// Update statistics when component mounts
+onMounted(async () => {
+  await updateRuleStatistics()
+})
 
 
 // Get the effective rules (new rules first, then original + modifications)
@@ -450,70 +487,277 @@ async function applySingleRule(rule) {
   }
 }
 
-function getPreviewCount(ruleId) {
-  // Check if it's a new rule
-  const newRule = newRules.value.find(r => r.id === ruleId)
-  if (newRule) {
-    return 1 // New rules show 1 match
-  }
-  
-  // For existing rules, return the filtered count
-  return getAllMatches(ruleId).length
+async function getPreviewCount(ruleId) {
+  // Use the same recalculation logic as getAllMatches
+  const ruleMatches = await recalculateRuleMatches()
+  const matches = ruleMatches.get(ruleId) || []
+  return matches.length
 }
 
-function getPreviewMatches(ruleId) {
-  const preview = props.autoRules.previews?.find(p => p.rule.id === ruleId)
-  return preview?.matches || []
+async function getCurrentFrequency(ruleId) {
+  // Get the current number of matches for this rule after recalculation
+  const ruleMatches = await recalculateRuleMatches()
+  const matches = ruleMatches.get(ruleId) || []
+  return matches.length
 }
 
-function getAllMatches(ruleId) {
-  // Check if it's a new rule
-  const newRule = newRules.value.find(r => r.id === ruleId)
-  if (newRule) {
-    // For new rules, we need to simulate matches
-    // This is a simplified version - in a real implementation, you'd want to
-    // recalculate matches based on the new rule pattern
-    return [{
-      id: newRule.transactionId,
-      name: createRuleTransaction.value?.name || 'Unknown',
-      amount: createRuleTransaction.value?.amount || 0,
-      date: createRuleTransaction.value?.date || new Date().toISOString(),
-      currentCategory: createRuleTransaction.value?.currentCategory,
-      newCategory: newRule.category,
-      wouldChange: createRuleTransaction.value?.currentCategory !== newRule.category
-    }]
+async function getCurrentExplanation(rule) {
+  const currentMatches = await getCurrentFrequency(rule.id)
+  
+  // For new rules, use the original explanation
+  if (rule.isNewRule) {
+    return rule.explain
   }
   
-  // For existing rules, filter out transactions that are now covered by higher priority rules
-  const preview = props.autoRules.previews?.find(p => p.rule.id === ruleId)
-  if (!preview) return []
+  // For original rules, update the explanation to reflect current state
+  if (currentMatches === 0) {
+    return `No current matches - all transactions claimed by higher priority rules`
+  } else if (currentMatches === 1) {
+    return `Currently matches 1 transaction (${currentMatches} of original ${rule.frequency || 0} claimed by higher priority rules)`
+  } else {
+    return `Currently matches ${currentMatches} transactions (${currentMatches} of original ${rule.frequency || 0} claimed by higher priority rules)`
+  }
+}
+
+async function getPreviewMatches(ruleId) {
+  // Use the same recalculation logic for consistency
+  const ruleMatches = await recalculateRuleMatches()
+  const matches = ruleMatches.get(ruleId) || []
+  // Return only the first few matches for preview
+  return matches.slice(0, 3)
+}
+
+// Cache for rule matches to avoid recalculating on every call
+let cachedRuleMatches = null
+let lastCalculationHash = null
+let forceRecalculation = false
+
+// Re-run rule matching algorithm with priority-based conflict resolution
+async function recalculateRuleMatches() {
+  if (!props.autoRules.previews || !props.transactions) return new Map()
   
-  // Get all new rules that have higher priority
-  const higherPriorityRules = newRules.value.filter(newRule => newRule.priority > 200)
-  
-  // Filter out transactions that would be matched by higher priority rules
-  const filteredMatches = preview.matches.filter(match => {
-    // Check if this transaction would be matched by any higher priority rule
-    return !higherPriorityRules.some(higherRule => {
-      const normalized = match.name.toLowerCase()
-      switch (higherRule.type) {
-        case 'contains':
-          return normalized.includes(higherRule.pattern)
-        case 'exact':
-          return normalized === higherRule.pattern
-        case 'regex':
-          try {
-            return new RegExp(higherRule.pattern, 'i').test(normalized)
-          } catch (e) {
-            return false
-          }
-        default:
-          return false
+  // If there are no new rules, just return the original preview data
+  if (newRules.value.length === 0) {
+    console.log('No new rules, returning original preview data')
+    const originalMatches = new Map()
+    props.autoRules.previews.forEach(preview => {
+      if (preview.rule && preview.matches) {
+        originalMatches.set(preview.rule.id, preview.matches)
       }
     })
+    return originalMatches
+  }
+  
+  console.log('New rules exist, doing full recalculation')
+  
+  // Create a hash of the current state to check if we need to recalculate
+  const currentHash = JSON.stringify({
+    newRulesCount: newRules.value.length,
+    newRulesIds: newRules.value.map(r => r.id).sort(),
+    originalRulesCount: props.autoRules.rules?.length || 0
   })
   
-  return filteredMatches
+  // Return cached result if nothing has changed and we're not forcing recalculation
+  if (cachedRuleMatches && lastCalculationHash === currentHash && !forceRecalculation) {
+    console.log('Using cached rule matches')
+    return cachedRuleMatches
+  }
+  
+  console.log('Recalculating rule matches (cache miss or cleared)', {
+    hasCachedMatches: !!cachedRuleMatches,
+    lastHash: lastCalculationHash,
+    currentHash: currentHash,
+    hashesMatch: lastCalculationHash === currentHash
+  })
+  
+  // Get all transactions from the original previews
+  const allTransactions = []
+  props.autoRules.previews.forEach(preview => {
+    if (preview.matches) {
+      allTransactions.push(...preview.matches)
+    }
+  })
+  
+  console.log('Preview transactions count:', allTransactions.length)
+  console.log('Props transactions available:', !!props.transactions)
+  console.log('Props transactions length:', props.transactions?.length || 0)
+  
+  // For recalculation with new rules, we need to work with ALL transactions
+  // Try to get transactions from props first (current import), then from database
+  if (newRules.value.length > 0) {
+    if (props.transactions && props.transactions.length > 0) {
+      console.log('Using props.transactions for recalculation:', props.transactions.length)
+      // Use the transactions from props (current import)
+      allTransactions.length = 0 // Clear the array
+      allTransactions.push(...props.transactions)
+      console.log('All transactions after adding props transactions:', allTransactions.length)
+    } else {
+      try {
+        console.log('Fetching all transactions from database for recalculation')
+        const allDbTransactions = await api.listTransactions()
+        console.log('Database transactions count:', allDbTransactions.length)
+        console.log('Sample database transaction:', allDbTransactions[0])
+        console.log('Full API response:', allDbTransactions)
+        
+        // Use database transactions instead of preview transactions for recalculation
+        allTransactions.length = 0 // Clear the array
+        allTransactions.push(...allDbTransactions)
+        console.log('All transactions after adding database transactions:', allTransactions.length)
+      } catch (error) {
+        console.error('Error fetching all transactions:', error)
+        console.error('Error details:', error.response?.data || error.message)
+        // Fall back to preview transactions if database fetch fails
+      }
+    }
+  }
+  
+        // Remove duplicates based on transaction ID, but be smarter about it
+        console.log('Before duplicate removal:', allTransactions.length)
+        console.log('Sample transaction IDs:', allTransactions.slice(0, 3).map(tx => ({ id: tx.id, name: tx.name })))
+        
+        // Check for ID patterns
+        const idCounts = {}
+        allTransactions.forEach(tx => {
+          idCounts[tx.id] = (idCounts[tx.id] || 0) + 1
+        })
+        console.log('ID frequency analysis:', Object.entries(idCounts).slice(0, 10))
+        console.log('Total unique IDs:', Object.keys(idCounts).length)
+        
+        // If all transactions have the same ID, don't remove duplicates
+        // This happens when the database returns the same transaction multiple times
+        const uniqueIds = Object.keys(idCounts)
+        let uniqueTransactions
+        if (uniqueIds.length === 1) {
+          console.log('All transactions have the same ID, keeping all transactions')
+          console.log('Sample transaction data:', allTransactions.slice(0, 2))
+          uniqueTransactions = allTransactions
+        } else {
+          // Only remove duplicates if there are actually different IDs
+          uniqueTransactions = allTransactions.filter((tx, index, self) =>
+            index === self.findIndex(t => t.id === tx.id)
+          )
+        }
+        
+        console.log('After duplicate removal:', uniqueTransactions.length)
+  
+  console.log('Recalculating rule matches:', {
+    totalTransactions: uniqueTransactions.length,
+    newRulesCount: newRules.value.length,
+    originalRulesCount: props.autoRules.rules?.length || 0,
+    sampleTransactions: uniqueTransactions.slice(0, 3).map(tx => ({ id: tx.id, name: tx.name })),
+    allTransactionNames: uniqueTransactions.map(tx => tx.name)
+  })
+  
+  // Combine all rules: new rules first (highest priority), then original rules
+  const allRules = [
+    ...newRules.value,
+    ...props.autoRules.rules
+  ]
+  
+  // Sort by priority (highest first)
+  allRules.sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  
+  console.log('All rules in priority order:', allRules.map(rule => ({
+    id: rule.id,
+    pattern: rule.pattern,
+    type: rule.type,
+    priority: rule.priority,
+    isNewRule: rule.isNewRule
+  })))
+  
+  // Track which transactions are covered by higher priority rules
+  const coveredTransactions = new Set()
+  const ruleMatches = new Map()
+  
+  // Process each rule in priority order
+  for (const rule of allRules) {
+    const matches = []
+    
+    for (const tx of uniqueTransactions) {
+      // Skip if already covered by higher priority rule
+      if (coveredTransactions.has(tx.id)) continue
+      
+      // Check if transaction matches this rule
+      if (transactionMatchesRule(tx, rule)) {
+        matches.push({
+          ...tx,
+          newCategory: rule.category,
+          wouldChange: tx.currentCategory !== rule.category
+        })
+        coveredTransactions.add(tx.id)
+      }
+    }
+    
+    if (matches.length > 0) {
+      ruleMatches.set(rule.id, matches)
+      console.log(`Rule "${rule.pattern}" (${rule.type}, priority: ${rule.priority}) matched ${matches.length} transactions:`, matches.map(m => m.name))
+    } else {
+      console.log(`Rule "${rule.pattern}" (${rule.type}, priority: ${rule.priority}) matched 0 transactions`)
+    }
+  }
+  
+  console.log('Final rule matches summary:', Array.from(ruleMatches.entries()).map(([id, matches]) => ({
+    ruleId: id,
+    matchCount: matches.length
+  })))
+  
+  // Debug: Show some sample transactions that didn't match any rules
+  const unmatchedTransactions = uniqueTransactions.filter(tx => !coveredTransactions.has(tx.id))
+  if (unmatchedTransactions.length > 0) {
+    console.log(`Found ${unmatchedTransactions.length} unmatched transactions:`, unmatchedTransactions.slice(0, 3).map(tx => tx.name))
+  }
+  
+  // Cache the result
+  cachedRuleMatches = ruleMatches
+  lastCalculationHash = currentHash
+  forceRecalculation = false // Reset the force flag
+  
+  return ruleMatches
+}
+
+// Check if a transaction matches a rule
+function transactionMatchesRule(transaction, rule) {
+  const normalized = (transaction.name || '').toLowerCase()
+  const pattern = (rule.pattern || '').toLowerCase()
+  
+  let matches = false
+  switch (rule.type) {
+    case 'contains':
+      matches = normalized.includes(pattern)
+      break
+    case 'exact':
+      matches = normalized === pattern
+      break
+    case 'regex':
+      try {
+        matches = new RegExp(rule.pattern, 'i').test(normalized)
+      } catch (e) {
+        matches = false
+      }
+      break
+    case 'mcc':
+      matches = transaction.mcc === rule.pattern
+      break
+    default:
+      matches = false
+  }
+  
+  // Debug: Log some matches for the new rule
+  if (rule.isNewRule && matches) {
+    console.log(`New rule "${rule.pattern}" matched transaction: "${transaction.name}"`)
+  }
+  
+  return matches
+}
+
+async function getAllMatches(ruleId) {
+  // Recalculate all rule matches with priority-based conflict resolution
+  const ruleMatches = await recalculateRuleMatches()
+  
+  // Return matches for this specific rule
+  const matches = ruleMatches.get(ruleId) || []
+  console.log(`Rule ${ruleId} has ${matches.length} matches after recalculation`)
+  return matches
 }
 
 function startEditing(rule) {
@@ -551,6 +795,11 @@ function removeRule(ruleId) {
   if (confirm('Are you sure you want to remove this rule?')) {
     // Mark as removed
     modifiedRules.value.set(ruleId, null)
+    
+    // Clear the cache since we removed a rule
+    cachedRuleMatches = null
+    lastCalculationHash = null
+    forceRecalculation = true
   }
 }
 
@@ -563,15 +812,39 @@ function toggleExpanded(ruleId) {
   }
 }
 
+// Extract merchant name from transaction name, removing store numbers and common suffixes
+function extractMerchantName(transactionName) {
+  if (!transactionName) return ''
+  
+  // Remove common patterns like store numbers, locations, etc.
+  let merchantName = transactionName
+  
+  // Remove store numbers (e.g., "STARBUCKS #1234" -> "STARBUCKS")
+  merchantName = merchantName.replace(/\s*#\d+\s*$/i, '')
+  
+  // Remove location suffixes (e.g., "STARBUCKS TORONTO ON" -> "STARBUCKS")
+  merchantName = merchantName.replace(/\s+(ON|QC|BC|AB|MB|SK|NS|NB|NL|PE|YT|NT|NU)\s*$/i, '')
+  
+  // Remove common store suffixes
+  merchantName = merchantName.replace(/\s+(STORE|LOCATION|SHOP)\s*\d*\s*$/i, '')
+  
+  // Remove extra whitespace
+  merchantName = merchantName.trim()
+  
+  return merchantName
+}
+
 function createRuleFromTransaction(transaction, parentRule) {
   // Store the transaction and parent rule for the dialog
   createRuleTransaction.value = transaction
   createRuleParent.value = parentRule
   
   // Initialize the create rule data with defaults
+  // Extract just the merchant name, removing common suffixes like store numbers
+  const merchantName = extractMerchantName(transaction.name)
   createRuleData.value = {
     type: 'contains',
-    pattern: transaction.name.toLowerCase(),
+    pattern: merchantName.toLowerCase(),
     category: transaction.currentCategory || transaction.newCategory || 'guilt_free',
     labels: []
   }
@@ -598,18 +871,42 @@ function saveNewRule() {
     labels: createRuleData.value.labels || [],
     confidence: 1.0,
     frequency: 1,
-    priority: 300, // Highest priority for user-created rules
+    priority: 1000, // High priority for user-created rules (matches backend expectation)
     source: 'user_created',
     explain: `User-created rule from transaction: "${createRuleTransaction.value.name}"`,
     actualMatches: 1,
     coverage: 0,
     isNewRule: true,
     parentRuleId: createRuleParent.value?.id,
-    transactionId: createRuleTransaction.value.id
+    transactionId: createRuleTransaction.value.id,
+    // Store the transaction data with the rule so we can display it later
+    sourceTransaction: {
+      id: createRuleTransaction.value.id,
+      name: createRuleTransaction.value.name,
+      amount: createRuleTransaction.value.amount,
+      date: createRuleTransaction.value.date,
+      currentCategory: createRuleTransaction.value.currentCategory
+    }
   }
   
   // Add to new rules list (will appear at top due to effectiveRules ordering)
   newRules.value.push(newRule)
+  
+  // Clear the cache since we added a new rule
+  console.log('Clearing cache after adding new rule:', newRule.pattern)
+  cachedRuleMatches = null
+  lastCalculationHash = null
+  forceRecalculation = true
+  
+  // Force an immediate recalculation to ensure the UI updates correctly
+  setTimeout(async () => {
+    console.log('Forcing recalculation after new rule addition')
+    // Ensure cache is definitely cleared and force recalculation
+    cachedRuleMatches = null
+    lastCalculationHash = null
+    forceRecalculation = true
+    await recalculateRuleMatches()
+  }, 0)
   
   // Collapse all expanded rules
   expandedRules.value = []
@@ -651,7 +948,9 @@ function formatDate(dateStr) {
 
 function formatAmount(amount) {
   if (amount === null || amount === undefined || isNaN(amount)) return '$0.00'
-  return `$${Math.abs(Number(amount)).toFixed(2)}`
+  const numAmount = Number(amount)
+  if (isNaN(numAmount)) return '$0.00'
+  return `$${Math.abs(numAmount).toFixed(2)}`
 }
 
 function showSnackMessage(message) {

@@ -45,7 +45,13 @@ CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_tx_account ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_tx_cat ON transactions(category);
 CREATE INDEX IF NOT EXISTS idx_tx_labels ON transactions(labels);
-
--- Migration: Add labels column if it doesn't exist
-ALTER TABLE transactions ADD COLUMN labels TEXT;
 `);
+
+// Migration: Add labels column if it doesn't exist
+try {
+  db.exec('ALTER TABLE transactions ADD COLUMN labels TEXT;');
+  console.log('Added labels column to transactions table');
+} catch (e) {
+  // Column already exists, ignore error
+  console.log('Labels column already exists in transactions table');
+}

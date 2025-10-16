@@ -313,7 +313,7 @@ function formatDate(dateString) {
                 
                 <template v-slot:item.amount="{ item }">
                   <span class="font-weight-medium">
-                    ${{ Number(item.amount).toFixed(2) }}
+                    ${{ item.amount !== null && item.amount !== undefined && !isNaN(item.amount) ? Number(item.amount).toFixed(2) : '0.00' }}
                   </span>
                 </template>
                 
@@ -486,7 +486,7 @@ function formatDate(dateString) {
           >
             <template v-slot:item.amount="{ item }">
               <span class="font-weight-medium">
-                ${{ Number(item.amount).toFixed(2) }}
+                ${{ item.amount !== null && item.amount !== undefined && !isNaN(item.amount) ? Number(item.amount).toFixed(2) : '0.00' }}
               </span>
             </template>
             
