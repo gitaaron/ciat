@@ -3,12 +3,13 @@
 import { ref, computed, watch } from 'vue'
 import api from './api.js'
 import RulesReview from './RulesReview.vue'
+import AutoRulesReview from './AutoRulesReview.vue'
 
 const props = defineProps({ accounts: Array })
 const emit = defineEmits(['refresh-accounts', 'import-complete'])
 
 const newAccount = ref('')
-const step = ref(1) // 1: file selection, 2: account assignment, 3: review, 4: complete
+const step = ref(1) // 1: file selection, 2: account assignment, 3: auto rules, 4: review, 5: complete
 const creating = ref(false)
 const createError = ref('')
 const createForm = ref(null)
@@ -25,6 +26,8 @@ const fileAnalysis = ref([])
 const filesByAccount = ref(new Map()) // Map<accountId, File[]>
 const previewsByAccount = ref(new Map()) // Map<accountId, preview[]>
 const usedRules = ref([])
+const autoRules = ref(null)
+const allTransactions = ref([])
 const isDragOver = ref(false)
 const processing = ref(false)
 const currentCategoryStep = ref(0) // 0: fixed, 1: investments, 2: guilt_free, 3: short_term
@@ -301,13 +304,26 @@ async function processAllFiles() {
         if (res.usedRules) {
           usedRules.value = res.usedRules
         }
+        
+        // Store auto rules and all transactions
+        if (res.autoRules) {
+          autoRules.value = res.autoRules
+        }
+        
+        // Collect all transactions for auto rules
+        allTransactions.value = res.preview || []
       } catch (error) {
         console.error(`Error processing file ${file.name}:`, error)
         alert(`Error processing file ${file.name}: ${error.message}`)
       }
     }
     
-    step.value = 3
+    // Go to auto rules step if we have auto rules, otherwise go to review
+    if (autoRules.value && autoRules.value.rules && autoRules.value.rules.length > 0) {
+      step.value = 3 // Auto rules step
+    } else {
+      step.value = 4 // Review step
+    }
     currentCategoryStep.value = 0
   } catch (error) {
     console.error('Error processing file:', error)
@@ -390,6 +406,17 @@ function handleRulesCancel() {
 function handleRefreshRules() {
   // Refresh rules by reprocessing the import
   processAllFiles()
+}
+
+function handleAutoRulesSkip() {
+  // Skip auto rules and go to review step
+  step.value = 4
+}
+
+function handleAutoRulesApplied(result) {
+  console.log('Auto rules applied:', result)
+  // Go to review step after applying auto rules
+  step.value = 4
 }
 </script>
 
@@ -521,10 +548,10 @@ function handleRefreshRules() {
 
     <!-- Import Transactions Section -->
     <v-card>
-      <v-card-title class="text-h5">
-        <v-icon left>mdi-upload</v-icon>
-        Import Transactions
-      </v-card-title>
+    <v-card-title class="text-h5">
+      <v-icon left>mdi-upload</v-icon>
+      Import Transactions
+    </v-card-title>
       
       <!-- Step 1: File Selection -->
       <v-card-text v-if="step === 1">
@@ -720,8 +747,18 @@ function handleRefreshRules() {
       </v-row>
     </v-card-text>
 
-    <!-- Step 3: Review Rules -->
+    <!-- Step 3: Auto Rules Review -->
     <v-card-text v-if="step === 3">
+      <AutoRulesReview
+        :auto-rules="autoRules"
+        :transactions="allTransactions"
+        @skip="handleAutoRulesSkip"
+        @applied="handleAutoRulesApplied"
+      />
+    </v-card-text>
+
+    <!-- Step 4: Review Rules -->
+    <v-card-text v-if="step === 4">
       <RulesReview
         :used-rules="usedRules"
         :accounts="accounts"
@@ -731,8 +768,8 @@ function handleRefreshRules() {
       />
     </v-card-text>
 
-    <!-- Step 4: Complete -->
-    <v-card-text v-if="step === 4">
+    <!-- Step 5: Complete -->
+    <v-card-text v-if="step === 5">
       <v-card variant="outlined" class="text-center">
         <v-card-text class="pa-8">
           <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>

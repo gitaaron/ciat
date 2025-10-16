@@ -9,7 +9,7 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule, updateUserRule, convertPatternToUserRule, deleteUserRule, deletePatternRule, toggleUserRule, togglePatternRule, reapplyCategories, getAllRules, getRulesUsedInImport } from './categorizer/index.js';
+import { guessCategory, addUserRule, updateUserRule, convertPatternToUserRule, deleteUserRule, deletePatternRule, toggleUserRule, togglePatternRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -230,6 +230,43 @@ app.post('/api/reapply-categories', async (req, res) => {
   }
 });
 
+// Auto rule generation endpoints
+app.post('/api/auto-rules/generate', async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    
+    if (!transactions || !Array.isArray(transactions)) {
+      return res.status(400).json({ error: 'transactions array is required' });
+    }
+    
+    const result = await generateAutoRules(transactions);
+    res.json(result);
+  } catch (error) {
+    console.error('Auto rule generation error:', error);
+    res.status(500).json({ error: `Failed to generate auto rules: ${error.message}` });
+  }
+});
+
+app.post('/api/auto-rules/apply', async (req, res) => {
+  try {
+    const { rulesToApply, transactions } = req.body;
+    
+    if (!rulesToApply || !Array.isArray(rulesToApply)) {
+      return res.status(400).json({ error: 'rulesToApply array is required' });
+    }
+    
+    if (!transactions || !Array.isArray(transactions)) {
+      return res.status(400).json({ error: 'transactions array is required' });
+    }
+    
+    const result = await applyAutoRules(rulesToApply, transactions);
+    res.json(result);
+  } catch (error) {
+    console.error('Auto rule application error:', error);
+    res.status(500).json({ error: `Failed to apply auto rules: ${error.message}` });
+  }
+});
+
 // Analyze files and suggest account mappings
 app.post('/api/import/analyze', upload.array('files'), (req, res) => {
   const files = req.files || [];
@@ -306,6 +343,22 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
     // Get rules used in this import
     const usedRules = getRulesUsedInImport(deduped);
     
+    // Generate auto rules for new transactions (only if there are enough new transactions)
+    let autoRules = null;
+    console.log(`Checking auto rule generation: ${deduped.length} new transactions`);
+    if (deduped.length >= 5) { // Only generate auto rules if we have enough data
+      try {
+        console.log('Generating auto rules...');
+        autoRules = await generateAutoRules(deduped);
+        console.log('Auto rules generated:', autoRules ? autoRules.rules.length : 0, 'rules');
+      } catch (error) {
+        console.warn('Auto rule generation failed:', error);
+        // Don't fail the import if auto rule generation fails
+      }
+    } else {
+      console.log('Not enough transactions for auto rule generation (need at least 5)');
+    }
+    
     res.json({ 
       preview: deduped,
       format: format,
@@ -313,7 +366,8 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       totalTransactions: rows.length,
       newTransactions: deduped.length,
       duplicatesSkipped: rows.length - deduped.length,
-      usedRules: usedRules
+      usedRules: usedRules,
+      autoRules: autoRules
     });
     
   } catch (error) {

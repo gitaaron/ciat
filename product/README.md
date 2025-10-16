@@ -22,6 +22,8 @@ This folder contains a set of docs for humans and AI code tools.
   - Reports & Charts → [`features/REPORTS_AND_CHARTS.md`](features/REPORTS_AND_CHARTS.md)
   - Transaction Management → [`features/TRANSACTION_MANAGEMENT.md`](features/TRANSACTION_MANAGEMENT.md)
   - User Overrides → [`features/USER_OVERRIDES.md`](features/USER_OVERRIDES.md)
+  - Transaction Labels → [`features/TRANSACTION_LABELS.md`](features/TRANSACTION_LABELS.md)
+
 
 - **UX** → Visual language and app behavior
   → [`ux/STYLE.md`](ux/STYLE.md), [`ux/USER_EXPERIENCE.md`](ux/USER_EXPERIENCE.md)

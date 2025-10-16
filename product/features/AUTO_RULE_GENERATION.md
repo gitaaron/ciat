@@ -67,6 +67,12 @@ Reduce collisions (e.g., “subway” restaurant vs. “subway transit”):
 - Generate exception/guard rules when two categories are detected for similar tokens.
 - Place exception rules at higher priority.
 
+#### 9. Repeated matching
+
+Rules should be created in such a way that each transaction only applies to a single rule.
+
+If it is possible that a transaction might apply to more than one rule then it should be applied to the one with higher priority (see: Confidence Scoring in features/CATEGORY_MATCHING.md)
+
 ---
 
 ### Non-Goals
@@ -79,6 +85,13 @@ Reduce collisions (e.g., “subway” restaurant vs. “subway transit”):
 - % of transactions auto-categorized on first import.
 - Acceptance rate of proposed rules.
 - Reduction in manual edits after rule adoption.
+
+### UX
+
+- When showing each proposed auto generated rules, it should be possible to:
+    - edit the rule
+    - remove it from the list of proposed new rules
+    - expand to see all transactions that would apply to the rule
 
 ---
 

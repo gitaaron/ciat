@@ -384,3 +384,45 @@ export function getRulesUsedInImport(transactions) {
   
   return Array.from(usedRules.values());
 }
+
+export async function generateAutoRules(transactions) {
+  const { generateAutoRules: generateRules, previewRuleImpact } = await import('./autoRuleGenerator.js');
+  
+  if (!transactions || transactions.length === 0) {
+    return { rules: [], analysis: null, previews: [] };
+  }
+  
+  // Generate auto rules
+  const result = generateRules(transactions);
+  
+  // Preview rule impact
+  const previews = previewRuleImpact(result.rules, transactions);
+  
+  return {
+    ...result,
+    previews
+  };
+}
+
+export async function applyAutoRules(rulesToApply, transactions) {
+  let appliedCount = 0;
+
+  for (const rule of rulesToApply) {
+    try {
+      // Convert auto rule to user rule format
+      const userRule = {
+        category: rule.category,
+        match_type: rule.type === 'mcc' ? 'exact' : rule.type,
+        pattern: rule.pattern,
+        explain: rule.explain || `Auto-generated: "${rule.pattern}" ${rule.type} rule`
+      };
+
+      await addUserRule(userRule);
+      appliedCount++;
+    } catch (error) {
+      console.error(`Failed to apply auto rule ${rule.id}:`, error);
+    }
+  }
+
+  return { applied: appliedCount, total: rulesToApply.length };
+}

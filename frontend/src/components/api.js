@@ -72,5 +72,14 @@ export default {
   async previewRule(ruleData) {
     const { data } = await axios.post(apiBase + '/rules/preview', ruleData)
     return data
-  }
+  },
+  // Auto rule generation APIs
+  async generateAutoRules(transactions) {
+    const { data } = await axios.post(apiBase + '/auto-rules/generate', { transactions })
+    return data
+  },
+    async applyAutoRules(rulesToApply, transactions) {
+      const { data } = await axios.post(apiBase + '/auto-rules/apply', { rulesToApply, transactions })
+      return data
+    }
 }
