@@ -323,6 +323,19 @@
                 <option value="">Uncategorized</option>
               </select>
             </div>
+            
+            <div class="form-row">
+              <label>Labels (Optional):</label>
+              <div class="label-autocomplete-container">
+                <MultiLabelSelector
+                  v-model="createRuleData.labels"
+                  label=""
+                  placeholder="e.g., Coffee, Travel, Work"
+                  hint=""
+                />
+              </div>
+              <small class="form-help">Optional labels for grouping transactions</small>
+            </div>
           </div>
         </div>
         
@@ -343,6 +356,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from './api.js'
+import MultiLabelSelector from './MultiLabelSelector.vue'
 
 const props = defineProps({
   autoRules: Object,
@@ -558,7 +572,8 @@ function createRuleFromTransaction(transaction, parentRule) {
   createRuleData.value = {
     type: 'contains',
     pattern: transaction.name.toLowerCase(),
-    category: transaction.currentCategory || transaction.newCategory || 'guilt_free'
+    category: transaction.currentCategory || transaction.newCategory || 'guilt_free',
+    labels: []
   }
   
   // Show the create rule dialog
@@ -580,6 +595,7 @@ function saveNewRule() {
     type: createRuleData.value.type,
     pattern: createRuleData.value.pattern.toLowerCase(),
     category: createRuleData.value.category,
+    labels: createRuleData.value.labels || [],
     confidence: 1.0,
     frequency: 1,
     priority: 300, // Highest priority for user-created rules
@@ -1509,5 +1525,25 @@ function showSnackMessage(message) {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+/* Label Autocomplete Container */
+.label-autocomplete-container {
+  width: 100%;
+}
+
+.label-autocomplete-container .v-field {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.label-autocomplete-container .v-field:hover {
+  border-color: #999;
+}
+
+.label-autocomplete-container .v-field--focused {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
 }
 </style>

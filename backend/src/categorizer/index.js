@@ -42,6 +42,7 @@ export function guessCategory(tx) {
     if (matches(r, { merchant_normalized, description_normalized })) {
       return { 
         category: r.category, 
+        labels: r.labels || [],
         source: 'rule', 
         explain: r.explain || 'User rule match',
         rule_id: r.id,
@@ -54,6 +55,7 @@ export function guessCategory(tx) {
     if (matches(r, { merchant_normalized, description_normalized })) {
       return { 
         category: r.category, 
+        labels: r.labels || [],
         source: 'pattern', 
         explain: r.explain || 'Pattern match',
         rule_id: r.pattern, // Use pattern as identifier for patterns
@@ -63,8 +65,8 @@ export function guessCategory(tx) {
   }
   // 3) ML (stub)
   const ml = mlGuess(tx);
-  if (ml) return { ...ml, rule_type: 'ml' };
-  return { category: null, source: 'none', explain: 'No match', rule_type: 'none' };
+  if (ml) return { ...ml, labels: [], rule_type: 'ml' };
+  return { category: null, labels: [], source: 'none', explain: 'No match', rule_type: 'none' };
 }
 
 function matches(rule, ctx) {
@@ -154,7 +156,7 @@ function mlGuess(tx) {
   return null;
 }
 
-export async function addUserRule({ category, match_type, pattern, explain }) {
+export async function addUserRule({ category, match_type, pattern, explain, labels }) {
   const rules = loadJSON('rules.json');
   const priority = Math.max(1000, ...rules.map(r => r.priority || 0)) + 1; // always win
   const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -166,6 +168,7 @@ export async function addUserRule({ category, match_type, pattern, explain }) {
     priority, 
     enabled: true, 
     explain: explain || 'User override',
+    labels: labels || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString() 
   };
@@ -178,7 +181,7 @@ export async function addUserRule({ category, match_type, pattern, explain }) {
   return ruleId;
 }
 
-export async function updateUserRule(ruleId, { category, match_type, pattern, explain }) {
+export async function updateUserRule(ruleId, { category, match_type, pattern, explain, labels }) {
   const rules = loadJSON('rules.json');
   const ruleIndex = rules.findIndex(rule => rule.id === ruleId);
   
@@ -193,6 +196,7 @@ export async function updateUserRule(ruleId, { category, match_type, pattern, ex
     match_type,
     pattern,
     explain: explain || rules[ruleIndex].explain,
+    labels: labels !== undefined ? labels : rules[ruleIndex].labels,
     updated_at: new Date().toISOString()
   };
   
@@ -204,7 +208,7 @@ export async function updateUserRule(ruleId, { category, match_type, pattern, ex
   return { updated: true, ruleId, rule: rules[ruleIndex] };
 }
 
-export async function convertPatternToUserRule(patternId, { category, match_type, pattern, explain }) {
+export async function convertPatternToUserRule(patternId, { category, match_type, pattern, explain, labels }) {
   const patterns = loadJSON('patterns.json');
   const userRules = loadJSON('rules.json');
   
@@ -229,6 +233,7 @@ export async function convertPatternToUserRule(patternId, { category, match_type
     priority, 
     enabled: true, 
     explain: explain || 'Converted from pattern rule',
+    labels: labels || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString() 
   };

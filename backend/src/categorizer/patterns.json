@@ -5,7 +5,8 @@
     "pattern": "\\bTORONTO\\s*HYDRO\\b",
     "priority": 500,
     "enabled": true,
-    "explain": "Utility bill"
+    "explain": "Utility bill",
+    "labels": []
   },
   {
     "category": "guilt_free",
@@ -13,7 +14,8 @@
     "pattern": "STARBUCKS",
     "priority": 300,
     "enabled": true,
-    "explain": "Coffee shop"
+    "explain": "Coffee shop",
+    "labels": []
   },
   {
     "category": "guilt_free",
@@ -21,6 +23,7 @@
     "pattern": "AMZN",
     "priority": 200,
     "enabled": false,
-    "explain": "Amazon purchase"
+    "explain": "Amazon purchase",
+    "labels": []
   }
 ]

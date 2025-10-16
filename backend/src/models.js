@@ -33,14 +33,14 @@ export const Transactions = {
     const stmt = db.prepare(`
       INSERT INTO transactions (
         external_id, account_id, date, name, description, amount, inflow,
-        category, category_source, category_explain, note, hash, manual_override
+        category, category_source, category_explain, labels, note, hash, manual_override
       ) VALUES (@external_id, @account_id, @date, @name, @description, @amount, @inflow,
-        @category, @category_source, @category_explain, @note, @hash, @manual_override)
+        @category, @category_source, @category_explain, @labels, @note, @hash, @manual_override)
     `);
     const info = stmt.run(tx);
     return { skipped: false, id: info.lastInsertRowid };
   },
-  list({ q, category, start, end, sort, order, accountId }) {
+  list({ q, category, label, start, end, sort, order, accountId }) {
     let sql = `SELECT t.*, a.name as account_name FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE 1=1`;
     const params = {};
     if (q) {
@@ -48,6 +48,14 @@ export const Transactions = {
       params.q = `%${q}%`;
     }
     if (category) { sql += ` AND t.category=@category`; params.category = category; }
+    if (label) { 
+      // Search for label in JSON array
+      sql += ` AND (t.labels LIKE @label OR t.labels LIKE @labelStart OR t.labels LIKE @labelEnd OR t.labels LIKE @labelMiddle)`;
+      params.label = `"${label}"`;
+      params.labelStart = `"${label}",`;
+      params.labelEnd = `,"${label}"`;
+      params.labelMiddle = `,"${label}",`;
+    }
     if (start) { sql += ` AND date(t.date) >= date(@start)`; params.start = start; }
     if (end) { sql += ` AND date(t.date) <= date(@end)`; params.end = end; }
     if (accountId) { sql += ` AND t.account_id=@accountId`; params.accountId = accountId; }
@@ -58,12 +66,13 @@ export const Transactions = {
     sql += ` ORDER BY ${sort} ${order}`;
     return db.prepare(sql).all(params);
   },
-  updateCategory(id, category, explain, source, manual) {
+  updateCategory(id, category, explain, source, manual, labels = null) {
+    const labelsJson = labels ? JSON.stringify(labels) : null;
     return db.prepare(`
       UPDATE transactions
-      SET category=?, category_explain=?, category_source=?, manual_override=?, updated_at=CURRENT_TIMESTAMP
+      SET category=?, category_explain=?, category_source=?, manual_override=?, labels=?, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(category, explain, source, manual ? 1 : 0, id);
+    `).run(category, explain, source, manual ? 1 : 0, labelsJson, id);
   },
   previewRuleImpact({ category, match_type, pattern }) {
     // Get all transactions that would be affected by this rule

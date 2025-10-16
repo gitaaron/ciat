@@ -81,5 +81,9 @@ export default {
     async applyAutoRules(rulesToApply, transactions) {
       const { data } = await axios.post(apiBase + '/auto-rules/apply', { rulesToApply, transactions })
       return data
-    }
+    },
+  async getLabels() {
+    const { data } = await axios.get(apiBase + '/labels')
+    return data
+  }
 }

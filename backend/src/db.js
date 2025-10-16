@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   category TEXT,                   -- current category
   category_source TEXT,            -- 'rule' | 'pattern' | 'ml' | 'manual' | 'none'
   category_explain TEXT,
+  labels TEXT,                     -- JSON array of labels for grouping transactions
   note TEXT,
   hash TEXT UNIQUE,                -- dedupe across imports
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -43,4 +44,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_tx_account ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_tx_cat ON transactions(category);
+CREATE INDEX IF NOT EXISTS idx_tx_labels ON transactions(labels);
+
+-- Migration: Add labels column if it doesn't exist
+ALTER TABLE transactions ADD COLUMN labels TEXT;
 `);

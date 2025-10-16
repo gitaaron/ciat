@@ -72,6 +72,7 @@ app.get('/api/transactions', (req, res) => {
   const list = Transactions.list({
     q: req.query.q,
     category: req.query.category,
+    label: req.query.label,
     start: req.query.start,
     end: req.query.end,
     sort: req.query.sort,
@@ -81,16 +82,48 @@ app.get('/api/transactions', (req, res) => {
   res.json(list);
 });
 
+// Get all existing labels
+app.get('/api/labels', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT labels 
+      FROM transactions 
+      WHERE labels IS NOT NULL AND labels != '' AND labels != 'null'
+    `).all();
+    
+    const allLabels = new Set();
+    rows.forEach(row => {
+      try {
+        const labels = JSON.parse(row.labels);
+        if (Array.isArray(labels)) {
+          labels.forEach(label => {
+            if (label && label.trim()) {
+              allLabels.add(label.trim());
+            }
+          });
+        }
+      } catch (e) {
+        // Skip invalid JSON
+      }
+    });
+    
+    const sortedLabels = Array.from(allLabels).sort();
+    res.json(sortedLabels);
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 // Update category (manual override → new user rule)
 app.post('/api/transactions/:id/category', async (req, res) => {
   const id = Number(req.params.id);
-  const { category, pattern, match_type, explain } = req.body;
+  const { category, pattern, match_type, explain, labels } = req.body;
   try {
     // 1) update tx as manual override
-    Transactions.updateCategory(id, category, explain || 'Manual override', 'manual', true);
+    Transactions.updateCategory(id, category, explain || 'Manual override', 'manual', true, labels);
     // 2) persist a new user rule that should win in future
     if (pattern && match_type) {
-      await addUserRule({ category, match_type, pattern, explain: explain || 'From user override' });
+      await addUserRule({ category, match_type, pattern, explain: explain || 'From user override', labels });
     }
     res.json({ ok: true });
   } catch (e) {
@@ -115,9 +148,9 @@ app.post('/api/rules/preview', (req, res) => {
 
 // Create new rule with confirmation
 app.post('/api/rules', async (req, res) => {
-  const { category, match_type, pattern, explain } = req.body;
+  const { category, match_type, pattern, explain, labels } = req.body;
   try {
-    const ruleId = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule' });
+    const ruleId = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels });
     res.json({ ok: true, ruleId });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -159,17 +192,17 @@ app.get('/api/rules/user', (req, res) => {
 app.put('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
-    const { category, match_type, pattern, explain } = req.body;
+    const { category, match_type, pattern, explain, labels } = req.body;
     
     // Check if this is a pattern rule (no id in the request, using pattern as id)
     if (ruleId.startsWith('pattern:')) {
       // This is a pattern rule, convert it to a user rule
       const patternId = ruleId.replace('pattern:', '');
-      const result = await convertPatternToUserRule(patternId, { category, match_type, pattern, explain });
+      const result = await convertPatternToUserRule(patternId, { category, match_type, pattern, explain, labels });
       res.json({ ok: true, ...result });
     } else {
       // This is a user rule, update it normally
-      const result = await updateUserRule(ruleId, { category, match_type, pattern, explain });
+      const result = await updateUserRule(ruleId, { category, match_type, pattern, explain, labels });
       res.json({ ok: true, ...result });
     }
   } catch (e) {

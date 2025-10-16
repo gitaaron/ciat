@@ -5,6 +5,7 @@ import api from './api.js'
 
 const q = ref('')
 const category = ref('')
+const label = ref('')
 const start = ref('')
 const end = ref('')
 const sort = ref('date')
@@ -12,9 +13,19 @@ const order = ref('DESC')
 const rows = ref([])
 
 async function load() {
-  rows.value = await api.listTransactions({ q: q.value, category: category.value, start: start.value, end: end.value, sort: sort.value, order: order.value })
+  rows.value = await api.listTransactions({ q: q.value, category: category.value, label: label.value, start: start.value, end: end.value, sort: sort.value, order: order.value })
 }
 watchEffect(load)
+
+function getLabels(item) {
+  if (!item.labels) return []
+  try {
+    const labels = JSON.parse(item.labels)
+    return Array.isArray(labels) ? labels : []
+  } catch (e) {
+    return []
+  }
+}
 
 async function overrideCategory(row) {
   const pattern = row.name   // default pattern suggestion: exact merchant name
@@ -81,6 +92,16 @@ async function overrideCategory(row) {
           />
         </v-col>
         <v-col cols="12" md="2">
+          <v-text-field
+            v-model="label"
+            label="Label"
+            variant="outlined"
+            density="compact"
+            placeholder="Filter by label"
+            clearable
+          />
+        </v-col>
+        <v-col cols="12" md="2">
           <v-select
             v-model="sort"
             :items="[
@@ -121,6 +142,7 @@ async function overrideCategory(row) {
           { title: 'Amount', key: 'amount', sortable: true },
           { title: 'Type', key: 'inflow', sortable: true },
           { title: 'Category', key: 'category', sortable: false },
+          { title: 'Labels', key: 'labels', sortable: false },
           { title: 'Explain', key: 'category_explain', sortable: false },
           { title: 'Actions', key: 'actions', sortable: false }
         ]"
@@ -160,6 +182,21 @@ async function overrideCategory(row) {
             hide-details
             style="min-width: 150px;"
           />
+        </template>
+        
+        <template v-slot:item.labels="{ item }">
+          <div v-if="getLabels(item).length > 0" class="d-flex flex-wrap ga-1">
+            <v-chip
+              v-for="label in getLabels(item)"
+              :key="label"
+              size="small"
+              color="primary"
+              variant="tonal"
+            >
+              {{ label }}
+            </v-chip>
+          </div>
+          <span v-else class="text-caption text-grey">No labels</span>
         </template>
         
         <template v-slot:item.category_explain="{ item }">

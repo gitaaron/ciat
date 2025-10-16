@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import api from './api.js'
+import MultiLabelSelector from './MultiLabelSelector.vue'
 
 const props = defineProps({ 
   usedRules: Array,
@@ -22,7 +23,8 @@ const editForm = ref({
   category: '',
   match_type: '',
   pattern: '',
-  explain: ''
+  explain: '',
+  labels: []
 })
 const saving = ref(false)
 
@@ -93,7 +95,8 @@ async function editRule(rule) {
     category: rule.category,
     match_type: rule.match_type,
     pattern: rule.pattern,
-    explain: rule.explain || ''
+    explain: rule.explain || '',
+    labels: rule.labels || []
   }
   await previewRuleImpact(rule)
 }
@@ -168,7 +171,8 @@ function cancelEdit() {
     category: '',
     match_type: '',
     pattern: '',
-    explain: ''
+    explain: '',
+    labels: []
   }
 }
 
@@ -431,6 +435,17 @@ function formatDate(dateString) {
                   density="compact"
                   hint="Optional explanation for this rule"
                   persistent-hint
+                />
+              </v-col>
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
+                <MultiLabelSelector
+                  v-model="editForm.labels"
+                  label="Labels (Optional)"
+                  placeholder="e.g., Coffee, Travel, Work"
+                  hint="Optional labels for grouping transactions"
                 />
               </v-col>
             </v-row>
