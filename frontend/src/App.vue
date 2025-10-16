@@ -1,13 +1,13 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import ImportWizard from './components/ImportWizard.vue'
-import TransactionsTable from './components/TransactionsTable.vue'
+import ImportWizard from './components/ImportWizard/ImportWizard.vue'
+import TransactionsTable from './components/TransactionsTable/TransactionsTable.vue'
 import PieChart from './components/PieChart.vue'
 import LineChart from './components/LineChart.vue'
-import DatabaseVersions from './components/DatabaseVersions.vue'
-import NewCategoryWizard from './components/NewCategoryWizard.vue'
-import RuleManager from './components/RuleManager.vue'
+import DatabaseVersions from './components/DatabaseVersions/DatabaseVersions.vue'
+import NewCategoryWizard from './components/NewCategoryWizard/NewCategoryWizard.vue'
+import RuleManager from './components/RuleManager/RuleManager.vue'
 import api from './components/api.js'
 
 const accounts = ref([])

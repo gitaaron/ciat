@@ -1,39 +1,3 @@
-
-<script setup>
-import { ref, watchEffect } from 'vue'
-import api from './api.js'
-
-const q = ref('')
-const category = ref('')
-const label = ref('')
-const start = ref('')
-const end = ref('')
-const sort = ref('date')
-const order = ref('DESC')
-const rows = ref([])
-
-async function load() {
-  rows.value = await api.listTransactions({ q: q.value, category: category.value, label: label.value, start: start.value, end: end.value, sort: sort.value, order: order.value })
-}
-watchEffect(load)
-
-function getLabels(item) {
-  if (!item.labels) return []
-  try {
-    const labels = JSON.parse(item.labels)
-    return Array.isArray(labels) ? labels : []
-  } catch (e) {
-    return []
-  }
-}
-
-async function overrideCategory(row) {
-  const pattern = row.name   // default pattern suggestion: exact merchant name
-  await api.setCategory(row.id, { category: row.category, pattern, match_type: 'exact', explain: 'User override from table' })
-  await load()
-}
-</script>
-
 <template>
   <v-card>
     <v-card-title class="text-h5">
@@ -218,3 +182,5 @@ async function overrideCategory(row) {
     </v-card-text>
   </v-card>
 </template>
+
+<script src="./TransactionsTable.js"></script>
