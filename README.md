@@ -19,7 +19,7 @@ See `product/REQUIREMENTS.md` for a full description.
 # in project root
 npm install
 npm run dev    # runs API and Web together
-# API at http://localhost:5176/api
+# API at http://localhost:3108/api
 # Web at http://localhost:5175
 ```
 
