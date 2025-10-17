@@ -1,11 +1,13 @@
 import { ref, computed, watch } from 'vue'
 import api from '../api.js'
 import MultiLabelSelector from '../MultiLabelSelector.vue'
+import RuleItem from './RuleItem.vue'
 
 export default {
   name: 'CombinedRulesReview',
   components: {
-    MultiLabelSelector
+    MultiLabelSelector,
+    RuleItem
   },
   props: {
     usedRules: Array,
@@ -18,24 +20,10 @@ export default {
     // Existing rules state
     const expandedRules = ref(new Set())
     const editingRule = ref(null)
-    const editingData = ref({
-      match_type: '',
-      pattern: '',
-      category: '',
-      explain: '',
-      labels: []
-    })
 
     // Auto rules state
     const expandedAutoRules = ref(new Set())
     const editingAutoRule = ref(null)
-    const editingAutoData = ref({
-      type: '',
-      pattern: '',
-      category: '',
-      explain: '',
-      labels: []
-    })
     const applying = ref(false)
     const ruleFrequencies = ref(new Map())
     const ruleExplanations = ref(new Map())
@@ -109,7 +97,8 @@ export default {
     }
 
     // Existing rules functions
-    function toggleExpanded(ruleId) {
+    function toggleExpanded(rule) {
+      const ruleId = rule.id || rule.pattern
       if (expandedRules.value.has(ruleId)) {
         expandedRules.value.delete(ruleId)
       } else {
@@ -119,18 +108,11 @@ export default {
 
     function startEditing(rule) {
       editingRule.value = rule.id
-      editingData.value = {
-        match_type: rule.match_type,
-        pattern: rule.pattern,
-        category: rule.category,
-        explain: rule.explain || '',
-        labels: rule.labels || []
-      }
     }
 
-    async function saveEdit(ruleId) {
+    async function saveEdit(rule, editData) {
       try {
-        await api.updateRule(ruleId, editingData.value)
+        await api.updateRule(rule.id, editData)
         editingRule.value = null
         showSnackMessage('Rule updated successfully')
         // Emit refresh event to parent
@@ -143,13 +125,6 @@ export default {
 
     function cancelEdit() {
       editingRule.value = null
-      editingData.value = {
-        match_type: '',
-        pattern: '',
-        category: '',
-        explain: '',
-        labels: []
-      }
     }
 
     async function deleteRule(rule) {
@@ -173,7 +148,8 @@ export default {
     }
 
     // Auto rules functions
-    function toggleAutoRuleExpanded(ruleId) {
+    function toggleAutoRuleExpanded(rule) {
+      const ruleId = rule.id
       if (expandedAutoRules.value.has(ruleId)) {
         expandedAutoRules.value.delete(ruleId)
       } else {
@@ -184,23 +160,16 @@ export default {
 
     function startEditingAutoRule(rule) {
       editingAutoRule.value = rule.id
-      editingAutoData.value = {
-        type: rule.type,
-        pattern: rule.pattern,
-        category: rule.category,
-        explain: rule.explain || '',
-        labels: rule.labels || []
-      }
     }
 
-    async function saveAutoRuleEdit(ruleId) {
+    async function saveAutoRuleEdit(rule, editData) {
       try {
         // For auto rules, we need to create a new rule
-        await api.createRule(editingAutoData.value)
+        await api.createRule(editData)
         editingAutoRule.value = null
         showSnackMessage('Rule created successfully')
         // Remove from auto rules list
-        removeAutoRule(ruleId)
+        removeAutoRule(rule.id)
       } catch (error) {
         console.error('Error creating rule:', error)
         showSnackMessage('Error creating rule: ' + error.message)
@@ -209,18 +178,11 @@ export default {
 
     function cancelAutoRuleEdit() {
       editingAutoRule.value = null
-      editingAutoData.value = {
-        type: '',
-        pattern: '',
-        category: '',
-        explain: '',
-        labels: []
-      }
     }
 
-    function removeAutoRule(ruleId) {
+    function removeAutoRule(rule) {
       // Remove from auto rules list (this is just UI state)
-      const ruleIndex = props.autoRules.rules.findIndex(r => r.id === ruleId)
+      const ruleIndex = props.autoRules.rules.findIndex(r => r.id === rule.id)
       if (ruleIndex !== -1) {
         props.autoRules.rules.splice(ruleIndex, 1)
       }
@@ -353,10 +315,8 @@ export default {
       // State
       expandedRules,
       editingRule,
-      editingData,
       expandedAutoRules,
       editingAutoRule,
-      editingAutoData,
       applying,
       ruleFrequencies,
       ruleExplanations,

@@ -18,153 +18,23 @@
       </div>
 
       <div class="rules-list">
-        <div 
-          v-for="rule in existingRules" 
+        <RuleItem
+          v-for="rule in existingRules"
           :key="rule.id || rule.pattern"
-          class="rule-item existing-rule"
-            :class="{ 
-              editing: editingRule === rule.id,
-              expanded: expandedRules.has(rule.id || rule.pattern)
-            }"
-        >
-          <div class="rule-main">
-            <div class="rule-content">
-              <!-- Rule Header with Actions -->
-              <div class="rule-header">
-                <div class="rule-pattern">
-                  <span class="rule-type-badge existing">{{ rule.match_type || 'user' }}</span>
-                  <code class="pattern">{{ rule.pattern }}</code>
-                  <span class="priority-badge">Priority: {{ rule.priority || 'High' }}</span>
-                </div>
-                <div class="rule-actions">
-                  <div class="rule-category">
-                    <span class="category-badge" :class="rule.category">{{ getCategoryName(rule.category) }}</span>
-                  </div>
-                  <div class="action-buttons">
-                    <button 
-                      class="action-btn edit-btn" 
-                      @click="startEditing(rule)"
-                      :disabled="editingRule !== null"
-                      title="Edit rule"
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      class="action-btn delete-btn" 
-                      @click="deleteRule(rule)"
-                      title="Delete rule"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Editing Mode -->
-              <div v-if="editingRule === rule.id" class="rule-editing">
-                <div class="edit-form">
-                  <div class="edit-row">
-                    <label>Type:</label>
-                    <select v-model="editingData.match_type" class="edit-input">
-                      <option value="contains">Contains</option>
-                      <option value="regex">Regex</option>
-                      <option value="exact">Exact</option>
-                    </select>
-                  </div>
-                  <div class="edit-row">
-                    <label>Pattern:</label>
-                    <input 
-                      v-model="editingData.pattern" 
-                      class="edit-input pattern-input"
-                      placeholder="Enter pattern..."
-                    >
-                  </div>
-                  <div class="edit-row">
-                    <label>Category:</label>
-                    <select v-model="editingData.category" class="edit-input">
-                      <option value="fixed_costs">Fixed Costs</option>
-                      <option value="investments">Investments</option>
-                      <option value="guilt_free">Guilt Free</option>
-                      <option value="short_term_savings">Short Term Savings</option>
-                      <option value="">Uncategorized</option>
-                    </select>
-                  </div>
-                  <div class="edit-actions">
-                    <button class="btn btn-sm btn-primary" @click="saveEdit(rule.id)">Save</button>
-                    <button class="btn btn-sm btn-secondary" @click="cancelEdit">Cancel</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Normal View -->
-              <div v-else class="rule-details">
-                <div class="rule-stats">
-                  <span class="stat">
-                    <strong>{{ rule.transactions?.length || 0 }}</strong> transactions
-                  </span>
-                  <span class="stat">
-                    <strong>{{ rule.explain || 'No explanation' }}</strong>
-                  </span>
-                </div>
-              </div>
-
-              <!-- Expanded Transactions View -->
-              <div v-if="expandedRules.has(rule.id || rule.pattern)" class="rule-transactions">
-                <div class="transactions-header">
-                  <span>Matching transactions ({{ rule.transactions?.length || 0 }} total):</span>
-                  <button 
-                    class="btn btn-sm btn-secondary" 
-                    @click="toggleExpanded(rule.id || rule.pattern)"
-                  >
-                    📖 Collapse
-                  </button>
-                </div>
-                <div class="transactions-list">
-                  <div 
-                    v-for="transaction in (rule.transactions || [])" 
-                    :key="transaction.id"
-                    class="transaction-item"
-                  >
-                    <span class="merchant">{{ transaction.name }}</span>
-                    <span class="amount">{{ formatAmount(transaction.amount) }}</span>
-                    <span class="date">{{ formatDate(transaction.date) }}</span>
-                    <span class="account">{{ getAccountName(transaction.account_id) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Sample Match (when not expanded) -->
-              <div v-else class="rule-preview">
-                <div class="preview-header">
-                  <span>Sample match:</span>
-                  <div class="preview-count-container">
-                    <span class="preview-count">{{ getExistingRulePreviewCount(rule.id || rule.pattern) }} total transactions</span>
-                    <button 
-                      class="action-btn expand-btn" 
-                      @click="toggleExpanded(rule.id || rule.pattern)"
-                      :title="expandedRules.has(rule.id || rule.pattern) ? 'Collapse' : 'Show transactions'"
-                    >
-                      <span v-if="expandedRules.has(rule.id || rule.pattern)">📖 Collapse</span>
-                      <span v-else>📄 Expand</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="preview-list">
-                  <div 
-                    v-for="transaction in getExistingRuleSingleMatch(rule.id || rule.pattern)" 
-                    :key="transaction.id"
-                    class="preview-item"
-                  >
-                    <span class="merchant">{{ transaction.name }}</span>
-                    <span class="amount">{{ formatAmount(transaction.amount) }}</span>
-                    <span class="date">{{ formatDate(transaction.date) }}</span>
-                    <span class="account">{{ getAccountName(transaction.account_id) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          :rule="rule"
+          rule-type="existing-rule"
+          :accounts="accounts"
+          :is-expanded="expandedRules.has(rule.id || rule.pattern)"
+          :is-editing="editingRule === rule.id"
+          :applying="applying"
+          :show-apply-button="false"
+          :show-create-rule-button="false"
+          @edit="startEditing"
+          @save-edit="saveEdit"
+          @cancel-edit="cancelEdit"
+          @remove="deleteRule"
+          @toggle-expanded="toggleExpanded"
+        />
       </div>
     </div>
 
@@ -219,189 +89,25 @@
 
       <!-- Auto Rules List -->
       <div class="rules-list">
-
-        <div class="rules-container">
-          <div 
-            v-for="rule in effectiveAutoRules" 
-            :key="rule.id"
-            class="rule-item auto-rule"
-            :class="{ 
-              editing: editingAutoRule === rule.id,
-              expanded: expandedAutoRules.has(rule.id)
-            }"
-          >
-            <div class="rule-main">
-              <div class="rule-content">
-                <!-- Rule Header with Actions -->
-                <div class="rule-header">
-                  <div class="rule-pattern">
-                    <span class="rule-type-badge" :class="rule.type">{{ rule.type }}</span>
-                    <code class="pattern">{{ rule.pattern }}</code>
-                    <span v-if="rule.isNewRule" class="new-rule-badge">NEW</span>
-                  </div>
-                  <div class="rule-actions">
-                    <div class="rule-category">
-                      <span class="category-badge" :class="rule.category">{{ getCategoryName(rule.category) }}</span>
-                    </div>
-                    <div class="action-buttons">
-                      <button 
-                        class="action-btn edit-btn" 
-                        @click="startEditingAutoRule(rule)"
-                        :disabled="editingAutoRule !== null"
-                        title="Edit rule"
-                      >
-                        ✏️
-                      </button>
-                      <button 
-                        class="action-btn remove-btn" 
-                        @click="removeAutoRule(rule.id)"
-                        title="Remove rule"
-                      >
-                        🗑️
-                      </button>
-                      <button 
-                        class="action-btn apply-btn" 
-                        @click="applySingleRule(rule)"
-                        :disabled="applying"
-                        title="Apply this rule"
-                      >
-                        {{ applying ? '⏳' : '✅' }} Apply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Editing Mode -->
-                <div v-if="editingAutoRule === rule.id" class="rule-editing">
-                  <div class="edit-form">
-                    <div class="edit-row">
-                      <label>Type:</label>
-                      <select v-model="editingAutoData.type" class="edit-input">
-                        <option value="contains">Contains</option>
-                        <option value="regex">Regex</option>
-                        <option value="exact">Exact</option>
-                        <option value="mcc">MCC</option>
-                      </select>
-                    </div>
-                    <div class="edit-row">
-                      <label>Pattern:</label>
-                      <input 
-                        v-model="editingAutoData.pattern" 
-                        class="edit-input pattern-input"
-                        placeholder="Enter pattern..."
-                      >
-                    </div>
-                    <div class="edit-row">
-                      <label>Category:</label>
-                      <select v-model="editingAutoData.category" class="edit-input">
-                        <option value="fixed_costs">Fixed Costs</option>
-                        <option value="investments">Investments</option>
-                        <option value="guilt_free">Guilt Free</option>
-                        <option value="short_term_savings">Short Term Savings</option>
-                        <option value="">Uncategorized</option>
-                      </select>
-                    </div>
-                    <div class="edit-actions">
-                      <button class="btn btn-sm btn-primary" @click="saveAutoRuleEdit(rule.id)">Save</button>
-                      <button class="btn btn-sm btn-secondary" @click="cancelAutoRuleEdit">Cancel</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Normal View -->
-                <div v-else class="rule-details">
-                  <div class="rule-stats">
-                    <span class="stat">
-                      <strong>{{ ruleFrequencies.get(rule.id) || 0 }}</strong> occurrences
-                    </span>
-                    <span class="stat">
-                      <strong>{{ Math.round(rule.confidence * 100) }}%</strong> confidence
-                    </span>
-                    <span class="stat">
-                      <strong>{{ rule.priority || 'N/A' }}</strong> priority
-                    </span>
-                    <span class="stat source">
-                      {{ rule.source }}
-                    </span>
-                  </div>
-                  <p class="rule-explanation">{{ ruleExplanations.get(rule.id) || rule.explain }}</p>
-                </div>
-
-                <!-- Expanded Transactions View -->
-                <div v-if="expandedAutoRules.has(rule.id)" class="rule-transactions">
-                  <div class="transactions-header">
-                    <span>All matching transactions ({{ rulePreviewCounts.get(rule.id) || 0 }} total):</span>
-                    <button 
-                      class="btn btn-sm btn-secondary" 
-                      @click="toggleAutoRuleExpanded(rule.id)"
-                    >
-                      📖 Collapse
-                    </button>
-                  </div>
-                  <div class="transactions-list">
-                    <div 
-                      v-for="match in (ruleMatches.get(rule.id) || [])" 
-                      :key="match.id"
-                      class="transaction-item"
-                    >
-                      <span class="merchant">{{ match.name }}</span>
-                      <span class="amount">{{ formatAmount(match.amount) }}</span>
-                      <span class="date">{{ formatDate(match.date) }}</span>
-                      <span 
-                        class="category-change"
-                        :class="{ changed: match.wouldChange }"
-                      >
-                        {{ match.wouldChange ? '→ ' + getCategoryName(match.newCategory) : getCategoryName(match.currentCategory) }}
-                      </span>
-                      <button 
-                        class="create-rule-btn"
-                        @click="createRuleFromTransaction(match, rule)"
-                        title="Create rule from this transaction"
-                      >
-                        ➕ Create Rule
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Sample Match (when not expanded) -->
-                <div v-else class="rule-preview">
-                  <div class="preview-header">
-                    <span>Sample match:</span>
-                    <div class="preview-count-container">
-                      <span class="preview-count">{{ getPreviewCount(rule.id) }} total transactions</span>
-                      <button 
-                        class="action-btn expand-btn" 
-                        @click="toggleAutoRuleExpanded(rule.id)"
-                        :title="expandedAutoRules.has(rule.id) ? 'Collapse' : 'Show all transactions'"
-                      >
-                        <span v-if="expandedAutoRules.has(rule.id)">📖 Collapse</span>
-                        <span v-else>📄 Expand</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="preview-list">
-                    <div 
-                      v-for="match in getSinglePreviewMatch(rule.id)" 
-                      :key="match.id"
-                      class="preview-item"
-                    >
-                      <span class="merchant">{{ match.name }}</span>
-                      <span class="amount">{{ formatAmount(match.amount) }}</span>
-                      <span class="date">{{ formatDate(match.date) }}</span>
-                      <span 
-                        class="category-change"
-                        :class="{ changed: match.wouldChange }"
-                      >
-                        {{ match.wouldChange ? '→ ' + getCategoryName(match.newCategory) : getCategoryName(match.currentCategory) }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RuleItem
+          v-for="rule in effectiveAutoRules"
+          :key="rule.id"
+          :rule="rule"
+          rule-type="auto-rule"
+          :accounts="accounts"
+          :is-expanded="expandedAutoRules.has(rule.id)"
+          :is-editing="editingAutoRule === rule.id"
+          :applying="applying"
+          :show-apply-button="true"
+          :show-create-rule-button="true"
+          @edit="startEditingAutoRule"
+          @save-edit="saveAutoRuleEdit"
+          @cancel-edit="cancelAutoRuleEdit"
+          @remove="removeAutoRule"
+          @apply="applySingleRule"
+          @toggle-expanded="toggleAutoRuleExpanded"
+          @create-rule="createRuleFromTransaction"
+        />
       </div>
     </div>
 
