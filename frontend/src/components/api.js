@@ -38,6 +38,10 @@ export default {
     const { data } = await axios.post(apiBase + `/transactions/${id}/category`, payload)
     return data
   },
+  async updateTransaction(id, payload) {
+    const { data } = await axios.put(apiBase + `/transactions/${id}`, payload)
+    return data
+  },
   async analyzeFiles(files) {
     const form = new FormData()
     files.forEach(file => form.append('files', file))
@@ -67,10 +71,6 @@ export default {
   },
   async deleteRule(ruleId) {
     const { data } = await axios.delete(apiBase + `/rules/${ruleId}`)
-    return data
-  },
-  async previewRule(ruleData) {
-    const { data } = await axios.post(apiBase + '/rules/preview', ruleData)
     return data
   },
   // Auto rule generation APIs

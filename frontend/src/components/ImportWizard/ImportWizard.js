@@ -426,6 +426,9 @@ export default {
     }
 
     return {
+      // Props
+      props,
+      // Reactive data
       newAccount,
       step,
       creating,

@@ -13,6 +13,7 @@ import api from './components/api.js'
 const accounts = ref([])
 const selected = ref('transactions')
 const hasTransactions = ref(false)
+const showNewCategoryWizard = ref(false)
 
 async function loadAccounts() {
   accounts.value = await api.getAccounts()
@@ -50,34 +51,30 @@ onMounted(async () => {
   <v-app>
     <v-app-bar color="primary" dark>
       <v-app-bar-title>Can I Afford That</v-app-bar-title>
+      <v-spacer></v-spacer>
+      <v-btn icon @click="selected = 'versions'" title="Database Versions">
+        <v-icon>mdi-cog</v-icon>
+      </v-btn>
     </v-app-bar>
 
     <v-main>
       <v-container max-width="1200" class="pa-4">
-        <v-tabs v-model="selected" class="mb-4">
-          <v-tab v-if="hasTransactions" value="transactions">
+        <v-tabs v-if="hasTransactions" v-model="selected" class="mb-4">
+          <v-tab value="transactions">
             <v-icon left>mdi-format-list-bulleted</v-icon>
             Transactions
+          </v-tab>
+          <v-tab value="reports">
+            <v-icon left>mdi-chart-pie</v-icon>
+            Reports
+          </v-tab>
+          <v-tab value="manage-rules">
+            <v-icon left>mdi-cog</v-icon>
+            Manage Rules
           </v-tab>
           <v-tab value="import">
             <v-icon left>mdi-upload</v-icon>
             Import
-          </v-tab>
-          <v-tab value="new-rule">
-            <v-icon left>mdi-plus-circle</v-icon>
-            New Category Rule
-          </v-tab>
-          <v-tab value="rules">
-            <v-icon left>mdi-cog</v-icon>
-            Manage Rules
-          </v-tab>
-          <v-tab value="charts">
-            <v-icon left>mdi-chart-pie</v-icon>
-            Charts
-          </v-tab>
-          <v-tab value="versions">
-            <v-icon left>mdi-database</v-icon>
-            Database Versions
           </v-tab>
         </v-tabs>
 
@@ -97,19 +94,7 @@ onMounted(async () => {
             <TransactionsTable />
           </v-window-item>
 
-          <v-window-item value="new-rule">
-            <NewCategoryWizard @close="selected=hasTransactions ? 'transactions' : 'import'" />
-          </v-window-item>
-
-          <v-window-item value="rules">
-            <RuleManager @create-new="selected='new-rule'" />
-          </v-window-item>
-
-          <v-window-item value="versions">
-            <DatabaseVersions />
-          </v-window-item>
-
-          <v-window-item value="charts">
+          <v-window-item value="reports">
             <v-row>
               <v-col cols="12" md="6">
                 <PieChart />
@@ -118,6 +103,18 @@ onMounted(async () => {
                 <LineChart />
               </v-col>
             </v-row>
+          </v-window-item>
+
+          <v-window-item value="manage-rules">
+            <RuleManager @create-new="showNewCategoryWizard = true" />
+            <NewCategoryWizard 
+              v-if="showNewCategoryWizard" 
+              @close="showNewCategoryWizard = false" 
+            />
+          </v-window-item>
+
+          <v-window-item value="versions">
+            <DatabaseVersions />
           </v-window-item>
         </v-window>
       </v-container>
