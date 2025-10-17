@@ -51,7 +51,7 @@
 
 <script>
 import PreexistingRulesReviewJS from './PreexistingRulesReview.js'
-import RuleItem from '../CombinedRulesReview/RuleItem.vue'
+import RuleItem from '../RuleItem.vue'
 import './PreexistingRulesReview.css'
 
 export default {

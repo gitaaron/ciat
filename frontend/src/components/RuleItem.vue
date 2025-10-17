@@ -189,7 +189,7 @@ export default {
     ruleType: {
       type: String,
       required: true,
-      validator: value => ['existing-rule', 'auto-rule'].includes(value)
+      validator: value => ['existing-rule', 'auto-rule', 'new-rule'].includes(value)
     },
     accounts: {
       type: Array,
@@ -269,6 +269,8 @@ export default {
     getTransactionHeaderText() {
       if (this.ruleType === 'existing-rule') {
         return `Matching transactions (${this.getTransactionCount()} total):`
+      } else if (this.ruleType === 'new-rule') {
+        return `New rule matches (${this.getTransactionCount()} total):`
       } else {
         return `All matching transactions (${this.getTransactionCount()} total):`
       }
@@ -318,6 +320,6 @@ export default {
 </script>
 
 <style scoped>
-/* Import the styles from the main component */
-@import './CombinedRulesReview.css';
+/* Import the styles for RuleItem */
+@import './RuleItem.css';
 </style>
