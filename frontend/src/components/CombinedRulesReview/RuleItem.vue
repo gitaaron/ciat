@@ -258,11 +258,7 @@ export default {
     },
 
     getTransactionCount() {
-      if (this.ruleType === 'existing-rule') {
-        return this.rule.transactions?.length || 0
-      } else {
-        return this.rule.frequency || 0
-      }
+      return this.rule.transactions?.length || 0
     },
 
     getTransactionHeaderText() {
@@ -274,23 +270,11 @@ export default {
     },
 
     getTransactions() {
-      if (this.ruleType === 'existing-rule') {
-        return this.rule.transactions || []
-      } else {
-        // For auto rules, we'd need to get the full transaction list
-        // This would need to be passed as a prop or fetched
-        return []
-      }
+      return this.rule.transactions || []
     },
 
     getSampleTransactions() {
-      if (this.ruleType === 'existing-rule') {
-        return (this.rule.transactions || []).slice(0, 1)
-      } else {
-        // For auto rules, we'd need to get sample transactions
-        // This would need to be passed as a prop or fetched
-        return []
-      }
+      return (this.rule.transactions || []).slice(0, 1)
     },
 
     startEditing() {

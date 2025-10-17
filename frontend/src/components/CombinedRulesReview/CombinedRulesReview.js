@@ -60,7 +60,12 @@ export default {
 
     const effectiveAutoRules = computed(() => {
       if (!props.autoRules || !props.autoRules.rules) return []
-      return props.autoRules.rules.filter(rule => !rule.applied)
+      return props.autoRules.rules
+        .filter(rule => !rule.applied)
+        .map(rule => ({
+          ...rule,
+          transactions: ruleMatches.value.get(rule.id) || []
+        }))
     })
 
     // Helper functions
@@ -260,16 +265,50 @@ export default {
       if (ruleMatches.value.has(ruleId)) return
 
       try {
-        // This would need to be implemented in the API
-        // For now, we'll use mock data
-        const matches = props.transactions.filter(tx => 
-          tx.name.toLowerCase().includes(ruleId.toLowerCase())
-        ).slice(0, 10) // Limit to 10 for performance
+        // Find the rule to get its pattern and match type
+        const rule = props.autoRules?.rules?.find(r => r.id === ruleId)
+        if (!rule || !props.transactions) {
+          ruleMatches.value.set(ruleId, [])
+          rulePreviewCounts.value.set(ruleId, 0)
+          return
+        }
 
-        ruleMatches.value.set(ruleId, matches)
-        rulePreviewCounts.value.set(ruleId, matches.length)
+        // Filter transactions based on rule pattern and match type
+        let matches = []
+        const pattern = rule.pattern?.toLowerCase() || ''
+        const matchType = rule.type || 'contains'
+
+        matches = props.transactions.filter(tx => {
+          const merchantName = tx.name?.toLowerCase() || ''
+          
+          switch (matchType) {
+            case 'contains':
+              return merchantName.includes(pattern)
+            case 'exact':
+              return merchantName === pattern
+            case 'regex':
+              try {
+                const regex = new RegExp(pattern, 'i')
+                return regex.test(merchantName)
+              } catch (e) {
+                return false
+              }
+            case 'mcc':
+              return tx.mcc === pattern
+            default:
+              return merchantName.includes(pattern)
+          }
+        })
+
+        // Limit to reasonable number for performance
+        const limitedMatches = matches.slice(0, 50)
+        
+        ruleMatches.value.set(ruleId, limitedMatches)
+        rulePreviewCounts.value.set(ruleId, limitedMatches.length)
       } catch (error) {
         console.error('Error loading rule matches:', error)
+        ruleMatches.value.set(ruleId, [])
+        rulePreviewCounts.value.set(ruleId, 0)
       }
     }
 
@@ -356,6 +395,8 @@ export default {
         props.autoRules.rules.forEach(rule => {
           ruleFrequencies.value.set(rule.id, rule.frequency || 0)
           ruleExplanations.value.set(rule.id, rule.explain || '')
+          // Load transaction matches for auto rules
+          loadRuleMatches(rule.id)
         })
       }
     }
