@@ -67,13 +67,7 @@ Reduce collisions (e.g., “subway” restaurant vs. “subway transit”):
 - Generate exception/guard rules when two categories are detected for similar tokens.
 - Place exception rules at higher priority.
 
-#### 9. Repeated matching
-
-Rules should be created in such a way that each transaction only applies to a single rule.
-
-If it is possible that a transaction might apply to more than one rule then it should be applied to the one with higher priority (see: Confidence Scoring in features/CATEGORY_MATCHING.md)
-
-#### 10. Same logic as pre-existing rules
+#### 9. Same logic as pre-existing rules
 
 The matching algorithm that checks to see if a transaction matches an auto generated rule should be the exact same as the matching algorithm used to check if a pre-existing rule matches a transaction.
 

@@ -159,7 +159,8 @@ export default {
         expandedAutoRules.value.delete(ruleId)
       } else {
         expandedAutoRules.value.add(ruleId)
-        loadRuleMatches(ruleId)
+        // Load all rule matches to ensure proper priority handling
+        loadAllRuleMatches()
       }
     }
 
@@ -261,24 +262,23 @@ export default {
       }
     }
 
-    async function loadRuleMatches(ruleId) {
+    function loadRuleMatches(ruleId, unmatchedTransactions) {
       if (ruleMatches.value.has(ruleId)) return
 
       try {
         // Find the rule to get its pattern and match type
         const rule = props.autoRules?.rules?.find(r => r.id === ruleId)
-        if (!rule || !props.transactions) {
+        if (!rule || !unmatchedTransactions) {
           ruleMatches.value.set(ruleId, [])
           rulePreviewCounts.value.set(ruleId, 0)
           return
         }
 
-        // Filter transactions based on rule pattern and match type
-        let matches = []
+        // Find transactions that match the current rule from the unmatched transactions
         const pattern = rule.pattern?.toLowerCase() || ''
         const matchType = rule.type || 'contains'
-
-        matches = props.transactions.filter(tx => {
+        
+        const matches = unmatchedTransactions.filter(tx => {
           const merchantName = tx.name?.toLowerCase() || ''
           
           switch (matchType) {
@@ -300,13 +300,59 @@ export default {
           }
         })
 
-        // Store all matches without artificial limit
+        // Store matches
         ruleMatches.value.set(ruleId, matches)
         rulePreviewCounts.value.set(ruleId, matches.length)
       } catch (error) {
         console.error('Error loading rule matches:', error)
         ruleMatches.value.set(ruleId, [])
         rulePreviewCounts.value.set(ruleId, 0)
+      }
+    }
+
+    function loadAllRuleMatches() {
+      if (!props.autoRules?.rules || !props.transactions) return
+
+      // Start with all transactions that aren't already matched by existing rules
+      let unmatchedTransactions = props.transactions.filter(tx => 
+        !tx.rule_id || !(tx.rule_type === 'user_rule' || tx.rule_type === 'pattern')
+      )
+
+      // Get all auto rules sorted by priority (highest first)
+      const allAutoRules = props.autoRules.rules
+        .filter(r => !r.applied)
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0))
+
+      // Process each rule in priority order
+      for (const rule of allAutoRules) {
+        // Load matches for this rule using current unmatched transactions
+        loadRuleMatches(rule.id, unmatchedTransactions)
+        
+        // Remove transactions that would be matched by this rule from unmatched list
+        const pattern = rule.pattern?.toLowerCase() || ''
+        const matchType = rule.type || 'contains'
+        
+        unmatchedTransactions = unmatchedTransactions.filter(tx => {
+          const merchantName = tx.name?.toLowerCase() || ''
+          
+          switch (matchType) {
+            case 'contains':
+              return !merchantName.includes(pattern)
+            case 'exact':
+              return merchantName !== pattern
+            case 'regex':
+              try {
+                const regex = new RegExp(pattern, 'i')
+                return !regex.test(merchantName)
+              } catch (e) {
+                return true
+              }
+            case 'mcc':
+              return tx.mcc !== pattern
+            default:
+              return !merchantName.includes(pattern)
+          }
+        })
       }
     }
 
@@ -393,9 +439,10 @@ export default {
         props.autoRules.rules.forEach(rule => {
           ruleFrequencies.value.set(rule.id, rule.frequency || 0)
           ruleExplanations.value.set(rule.id, rule.explain || '')
-          // Load transaction matches for auto rules
-          loadRuleMatches(rule.id)
         })
+        
+        // Load all rule matches to ensure proper priority handling
+        loadAllRuleMatches()
       }
     }
 
@@ -442,6 +489,7 @@ export default {
       removeAutoRule,
       applyAllAutoRules,
       loadRuleMatches,
+      loadAllRuleMatches,
       getPreviewCount,
       getPreviewMatches,
       getExistingRulePreviewCount,

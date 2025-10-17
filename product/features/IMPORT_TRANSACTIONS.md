@@ -20,6 +20,7 @@ Import historical transactions from multiple accounts using common bank formats,
         - Clicking 'create rule' should open a dialog where i can edit the pattern/category/match type.  After creating the new rule it should appear at the top of the list of rules to apply and take precedence over all previous rules and all transactions should be updated based on the new rule. 
 - The **same categorization algorithm** is used in CLI and import flows.
 - During import, the 'rules review' and 'auto rules review' should be completed in the same step.  Any pre-existing rules should have a higher priority (and thus appear first before any auto generated rules).  The pre-existing rules should appear in a separate section from the auto generated rules so they are distinct to the user.
+- **Rule Matching Order**: Rules are tested in priority order (highest priority first). Once a transaction matches a rule, it is not tested against subsequent rules. This ensures each transaction is assigned to exactly one category based on the first matching rule.
 
 ### UI Considerations
 - After parsing, provide a **review** before save (with inline category edit and optional note).
