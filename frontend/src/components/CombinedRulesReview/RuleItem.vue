@@ -39,15 +39,6 @@
               >
                 🗑️
               </button>
-              <button 
-                v-if="showApplyButton"
-                class="action-btn apply-btn" 
-                @click="applyRule"
-                :disabled="applying"
-                title="Apply this rule"
-              >
-                {{ applying ? '⏳' : '✅' }} Apply
-              </button>
             </div>
           </div>
         </div>
@@ -216,16 +207,12 @@ export default {
       type: Boolean,
       default: false
     },
-    showApplyButton: {
-      type: Boolean,
-      default: false
-    },
     showCreateRuleButton: {
       type: Boolean,
       default: false
     }
   },
-  emits: ['edit', 'save-edit', 'cancel-edit', 'remove', 'apply', 'toggle-expanded', 'create-rule'],
+  emits: ['edit', 'save-edit', 'cancel-edit', 'remove', 'toggle-expanded', 'create-rule'],
   data() {
     return {
       editData: {
@@ -329,9 +316,6 @@ export default {
       this.$emit('remove', this.rule)
     },
 
-    applyRule() {
-      this.$emit('apply', this.rule)
-    },
 
     toggleExpanded() {
       this.$emit('toggle-expanded', this.rule)

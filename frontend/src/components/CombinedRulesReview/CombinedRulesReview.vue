@@ -27,7 +27,6 @@
           :is-expanded="expandedRules.has(rule.id || rule.pattern)"
           :is-editing="editingRule === rule.id"
           :applying="applying"
-          :show-apply-button="false"
           :show-create-rule-button="false"
           @edit="startEditing"
           @save-edit="saveEdit"
@@ -98,13 +97,11 @@
           :is-expanded="expandedAutoRules.has(rule.id)"
           :is-editing="editingAutoRule === rule.id"
           :applying="applying"
-          :show-apply-button="true"
           :show-create-rule-button="true"
           @edit="startEditingAutoRule"
           @save-edit="saveAutoRuleEdit"
           @cancel-edit="cancelAutoRuleEdit"
           @remove="removeAutoRule"
-          @apply="applySingleRule"
           @toggle-expanded="toggleAutoRuleExpanded"
           @create-rule="createRuleFromTransaction"
         />
@@ -125,11 +122,11 @@
         Skip Rules Review
       </button>
       <div class="actions-info">
-        <p>Review and apply rules as needed, then proceed to import your transactions.</p>
+        <p>Review rules as needed. All auto-generated rules will be applied automatically when you continue to import.</p>
       </div>
       <button 
         class="btn btn-primary" 
-        @click="$emit('commit')"
+        @click="handleCommit"
         :disabled="applying"
       >
         {{ applying ? 'Processing...' : 'Continue to Import' }}

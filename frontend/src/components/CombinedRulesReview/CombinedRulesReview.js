@@ -210,6 +210,52 @@ export default {
       }
     }
 
+    async function applyAllAutoRules() {
+      applying.value = true
+      try {
+        const rulesToApply = effectiveAutoRules.value.filter(rule => !rule.applied)
+        
+        if (rulesToApply.length === 0) {
+          showSnackMessage('No auto-generated rules to apply')
+          return
+        }
+
+        let successCount = 0
+        let errorCount = 0
+
+        for (const rule of rulesToApply) {
+          try {
+            await api.createRule({
+              match_type: rule.type,
+              pattern: rule.pattern,
+              category: rule.category,
+              explain: rule.explain,
+              labels: rule.labels || []
+            })
+            
+            // Mark as applied
+            rule.applied = true
+            successCount++
+          } catch (error) {
+            console.error('Error applying rule:', error)
+            errorCount++
+          }
+        }
+
+        if (successCount > 0) {
+          showSnackMessage(`Successfully applied ${successCount} auto-generated rules`)
+        }
+        if (errorCount > 0) {
+          showSnackMessage(`Failed to apply ${errorCount} rules`)
+        }
+      } catch (error) {
+        console.error('Error applying auto rules:', error)
+        showSnackMessage('Error applying auto rules: ' + error.message)
+      } finally {
+        applying.value = false
+      }
+    }
+
     async function loadRuleMatches(ruleId) {
       if (ruleMatches.value.has(ruleId)) return
 
@@ -296,6 +342,14 @@ export default {
       }, 3000)
     }
 
+    async function handleCommit() {
+      // Apply all auto-generated rules first
+      await applyAllAutoRules()
+      
+      // Then emit the commit event
+      emit('commit')
+    }
+
     // Initialize rule frequencies and explanations
     function initializeRuleData() {
       if (props.autoRules && props.autoRules.rules) {
@@ -347,7 +401,7 @@ export default {
       saveAutoRuleEdit,
       cancelAutoRuleEdit,
       removeAutoRule,
-      applySingleRule,
+      applyAllAutoRules,
       loadRuleMatches,
       getPreviewCount,
       getPreviewMatches,
@@ -359,6 +413,7 @@ export default {
       saveNewRule,
       cancelCreateRule,
       showSnackMessage,
+      handleCommit,
       initializeRuleData
     }
   }
