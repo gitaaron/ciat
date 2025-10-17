@@ -326,29 +326,20 @@
       </v-row>
     </v-card-text>
 
-    <!-- Step 3: Auto Rules Review -->
+    <!-- Step 3: Combined Rules Review -->
     <v-card-text v-if="step === 3">
-      <AutoRulesReview
+      <CombinedRulesReview
+        :used-rules="usedRules"
         :auto-rules="autoRules"
         :transactions="allTransactions"
-        @skip="handleAutoRulesSkip"
-        @applied="handleAutoRulesApplied"
-      />
-    </v-card-text>
-
-    <!-- Step 4: Review Rules -->
-    <v-card-text v-if="step === 4">
-      <RulesReview
-        :used-rules="usedRules"
         :accounts="accounts"
-        @commit="handleRulesCommit"
-        @cancel="handleRulesCancel"
-        @refresh-rules="handleRefreshRules"
+        @commit="handleCombinedRulesCommit"
+        @skip="handleCombinedRulesSkip"
       />
     </v-card-text>
 
-    <!-- Step 5: Complete -->
-    <v-card-text v-if="step === 5">
+    <!-- Step 4: Complete -->
+    <v-card-text v-if="step === 4">
       <v-card variant="outlined" class="text-center">
         <v-card-text class="pa-8">
           <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>

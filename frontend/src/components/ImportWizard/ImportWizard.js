@@ -1,13 +1,11 @@
 import { ref, computed } from 'vue'
 import api from '../api.js'
-import RulesReview from '../RulesReview/RulesReview.vue'
-import AutoRulesReview from '../AutoRulesReview/AutoRulesReview.vue'
+import CombinedRulesReview from '../CombinedRulesReview/CombinedRulesReview.vue'
 
 export default {
   name: 'ImportWizard',
   components: {
-    RulesReview,
-    AutoRulesReview
+    CombinedRulesReview
   },
   props: {
     accounts: Array
@@ -15,7 +13,7 @@ export default {
   emits: ['refresh-accounts', 'import-complete'],
   setup(props, { emit }) {
     const newAccount = ref('')
-    const step = ref(1) // 1: file selection, 2: account assignment, 3: auto rules, 4: review, 5: complete
+    const step = ref(1) // 1: file selection, 2: account assignment, 3: combined rules review, 4: complete
     const creating = ref(false)
     const createError = ref('')
     const createForm = ref(null)
@@ -324,12 +322,8 @@ export default {
           }
         }
         
-        // Go to auto rules step if we have auto rules, otherwise go to review
-        if (autoRules.value && autoRules.value.rules && autoRules.value.rules.length > 0) {
-          step.value = 3 // Auto rules step
-        } else {
-          step.value = 4 // Review step
-        }
+        // Go to combined rules review step
+        step.value = 3 // Combined rules review step
         currentCategoryStep.value = 0
       } catch (error) {
         console.error('Error processing file:', error)
@@ -414,15 +408,14 @@ export default {
       processAllFiles()
     }
 
-    function handleAutoRulesSkip() {
-      // Skip auto rules and go to review step
+    function handleCombinedRulesSkip() {
+      // Skip rules review and go to complete step
       step.value = 4
     }
 
-    function handleAutoRulesApplied(result) {
-      console.log('Auto rules applied:', result)
-      // Go to review step after applying auto rules
-      step.value = 4
+    function handleCombinedRulesCommit() {
+      // Commit the import
+      commitAllImports()
     }
 
     return {
@@ -486,8 +479,8 @@ export default {
       handleRulesCommit,
       handleRulesCancel,
       handleRefreshRules,
-      handleAutoRulesSkip,
-      handleAutoRulesApplied
+      handleCombinedRulesSkip,
+      handleCombinedRulesCommit
     }
   }
 }

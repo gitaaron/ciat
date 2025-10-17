@@ -19,6 +19,7 @@ Import historical transactions from multiple accounts using common bank formats,
     - In the expanded 'transactions' section I should be able to click a button on each transaction to create a new rule from the transaction. 
         - Clicking 'create rule' should open a dialog where i can edit the pattern/category/match type.  After creating the new rule it should appear at the top of the list of rules to apply and take precedence over all previous rules and all transactions should be updated based on the new rule. 
 - The **same categorization algorithm** is used in CLI and import flows.
+- During import, the 'rules review' and 'auto rules review' should be completed in the same step.  Any pre-existing rules should have a higher priority (and thus appear first before any auto generated rules).  The pre-existing rules should appear in a separate section from the auto generated rules so they are distinct to the user.
 
 ### UI Considerations
 - After parsing, provide a **review** before save (with inline category edit and optional note).

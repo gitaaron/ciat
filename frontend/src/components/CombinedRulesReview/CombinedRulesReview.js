@@ -1,0 +1,405 @@
+import { ref, computed, watch } from 'vue'
+import api from '../api.js'
+import MultiLabelSelector from '../MultiLabelSelector.vue'
+
+export default {
+  name: 'CombinedRulesReview',
+  components: {
+    MultiLabelSelector
+  },
+  props: {
+    usedRules: Array,
+    autoRules: Object,
+    transactions: Array,
+    accounts: Array
+  },
+  emits: ['commit', 'skip'],
+  setup(props, { emit }) {
+    // Existing rules state
+    const expandedRules = ref(new Set())
+    const editingRule = ref(null)
+    const editingData = ref({
+      match_type: '',
+      pattern: '',
+      category: '',
+      explain: '',
+      labels: []
+    })
+
+    // Auto rules state
+    const expandedAutoRules = ref(new Set())
+    const editingAutoRule = ref(null)
+    const editingAutoData = ref({
+      type: '',
+      pattern: '',
+      category: '',
+      explain: '',
+      labels: []
+    })
+    const applying = ref(false)
+    const ruleFrequencies = ref(new Map())
+    const ruleExplanations = ref(new Map())
+    const rulePreviewCounts = ref(new Map())
+    const ruleMatches = ref(new Map())
+
+    // Create rule dialog state
+    const showCreateRuleDialog = ref(false)
+    const createRuleTransaction = ref(null)
+    const createRuleData = ref({
+      type: 'contains',
+      pattern: '',
+      category: '',
+      labels: []
+    })
+
+    // Snack message state
+    const showSnack = ref(false)
+    const snackMessage = ref('')
+
+    // Computed properties
+    const existingRules = computed(() => {
+      if (!props.usedRules) return []
+      
+      return props.usedRules
+        .filter(rule => rule.type === 'user_rule' || rule.type === 'pattern')
+        .sort((a, b) => {
+          // Sort by priority (higher first), then by type (user rules first)
+          if (a.priority !== b.priority) return b.priority - a.priority
+          if (a.type !== b.type) return a.type === 'user_rule' ? -1 : 1
+          return 0
+        })
+    })
+
+    const effectiveAutoRules = computed(() => {
+      if (!props.autoRules || !props.autoRules.rules) return []
+      return props.autoRules.rules.filter(rule => !rule.applied)
+    })
+
+    // Helper functions
+    function getCategoryName(category) {
+      const categoryNames = {
+        'fixed_costs': 'Fixed Costs',
+        'investments': 'Investments',
+        'guilt_free': 'Guilt Free',
+        'short_term_savings': 'Short Term Savings',
+        '': 'Uncategorized'
+      }
+      return categoryNames[category] || category
+    }
+
+    function getAccountName(accountId) {
+      const account = props.accounts.find(a => a.id === accountId)
+      return account ? account.name : 'Unknown Account'
+    }
+
+    function formatAmount(amount) {
+      if (amount === null || amount === undefined || isNaN(amount)) return '$0.00'
+      return `$${Number(amount).toFixed(2)}`
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'Unknown'
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return 'Unknown'
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    }
+
+    // Existing rules functions
+    function toggleExpanded(ruleId) {
+      if (expandedRules.value.has(ruleId)) {
+        expandedRules.value.delete(ruleId)
+      } else {
+        expandedRules.value.add(ruleId)
+      }
+    }
+
+    function startEditing(rule) {
+      editingRule.value = rule.id
+      editingData.value = {
+        match_type: rule.match_type,
+        pattern: rule.pattern,
+        category: rule.category,
+        explain: rule.explain || '',
+        labels: rule.labels || []
+      }
+    }
+
+    async function saveEdit(ruleId) {
+      try {
+        await api.updateRule(ruleId, editingData.value)
+        editingRule.value = null
+        showSnackMessage('Rule updated successfully')
+        // Emit refresh event to parent
+        emit('refresh-rules')
+      } catch (error) {
+        console.error('Error updating rule:', error)
+        showSnackMessage('Error updating rule: ' + error.message)
+      }
+    }
+
+    function cancelEdit() {
+      editingRule.value = null
+      editingData.value = {
+        match_type: '',
+        pattern: '',
+        category: '',
+        explain: '',
+        labels: []
+      }
+    }
+
+    async function deleteRule(rule) {
+      if (!confirm(`Are you sure you want to delete the rule "${rule.pattern}"?`)) {
+        return
+      }
+
+      try {
+        const ruleId = rule.type === 'pattern' 
+          ? `pattern:${rule.id}` 
+          : rule.id
+        
+        await api.deleteRule(ruleId)
+        showSnackMessage('Rule deleted successfully')
+        // Emit refresh event to parent
+        emit('refresh-rules')
+      } catch (error) {
+        console.error('Error deleting rule:', error)
+        showSnackMessage('Error deleting rule: ' + error.message)
+      }
+    }
+
+    // Auto rules functions
+    function toggleAutoRuleExpanded(ruleId) {
+      if (expandedAutoRules.value.has(ruleId)) {
+        expandedAutoRules.value.delete(ruleId)
+      } else {
+        expandedAutoRules.value.add(ruleId)
+        loadRuleMatches(ruleId)
+      }
+    }
+
+    function startEditingAutoRule(rule) {
+      editingAutoRule.value = rule.id
+      editingAutoData.value = {
+        type: rule.type,
+        pattern: rule.pattern,
+        category: rule.category,
+        explain: rule.explain || '',
+        labels: rule.labels || []
+      }
+    }
+
+    async function saveAutoRuleEdit(ruleId) {
+      try {
+        // For auto rules, we need to create a new rule
+        await api.createRule(editingAutoData.value)
+        editingAutoRule.value = null
+        showSnackMessage('Rule created successfully')
+        // Remove from auto rules list
+        removeAutoRule(ruleId)
+      } catch (error) {
+        console.error('Error creating rule:', error)
+        showSnackMessage('Error creating rule: ' + error.message)
+      }
+    }
+
+    function cancelAutoRuleEdit() {
+      editingAutoRule.value = null
+      editingAutoData.value = {
+        type: '',
+        pattern: '',
+        category: '',
+        explain: '',
+        labels: []
+      }
+    }
+
+    function removeAutoRule(ruleId) {
+      // Remove from auto rules list (this is just UI state)
+      const ruleIndex = props.autoRules.rules.findIndex(r => r.id === ruleId)
+      if (ruleIndex !== -1) {
+        props.autoRules.rules.splice(ruleIndex, 1)
+      }
+    }
+
+    async function applySingleRule(rule) {
+      applying.value = true
+      try {
+        await api.createRule({
+          match_type: rule.type,
+          pattern: rule.pattern,
+          category: rule.category,
+          explain: rule.explain,
+          labels: rule.labels || []
+        })
+        
+        // Mark as applied
+        rule.applied = true
+        showSnackMessage('Rule applied successfully')
+      } catch (error) {
+        console.error('Error applying rule:', error)
+        showSnackMessage('Error applying rule: ' + error.message)
+      } finally {
+        applying.value = false
+      }
+    }
+
+    async function loadRuleMatches(ruleId) {
+      if (ruleMatches.value.has(ruleId)) return
+
+      try {
+        // This would need to be implemented in the API
+        // For now, we'll use mock data
+        const matches = props.transactions.filter(tx => 
+          tx.name.toLowerCase().includes(ruleId.toLowerCase())
+        ).slice(0, 10) // Limit to 10 for performance
+
+        ruleMatches.value.set(ruleId, matches)
+        rulePreviewCounts.value.set(ruleId, matches.length)
+      } catch (error) {
+        console.error('Error loading rule matches:', error)
+      }
+    }
+
+    function getPreviewCount(ruleId) {
+      return rulePreviewCounts.value.get(ruleId) || 0
+    }
+
+    function getPreviewMatches(ruleId) {
+      return (ruleMatches.value.get(ruleId) || []).slice(0, 3)
+    }
+
+    function getExistingRulePreviewCount(ruleId) {
+      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      return rule?.transactions?.length || 0
+    }
+
+    function getExistingRulePreviewMatches(ruleId) {
+      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      return (rule?.transactions || []).slice(0, 3)
+    }
+
+    function getExistingRuleSingleMatch(ruleId) {
+      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      return (rule?.transactions || []).slice(0, 1)
+    }
+
+    function getSinglePreviewMatch(ruleId) {
+      return (ruleMatches.value.get(ruleId) || []).slice(0, 1)
+    }
+
+    // Create rule from transaction
+    function createRuleFromTransaction(transaction, rule) {
+      createRuleTransaction.value = transaction
+      createRuleData.value = {
+        type: 'contains',
+        pattern: transaction.name,
+        category: rule.category,
+        labels: []
+      }
+      showCreateRuleDialog.value = true
+    }
+
+    async function saveNewRule() {
+      try {
+        await api.createRule(createRuleData.value)
+        showCreateRuleDialog.value = false
+        showSnackMessage('Rule created successfully')
+      } catch (error) {
+        console.error('Error creating rule:', error)
+        showSnackMessage('Error creating rule: ' + error.message)
+      }
+    }
+
+    function cancelCreateRule() {
+      showCreateRuleDialog.value = false
+      createRuleTransaction.value = null
+      createRuleData.value = {
+        type: 'contains',
+        pattern: '',
+        category: '',
+        labels: []
+      }
+    }
+
+    function showSnackMessage(message) {
+      snackMessage.value = message
+      showSnack.value = true
+      setTimeout(() => {
+        showSnack.value = false
+      }, 3000)
+    }
+
+    // Initialize rule frequencies and explanations
+    function initializeRuleData() {
+      if (props.autoRules && props.autoRules.rules) {
+        props.autoRules.rules.forEach(rule => {
+          ruleFrequencies.value.set(rule.id, rule.frequency || 0)
+          ruleExplanations.value.set(rule.id, rule.explain || '')
+        })
+      }
+    }
+
+    // Watch for changes in autoRules and initialize data
+    watch(() => props.autoRules, () => {
+      initializeRuleData()
+    }, { immediate: true })
+
+    return {
+      // State
+      expandedRules,
+      editingRule,
+      editingData,
+      expandedAutoRules,
+      editingAutoRule,
+      editingAutoData,
+      applying,
+      ruleFrequencies,
+      ruleExplanations,
+      rulePreviewCounts,
+      ruleMatches,
+      showCreateRuleDialog,
+      createRuleTransaction,
+      createRuleData,
+      showSnack,
+      snackMessage,
+      
+      // Computed
+      existingRules,
+      effectiveAutoRules,
+      
+      // Methods
+      getCategoryName,
+      getAccountName,
+      formatAmount,
+      formatDate,
+      toggleExpanded,
+      startEditing,
+      saveEdit,
+      cancelEdit,
+      deleteRule,
+      toggleAutoRuleExpanded,
+      startEditingAutoRule,
+      saveAutoRuleEdit,
+      cancelAutoRuleEdit,
+      removeAutoRule,
+      applySingleRule,
+      loadRuleMatches,
+      getPreviewCount,
+      getPreviewMatches,
+      getExistingRulePreviewCount,
+      getExistingRulePreviewMatches,
+      getExistingRuleSingleMatch,
+      getSinglePreviewMatch,
+      createRuleFromTransaction,
+      saveNewRule,
+      cancelCreateRule,
+      showSnackMessage,
+      initializeRuleData
+    }
+  }
+}
