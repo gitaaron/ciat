@@ -2,6 +2,8 @@ import { ref, computed, watch } from 'vue'
 import api from '../api.js'
 import MultiLabelSelector from '../MultiLabelSelector.vue'
 import RuleItem from './RuleItem.vue'
+import { matchesRule, applyRulesToTransactions, getUnmatchedTransactions, applyRulesWithDetails } from '../../utils/ruleMatcher.js'
+import { useRulesReview } from '../shared/RulesReviewMixin.js'
 
 export default {
   name: 'CombinedRulesReview',
@@ -17,6 +19,19 @@ export default {
   },
   emits: ['commit'],
   setup(props, { emit }) {
+    // Use shared rules review functionality
+    const {
+      showSnack,
+      snackMessage,
+      getCategoryName,
+      showSnackMessage,
+      toggleExpanded: sharedToggleExpanded,
+      startEditing: sharedStartEditing,
+      saveEdit: sharedSaveEdit,
+      cancelEdit: sharedCancelEdit,
+      deleteRule: sharedDeleteRule
+    } = useRulesReview()
+
     // Existing rules state
     const expandedRules = ref(new Set())
     const editingRule = ref(null)
@@ -40,45 +55,38 @@ export default {
       labels: []
     })
 
-    // Snack message state
-    const showSnack = ref(false)
-    const snackMessage = ref('')
-
     // Computed properties
     const existingRules = computed(() => {
       if (!props.usedRules) return []
       
       return props.usedRules
-        .filter(rule => rule.type === 'user_rule' || rule.type === 'pattern')
+        .filter(rule => rule.type === 'user_rule')
         .sort((a, b) => {
-          // Sort by priority (higher first), then by type (user rules first)
+          // Sort by priority (higher first)
           if (a.priority !== b.priority) return b.priority - a.priority
-          if (a.type !== b.type) return a.type === 'user_rule' ? -1 : 1
           return 0
         })
     })
 
     const effectiveAutoRules = computed(() => {
       if (!props.autoRules || !props.autoRules.rules) return []
-      return props.autoRules.rules
+      const rules = props.autoRules.rules
         .filter(rule => !rule.applied)
-        .map(rule => ({
-          ...rule,
-          transactions: ruleMatches.value.get(rule.id) || []
-        }))
+        .map(rule => {
+          const transactions = ruleMatches.value.get(rule.id) || []
+          const hasInMap = ruleMatches.value.has(rule.id)
+          console.log(`effectiveAutoRules: Rule ${rule.id} (${rule.pattern}) has ${transactions.length} transactions, exists in map: ${hasInMap}`)
+          return {
+            ...rule,
+            transactions
+          }
+        })
+      
+      console.log('effectiveAutoRules: Total rules with transactions:', rules.length)
+      return rules
     })
 
-    // Helper functions
-    function getCategoryName(category) {
-      const categoryNames = {
-        'fixed_costs': 'Fixed Costs',
-        'investments': 'Investments',
-        'guilt_free': 'Guilt Free',
-        'short_term_savings': 'Short Term Savings',
-        '': 'Uncategorized'
-      }
-      return categoryNames[category] || category
-    }
+    // Helper functions (getCategoryName is now provided by shared mixin)
 
     function getAccountName(accountId) {
       const account = props.accounts.find(a => a.id === accountId)
@@ -101,55 +109,25 @@ export default {
       })
     }
 
-    // Existing rules functions
+    // Existing rules functions (using shared functionality)
     function toggleExpanded(rule) {
-      const ruleId = rule.id || rule.pattern
-      if (expandedRules.value.has(ruleId)) {
-        expandedRules.value.delete(ruleId)
-      } else {
-        expandedRules.value.add(ruleId)
-      }
+      sharedToggleExpanded(expandedRules, rule)
     }
 
     function startEditing(rule) {
-      editingRule.value = rule.id
+      sharedStartEditing(editingRule, rule)
     }
 
     async function saveEdit(rule, editData) {
-      try {
-        await api.updateRule(rule.id, editData)
-        editingRule.value = null
-        showSnackMessage('Rule updated successfully')
-        // Emit refresh event to parent
-        emit('refresh-rules')
-      } catch (error) {
-        console.error('Error updating rule:', error)
-        showSnackMessage('Error updating rule: ' + error.message)
-      }
+      await sharedSaveEdit(rule, editData, editingRule, emit)
     }
 
     function cancelEdit() {
-      editingRule.value = null
+      sharedCancelEdit(editingRule)
     }
 
     async function deleteRule(rule) {
-      if (!confirm(`Are you sure you want to delete the rule "${rule.pattern}"?`)) {
-        return
-      }
-
-      try {
-        const ruleId = rule.type === 'pattern' 
-          ? `pattern:${rule.id}` 
-          : rule.id
-        
-        await api.deleteRule(ruleId)
-        showSnackMessage('Rule deleted successfully')
-        // Emit refresh event to parent
-        emit('refresh-rules')
-      } catch (error) {
-        console.error('Error deleting rule:', error)
-        showSnackMessage('Error deleting rule: ' + error.message)
-      }
+      await sharedDeleteRule(rule, emit)
     }
 
     // Auto rules functions
@@ -274,31 +252,8 @@ export default {
           return
         }
 
-        // Find transactions that match the current rule from the unmatched transactions
-        const pattern = rule.pattern?.toLowerCase() || ''
-        const matchType = rule.type || 'contains'
-        
-        const matches = unmatchedTransactions.filter(tx => {
-          const merchantName = tx.name?.toLowerCase() || ''
-          
-          switch (matchType) {
-            case 'contains':
-              return merchantName.includes(pattern)
-            case 'exact':
-              return merchantName === pattern
-            case 'regex':
-              try {
-                const regex = new RegExp(pattern, 'i')
-                return regex.test(merchantName)
-              } catch (e) {
-                return false
-              }
-            case 'mcc':
-              return tx.mcc === pattern
-            default:
-              return merchantName.includes(pattern)
-          }
-        })
+        // Use the same rule matching logic as the main matching function
+        const matches = unmatchedTransactions.filter(tx => matchesRule(rule, tx))
 
         // Store matches
         ruleMatches.value.set(ruleId, matches)
@@ -311,49 +266,53 @@ export default {
     }
 
     function loadAllRuleMatches() {
-      if (!props.autoRules?.rules || !props.transactions) return
-
-      // Start with all transactions that aren't already matched by existing rules
-      let unmatchedTransactions = props.transactions.filter(tx => 
-        !tx.rule_id || !(tx.rule_type === 'user_rule' || tx.rule_type === 'pattern')
-      )
+      console.log('loadAllRuleMatches: FUNCTION CALLED - Starting execution')
+      if (!props.autoRules?.rules || !props.transactions) {
+        console.log('loadAllRuleMatches: Missing autoRules or transactions', {
+          hasAutoRules: !!props.autoRules?.rules,
+          hasTransactions: !!props.transactions,
+          autoRulesCount: props.autoRules?.rules?.length || 0,
+          transactionsCount: props.transactions?.length || 0
+        })
+        return
+      }
 
       // Get all auto rules sorted by priority (highest first)
       const allAutoRules = props.autoRules.rules
         .filter(r => !r.applied)
         .sort((a, b) => (b.priority || 0) - (a.priority || 0))
 
-      // Process each rule in priority order
-      for (const rule of allAutoRules) {
-        // Load matches for this rule using current unmatched transactions
-        loadRuleMatches(rule.id, unmatchedTransactions)
-        
-        // Remove transactions that would be matched by this rule from unmatched list
-        const pattern = rule.pattern?.toLowerCase() || ''
-        const matchType = rule.type || 'contains'
-        
-        unmatchedTransactions = unmatchedTransactions.filter(tx => {
-          const merchantName = tx.name?.toLowerCase() || ''
-          
-          switch (matchType) {
-            case 'contains':
-              return !merchantName.includes(pattern)
-            case 'exact':
-              return merchantName !== pattern
-            case 'regex':
-              try {
-                const regex = new RegExp(pattern, 'i')
-                return !regex.test(merchantName)
-              } catch (e) {
-                return true
-              }
-            case 'mcc':
-              return tx.mcc !== pattern
-            default:
-              return !merchantName.includes(pattern)
-          }
-        })
+      console.log('loadAllRuleMatches: Processing auto rules', {
+        totalAutoRules: props.autoRules.rules.length,
+        unappliedAutoRules: allAutoRules.length,
+        sampleRule: allAutoRules[0],
+        transactionsCount: props.transactions.length
+      })
+
+      // Start with all transactions (they are raw transactions from ImportWizard)
+      const unmatchedTransactions = props.transactions
+
+      // Use the centralized rule matching logic
+      console.log('loadAllRuleMatches: About to call applyRulesWithDetails')
+      const result = applyRulesWithDetails(unmatchedTransactions, allAutoRules)
+      console.log('loadAllRuleMatches: applyRulesWithDetails completed')
+      
+      console.log('loadAllRuleMatches: Rule matching result', {
+        ruleMatchesCount: result.ruleMatches.size,
+        categorizedTransactionsCount: result.categorizedTransactions.length,
+        sampleMatches: Array.from(result.ruleMatches.entries()).slice(0, 3)
+      })
+      
+      // Store the rule matches for preview
+      console.log('loadAllRuleMatches: Storing rule matches')
+      for (const [ruleId, matchingTransactions] of result.ruleMatches) {
+        console.log(`loadAllRuleMatches: Storing rule ${ruleId} with ${matchingTransactions.length} transactions`)
+        ruleMatches.value.set(ruleId, matchingTransactions)
+        rulePreviewCounts.value.set(ruleId, matchingTransactions.length)
       }
+      
+      console.log('loadAllRuleMatches: Final ruleMatches map size:', ruleMatches.value.size)
+      console.log('loadAllRuleMatches: Sample ruleMatches keys:', Array.from(ruleMatches.value.keys()).slice(0, 5))
     }
 
     function getPreviewCount(ruleId) {
@@ -365,17 +324,17 @@ export default {
     }
 
     function getExistingRulePreviewCount(ruleId) {
-      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      const rule = props.usedRules?.find(r => r.id === ruleId)
       return rule?.transactions?.length || 0
     }
 
     function getExistingRulePreviewMatches(ruleId) {
-      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      const rule = props.usedRules?.find(r => r.id === ruleId)
       return (rule?.transactions || []).slice(0, 3)
     }
 
     function getExistingRuleSingleMatch(ruleId) {
-      const rule = props.usedRules?.find(r => (r.id || r.pattern) === ruleId)
+      const rule = props.usedRules?.find(r => r.id === ruleId)
       return (rule?.transactions || []).slice(0, 1)
     }
 
@@ -417,13 +376,7 @@ export default {
       }
     }
 
-    function showSnackMessage(message) {
-      snackMessage.value = message
-      showSnack.value = true
-      setTimeout(() => {
-        showSnack.value = false
-      }, 3000)
-    }
+    // showSnackMessage is now provided by the shared mixin
 
     async function handleCommit() {
       // Apply all auto-generated rules first
@@ -435,13 +388,16 @@ export default {
 
     // Initialize rule frequencies and explanations
     function initializeRuleData() {
+      console.log('initializeRuleData: Called with autoRules:', !!props.autoRules)
       if (props.autoRules && props.autoRules.rules) {
+        console.log('initializeRuleData: Processing', props.autoRules.rules.length, 'rules')
         props.autoRules.rules.forEach(rule => {
           ruleFrequencies.value.set(rule.id, rule.frequency || 0)
           ruleExplanations.value.set(rule.id, rule.explain || '')
         })
         
         // Load all rule matches to ensure proper priority handling
+        console.log('initializeRuleData: Calling loadAllRuleMatches')
         loadAllRuleMatches()
       }
     }

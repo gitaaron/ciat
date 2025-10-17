@@ -326,8 +326,17 @@
       </v-row>
     </v-card-text>
 
-    <!-- Step 3: Combined Rules Review -->
+    <!-- Step 3: Rules Review -->
     <v-card-text v-if="step === 3">
+      <!-- Pre-existing Rules Review -->
+      <PreexistingRulesReview
+        :used-rules="usedRules"
+        :accounts="accounts"
+        :applying="processing"
+        @refresh-rules="handleRulesRefresh"
+      />
+      
+      <!-- Auto-Generated Rules Review -->
       <CombinedRulesReview
         :used-rules="usedRules"
         :auto-rules="autoRules"

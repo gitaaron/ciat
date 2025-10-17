@@ -1,11 +1,14 @@
 import { ref, computed } from 'vue'
 import api from '../api.js'
 import CombinedRulesReview from '../CombinedRulesReview/CombinedRulesReview.vue'
+import PreexistingRulesReview from '../PreexistingRulesReview/PreexistingRulesReview.vue'
+import { applyRulesToTransactions, getUnmatchedTransactions, applyRulesWithDetails } from '../../utils/ruleMatcher.js'
 
 export default {
   name: 'ImportWizard',
   components: {
-    CombinedRulesReview
+    CombinedRulesReview,
+    PreexistingRulesReview
   },
   props: {
     accounts: Array
@@ -301,21 +304,55 @@ export default {
         for (const [accountId, accountFiles] of filesByAccount.value) {
           const file = accountFiles[0] // Only one file now
           try {
+            // Import transactions without categorization
             const res = await api.importCSV(accountId, file)
-            previewsByAccount.value.set(accountId, res.preview)
+            const rawTransactions = res.preview || []
             
-            // Store used rules from the import
-            if (res.usedRules) {
-              usedRules.value = res.usedRules
+            // Load existing rules from backend
+            const existingRules = await api.getRules()
+            
+            // Apply rules to transactions using centralized logic
+            const ruleMatchingResult = applyRulesWithDetails(rawTransactions, existingRules)
+            const categorizedTransactions = ruleMatchingResult.categorizedTransactions
+            
+            // Get unmatched transactions for auto rule generation
+            const unmatchedTransactions = getUnmatchedTransactions(rawTransactions, existingRules)
+            
+            // Generate auto rules for unmatched transactions
+            // Send categorized transactions so auto rule generator can learn from existing patterns
+            let autoRulesResult = null
+            if (unmatchedTransactions.length >= 5) {
+              try {
+                autoRulesResult = await api.generateAutoRules(categorizedTransactions)
+              } catch (error) {
+                console.warn('Auto rule generation failed:', error)
+              }
             }
             
-            // Store auto rules and all transactions
-            if (res.autoRules) {
-              autoRules.value = res.autoRules
-            }
+            // Store the categorized transactions
+            previewsByAccount.value.set(accountId, categorizedTransactions)
             
-            // Collect all transactions for auto rules
-            allTransactions.value = res.preview || []
+            // Build used rules from the centralized rule matching result
+            const usedRulesList = []
+            for (const [ruleId, matchingTransactions] of ruleMatchingResult.ruleMatches) {
+              if (matchingTransactions.length > 0) {
+                const rule = existingRules.find(r => r.id === ruleId)
+                if (rule) {
+                  usedRulesList.push({
+                    ...rule,
+                    type: 'user_rule',
+                    transactions: matchingTransactions
+                  })
+                }
+              }
+            }
+            usedRules.value = usedRulesList
+            
+            // Store auto rules
+            autoRules.value = autoRulesResult
+            
+            // Store raw transactions for CombinedRulesReview to work with
+            allTransactions.value = rawTransactions
           } catch (error) {
             console.error(`Error processing file ${file.name}:`, error)
             alert(`Error processing file ${file.name}: ${error.message}`)
@@ -408,6 +445,11 @@ export default {
       processAllFiles()
     }
 
+    function handleRulesRefresh() {
+      // Handle rules refresh from PreexistingRulesReview component
+      handleRefreshRules()
+    }
+
     function handleCombinedRulesSkip() {
       // Skip rules review and go to complete step
       step.value = 4
@@ -479,6 +521,7 @@ export default {
       handleRulesCommit,
       handleRulesCancel,
       handleRefreshRules,
+      handleRulesRefresh,
       handleCombinedRulesSkip,
       handleCombinedRulesCommit
     }

@@ -34,40 +34,27 @@ export function guessCategory(tx) {
     const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
     return bTime - aTime;
   });
-  const patterns = loadJSON('patterns.json').filter(r => r.enabled !== false).sort((a,b)=>b.priority-a.priority);
 
   const merchant = normalize(tx.name || '');
   const description = normalize(tx.description || '');
   const merchant_normalized = merchant;
   const description_normalized = description;
 
-  // 1) Rules (user-first precedence)
+  // Check rules in priority order
   for (const r of rules) {
     if (matches(r, { merchant_normalized, description_normalized })) {
       return { 
         category: r.category, 
         labels: r.labels || [],
         source: 'rule', 
-        explain: r.explain || 'User rule match',
+        explain: r.explain || 'Rule match',
         rule_id: r.id,
         rule_type: 'user_rule'
       };
     }
   }
-  // 2) Pattern matching
-  for (const r of patterns) {
-    if (matches(r, { merchant_normalized, description_normalized })) {
-      return { 
-        category: r.category, 
-        labels: r.labels || [],
-        source: 'pattern', 
-        explain: r.explain || 'Pattern match',
-        rule_id: r.pattern, // Use pattern as identifier for patterns
-        rule_type: 'pattern'
-      };
-    }
-  }
-  // 3) ML (stub)
+  
+  // ML fallback
   const ml = mlGuess(tx);
   if (ml) return { ...ml, labels: [], rule_type: 'ml' };
   return { category: null, labels: [], source: 'none', explain: 'No match', rule_type: 'none' };
@@ -215,44 +202,6 @@ export async function updateUserRule(ruleId, { category, match_type, pattern, ex
   return { updated: true, ruleId, rule: rules[ruleIndex] };
 }
 
-export async function convertPatternToUserRule(patternId, { category, match_type, pattern, explain, labels }) {
-  const patterns = loadJSON('patterns.json');
-  const userRules = loadJSON('rules.json');
-  
-  // Find the pattern rule
-  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
-  if (patternIndex === -1) {
-    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
-  }
-  
-  // Disable the original pattern rule
-  patterns[patternIndex].enabled = false;
-  saveJSON('patterns.json', patterns);
-  
-  // Create a new user rule with the updated values
-  const priority = Math.max(1000, ...userRules.map(r => r.priority || 0)) + 1; // always win
-  const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const newRule = { 
-    id: ruleId,
-    category, 
-    match_type, 
-    pattern, 
-    priority, 
-    enabled: true, 
-    explain: explain || 'Converted from pattern rule',
-    labels: labels || [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString() 
-  };
-  
-  userRules.push(newRule);
-  saveJSON('rules.json', userRules);
-  
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
-  return { converted: true, ruleId, rule: newRule };
-}
 
 export async function deleteUserRule(ruleId) {
   const rules = loadJSON('rules.json');
@@ -273,23 +222,6 @@ export async function deleteUserRule(ruleId) {
   return { deleted: true, ruleId };
 }
 
-export async function deletePatternRule(patternId) {
-  const patterns = loadJSON('patterns.json');
-  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
-  
-  if (patternIndex === -1) {
-    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
-  }
-  
-  // Disable the pattern rule instead of deleting it
-  patterns[patternIndex].enabled = false;
-  saveJSON('patterns.json', patterns);
-  
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
-  return { deleted: true, patternId };
-}
 
 export async function toggleUserRule(ruleId, enabled) {
   const rules = loadJSON('rules.json');
@@ -310,23 +242,6 @@ export async function toggleUserRule(ruleId, enabled) {
   return { toggled: true, ruleId, enabled, rule: rules[ruleIndex] };
 }
 
-export async function togglePatternRule(patternId, enabled) {
-  const patterns = loadJSON('patterns.json');
-  const patternIndex = patterns.findIndex(p => p.pattern === patternId);
-  
-  if (patternIndex === -1) {
-    throw new Error(`Pattern rule with pattern "${patternId}" not found`);
-  }
-  
-  // Update the enabled status
-  patterns[patternIndex].enabled = enabled;
-  saveJSON('patterns.json', patterns);
-  
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
-  return { toggled: true, patternId, enabled, rule: patterns[patternIndex] };
-}
 
 export async function reapplyCategories() {
   // Import db here to avoid circular dependency
@@ -350,37 +265,23 @@ export async function reapplyCategories() {
 
 export function getAllRules() {
   const rules = loadJSON('rules.json');
-  const patterns = loadJSON('patterns.json');
-  
-  // Combine rules and patterns with type information
-  const allRules = [
-    ...rules.map(r => ({ ...r, type: 'user_rule' })),
-    ...patterns.map(p => ({ ...p, type: 'pattern', id: p.pattern }))
-  ];
-  
-  return allRules;
+  return rules;
 }
 
 export function getRulesUsedInImport(transactions) {
   const rules = loadJSON('rules.json');
-  const patterns = loadJSON('patterns.json');
   const usedRules = new Map();
   
   for (const tx of transactions) {
-    if (tx.rule_id && tx.rule_type) {
-      const key = `${tx.rule_type}:${tx.rule_id}`;
+    if (tx.rule_id && tx.rule_type === 'user_rule') {
+      const key = `user_rule:${tx.rule_id}`;
       if (!usedRules.has(key)) {
-        let rule;
-        if (tx.rule_type === 'user_rule') {
-          rule = rules.find(r => r.id === tx.rule_id);
-        } else if (tx.rule_type === 'pattern') {
-          rule = patterns.find(p => p.pattern === tx.rule_id);
-        }
+        const rule = rules.find(r => r.id === tx.rule_id);
         
         if (rule) {
           usedRules.set(key, {
             ...rule,
-            type: tx.rule_type,
+            type: 'user_rule',
             transactions: []
           });
         }

@@ -1,41 +1,14 @@
 <template>
   <div class="combined-rules-review">
     <div class="header">
-      <h3>📋 Rules Review</h3>
+      <h3>🤖 Auto-Generated Rules Review</h3>
       <p class="subtitle">
-        Review and manage rules used in this import. Pre-existing rules are shown first, followed by auto-generated suggestions.
+        Review and manage auto-generated rules suggested based on your transaction patterns.
       </p>
       
     </div>
 
-    <!-- Pre-existing Rules Section -->
-    <div v-if="existingRules.length > 0" class="rules-section existing-rules">
-      <div class="section-header">
-        <h4>🔧 Pre-existing Rules</h4>
-        <p class="section-subtitle">
-          {{ existingRules.length }} rules that were already in your system and applied to these transactions
-        </p>
-      </div>
-
-      <div class="rules-list">
-        <RuleItem
-          v-for="rule in existingRules"
-          :key="rule.id || rule.pattern"
-          :rule="rule"
-          rule-type="existing-rule"
-          :accounts="accounts"
-          :is-expanded="expandedRules.has(rule.id || rule.pattern)"
-          :is-editing="editingRule === rule.id"
-          :applying="applying"
-          :show-create-rule-button="false"
-          @edit="startEditing"
-          @save-edit="saveEdit"
-          @cancel-edit="cancelEdit"
-          @remove="deleteRule"
-          @toggle-expanded="toggleExpanded"
-        />
-      </div>
-    </div>
+    <!-- Pre-existing Rules Section - Now handled by separate PreexistingRulesReview component -->
 
     <!-- Auto-generated Rules Section -->
     <div v-if="autoRules && autoRules.rules && autoRules.rules.length > 0" class="rules-section auto-rules">

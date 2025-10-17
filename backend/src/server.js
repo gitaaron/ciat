@@ -9,14 +9,15 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
-import { guessCategory, addUserRule, updateUserRule, convertPatternToUserRule, deleteUserRule, deletePatternRule, toggleUserRule, togglePatternRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
+import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -157,11 +158,11 @@ app.post('/api/rules', async (req, res) => {
   }
 });
 
-// List all rules (both user rules and patterns)
+// List all rules (consolidated from rules.json only)
 app.get('/api/rules', (req, res) => {
   try {
-    const allRules = getAllRules();
-    res.json(allRules);
+    const rules = loadJSON('rules.json');
+    res.json(rules);
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
@@ -177,23 +178,31 @@ app.get('/api/rules/user', (req, res) => {
   }
 });
 
+// Generate auto rules for transactions
+app.post('/api/rules/auto-generate', async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    
+    if (!transactions || transactions.length < 5) {
+      return res.json({ rules: [], analysis: null });
+    }
+    
+    const autoRules = await generateAutoRules(transactions);
+    res.json(autoRules);
+  } catch (e) {
+    console.error('Auto rule generation error:', e);
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 // Update rule
 app.put('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
     const { category, match_type, pattern, explain, labels } = req.body;
     
-    // Check if this is a pattern rule (no id in the request, using pattern as id)
-    if (ruleId.startsWith('pattern:')) {
-      // This is a pattern rule, convert it to a user rule
-      const patternId = ruleId.replace('pattern:', '');
-      const result = await convertPatternToUserRule(patternId, { category, match_type, pattern, explain, labels });
-      res.json({ ok: true, ...result });
-    } else {
-      // This is a user rule, update it normally
-      const result = await updateUserRule(ruleId, { category, match_type, pattern, explain, labels });
-      res.json({ ok: true, ...result });
-    }
+    const result = await updateUserRule(ruleId, { category, match_type, pattern, explain, labels });
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
@@ -205,17 +214,8 @@ app.patch('/api/rules/:id/toggle', async (req, res) => {
     const ruleId = req.params.id;
     const { enabled } = req.body;
     
-    // Check if this is a pattern rule
-    if (ruleId.startsWith('pattern:')) {
-      // This is a pattern rule
-      const patternId = ruleId.replace('pattern:', '');
-      const result = await togglePatternRule(patternId, enabled);
-      res.json({ ok: true, ...result });
-    } else {
-      // This is a user rule
-      const result = await toggleUserRule(ruleId, enabled);
-      res.json({ ok: true, ...result });
-    }
+    const result = await toggleUserRule(ruleId, enabled);
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
@@ -226,17 +226,8 @@ app.delete('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
     
-    // Check if this is a pattern rule
-    if (ruleId.startsWith('pattern:')) {
-      // This is a pattern rule
-      const patternId = ruleId.replace('pattern:', '');
-      const result = await deletePatternRule(patternId);
-      res.json({ ok: true, ...result });
-    } else {
-      // This is a user rule
-      const result = await deleteUserRule(ruleId);
-      res.json({ ok: true, ...result });
-    }
+    const result = await deleteUserRule(ruleId);
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
@@ -347,13 +338,14 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
     // Transfer detection (pre-save)
     const ignore = detectTransfers(processedRows);
 
-    const preview = processedRows.map(r => {
-      const guess = guessCategory(r);
-      return { ...r, ...guess, ignore: ignore.has(r.hash) };
-    });
+    // Add ignore flag to transactions
+    const processedWithIgnore = processedRows.map(r => ({
+      ...r,
+      ignore: ignore.has(r.hash)
+    }));
 
     // Filter out duplicates already saved
-    const deduped = preview.filter(r => {
+    const deduped = processedWithIgnore.filter(r => {
       const existing = db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash);
       if (existing) {
         console.log(`Skipping duplicate transaction: ${r.name} - ${r.amount} on ${r.date}`);
@@ -361,25 +353,6 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       }
       return true;
     });
-
-    // Get rules used in this import
-    const usedRules = getRulesUsedInImport(deduped);
-    
-    // Generate auto rules for new transactions (only if there are enough new transactions)
-    let autoRules = null;
-    console.log(`Checking auto rule generation: ${deduped.length} new transactions`);
-    if (deduped.length >= 5) { // Only generate auto rules if we have enough data
-      try {
-        console.log('Generating auto rules...');
-        autoRules = await generateAutoRules(deduped);
-        console.log('Auto rules generated:', autoRules ? autoRules.rules.length : 0, 'rules');
-      } catch (error) {
-        console.warn('Auto rule generation failed:', error);
-        // Don't fail the import if auto rule generation fails
-      }
-    } else {
-      console.log('Not enough transactions for auto rule generation (need at least 5)');
-    }
     
     res.json({ 
       preview: deduped,
@@ -387,9 +360,7 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       formatDisplayName: getFormatDisplayName(format),
       totalTransactions: rows.length,
       newTransactions: deduped.length,
-      duplicatesSkipped: rows.length - deduped.length,
-      usedRules: usedRules,
-      autoRules: autoRules
+      duplicatesSkipped: rows.length - deduped.length
     });
     
   } catch (error) {

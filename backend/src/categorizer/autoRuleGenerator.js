@@ -387,6 +387,8 @@ export function generateFrequencyBasedRules(analysis) {
           category: topCategory,
           confidence,
           frequency: totalCount,
+          applied: false,
+          enabled: true,
           explain: `Auto-generated: "${token}" appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
           source: 'frequency_analysis'
         });
@@ -413,7 +415,8 @@ export function generateFrequencyBasedRules(analysis) {
           confidence,
           frequency: totalCount,
           explain: `Auto-generated: ${brand} store pattern appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
-          source: 'store_pattern'
+          source: 'store_pattern',
+          applied: false
         });
       }
     }
@@ -450,7 +453,8 @@ export function generateMCCRules(analysis) {
           confidence,
           frequency: totalCount,
           explain: `Auto-generated: MCC ${mcc} appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${finalCategory}`,
-          source: 'mcc_analysis'
+          source: 'mcc_analysis',
+          applied: false
         });
       }
     }
@@ -483,7 +487,8 @@ export function generateMerchantIdRules(analysis) {
           confidence,
           frequency: totalCount,
           explain: `Auto-generated: Merchant ID ${merchantId} appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
-          source: 'merchant_id_analysis'
+          source: 'merchant_id_analysis',
+          applied: false
         });
       }
     }
@@ -592,7 +597,8 @@ export function generateMarketplaceRules(transactions) {
                 confidence: 0.8,
                 frequency: 1,
                 explain: `Auto-generated: ${marketplace} marketplace keyword "${keyword}" → ${category}`,
-                source: 'marketplace_analysis'
+                source: 'marketplace_analysis',
+                applied: false
               });
             }
           }
