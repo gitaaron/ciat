@@ -15,7 +15,7 @@ export default {
     transactions: Array,
     accounts: Array
   },
-  emits: ['commit', 'skip'],
+  emits: ['commit'],
   setup(props, { emit }) {
     // Existing rules state
     const expandedRules = ref(new Set())

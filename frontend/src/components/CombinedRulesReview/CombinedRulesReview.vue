@@ -115,12 +115,6 @@
 
     <!-- Actions -->
     <div class="actions">
-      <button 
-        class="btn btn-secondary" 
-        @click="$emit('skip')"
-      >
-        Skip Rules Review
-      </button>
       <div class="actions-info">
         <p>Review rules as needed. All auto-generated rules will be applied automatically when you continue to import.</p>
       </div>
