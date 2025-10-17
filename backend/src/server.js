@@ -132,10 +132,10 @@ app.post('/api/transactions/:id/category', async (req, res) => {
 });
 
 // Preview rule impact - show which transactions would be affected
-app.post('/api/rules/preview', (req, res) => {
+app.post('/api/rules/preview', async (req, res) => {
   const { category, match_type, pattern, explain } = req.body;
   try {
-    const affectedTransactions = Transactions.previewRuleImpact({ category, match_type, pattern });
+    const affectedTransactions = await Transactions.previewRuleImpact({ category, match_type, pattern });
     res.json({ 
       affectedTransactions,
       rule: { category, match_type, pattern, explain },
@@ -152,17 +152,6 @@ app.post('/api/rules', async (req, res) => {
   try {
     const ruleId = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels });
     res.json({ ok: true, ruleId });
-  } catch (e) {
-    res.status(400).json({ error: String(e) });
-  }
-});
-
-// Preview rule impact
-app.post('/api/rules/preview', (req, res) => {
-  try {
-    const { category, match_type, pattern } = req.body;
-    const affected = Transactions.previewRuleImpact({ category, match_type, pattern });
-    res.json(affected);
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }

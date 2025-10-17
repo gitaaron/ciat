@@ -17,8 +17,12 @@ function saveJSON(name, data) {
   fs.writeFileSync(p, JSON.stringify(data, null, 2));
 }
 
+// Import the same normalization function used by auto rule generator
+import { normalizeMerchant } from './autoRuleGenerator.js';
+
 function normalize(s='') {
-  return s.toUpperCase().replace(/\s+/g,' ').trim();
+  // Use the same normalization as auto rule generator for consistency
+  return normalizeMerchant(s).normalized;
 }
 
 export function guessCategory(tx) {
@@ -71,11 +75,14 @@ export function guessCategory(tx) {
 
 function matches(rule, ctx) {
   const p = rule.pattern || '';
+  // Normalize the pattern to match the same normalization used for transactions
+  const normalizedPattern = normalizeMerchant(p).normalized;
+  
   switch (rule.match_type) {
     case 'exact':
-      return ctx.merchant_normalized === p || ctx.description_normalized === p;
+      return ctx.merchant_normalized === normalizedPattern || ctx.description_normalized === normalizedPattern;
     case 'contains':
-      return ctx.merchant_normalized.includes(p) || ctx.description_normalized.includes(p);
+      return ctx.merchant_normalized.includes(normalizedPattern) || ctx.description_normalized.includes(normalizedPattern);
     case 'regex':
       try { return new RegExp(p, 'i').test(ctx.merchant_normalized) || new RegExp(p, 'i').test(ctx.description_normalized); }
       catch { return false; }

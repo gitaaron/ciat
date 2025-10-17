@@ -74,7 +74,7 @@ export const Transactions = {
       WHERE id=?
     `).run(category, explain, source, manual ? 1 : 0, labelsJson, id);
   },
-  previewRuleImpact({ category, match_type, pattern }) {
+  async previewRuleImpact({ category, match_type, pattern }) {
     // Get all transactions that would be affected by this rule
     // Use LEFT JOIN to handle cases where there might be no accounts
     const allTransactions = db.prepare(`
@@ -85,12 +85,13 @@ export const Transactions = {
     `).all();
     
     const affected = [];
-    const normalize = (s = '') => s.toUpperCase().trim();
-    const normalizedPattern = normalize(pattern);
+    // Import the same normalization function used by the categorizer
+    const { normalizeMerchant } = await import('./categorizer/autoRuleGenerator.js');
+    const normalizedPattern = normalizeMerchant(pattern).normalized;
     
     for (const tx of allTransactions) {
-      const merchant = normalize(tx.name || '');
-      const description = normalize(tx.description || '');
+      const merchant = normalizeMerchant(tx.name || '').normalized;
+      const description = normalizeMerchant(tx.description || '').normalized;
       let matches = false;
       
       switch (match_type) {
