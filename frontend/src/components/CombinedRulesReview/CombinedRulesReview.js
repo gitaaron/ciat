@@ -300,11 +300,9 @@ export default {
           }
         })
 
-        // Limit to reasonable number for performance
-        const limitedMatches = matches.slice(0, 50)
-        
-        ruleMatches.value.set(ruleId, limitedMatches)
-        rulePreviewCounts.value.set(ruleId, limitedMatches.length)
+        // Store all matches without artificial limit
+        ruleMatches.value.set(ruleId, matches)
+        rulePreviewCounts.value.set(ruleId, matches.length)
       } catch (error) {
         console.error('Error loading rule matches:', error)
         ruleMatches.value.set(ruleId, [])
