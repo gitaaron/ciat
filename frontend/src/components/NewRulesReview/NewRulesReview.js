@@ -44,6 +44,7 @@ export default function NewRulesReviewJS(props, { emit }) {
     }
     
     props.newRules.forEach(rule => {
+      console.log('rule', rule)
       const matchType = rule.match_type || rule.type || 'contains'
       if (counts.hasOwnProperty(matchType)) {
         counts[matchType]++

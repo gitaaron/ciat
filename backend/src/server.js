@@ -151,8 +151,8 @@ app.post('/api/rules/preview', async (req, res) => {
 app.post('/api/rules', async (req, res) => {
   const { category, match_type, pattern, explain, labels } = req.body;
   try {
-    const ruleId = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels });
-    res.json({ ok: true, ruleId });
+    const newRule = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels });
+    res.json(newRule);
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }

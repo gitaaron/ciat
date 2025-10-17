@@ -14,7 +14,7 @@
         <!-- Rule Header with Actions -->
         <div class="rule-header">
           <div class="rule-pattern">
-            <span class="rule-type-badge" :class="rule.type || 'existing'">{{ rule.type || 'existing' }}</span>
+            <span class="rule-type-badge" :class="rule.match_type || rule.type || 'existing'">{{ rule.match_type || rule.type || 'existing' }}</span>
             <code class="pattern">{{ rule.pattern }}</code>
             <span v-if="rule.isNewRule" class="new-rule-badge">NEW</span>
             <span v-if="rule.priority" class="priority-badge">Priority: {{ rule.priority }}</span>

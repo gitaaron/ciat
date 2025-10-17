@@ -49,7 +49,7 @@ export default {
     const showCreateRuleDialog = ref(false)
     const createRuleTransaction = ref(null)
     const createRuleData = ref({
-      type: 'contains',
+      match_type: 'contains',
       pattern: '',
       category: '',
       labels: []
@@ -352,7 +352,7 @@ export default {
     function createRuleFromTransaction(transaction, rule) {
       createRuleTransaction.value = transaction
       createRuleData.value = {
-        type: 'contains',
+        match_type: 'contains',
         pattern: transaction.name,
         category: rule.category,
         labels: []
@@ -360,9 +360,22 @@ export default {
       showCreateRuleDialog.value = true
     }
 
-    async function saveNewRule() {
+    function saveNewRule() {
       try {
-        const newRule = await api.createRule(createRuleData.value)
+        console.log('saveNewRule: Creating rule in memory:', createRuleData.value)
+        
+        // Create a rule object in memory (don't send to backend yet)
+        const newRule = {
+          id: `temp_rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...createRuleData.value,
+          priority: 1000, // High priority for user-created rules
+          enabled: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          isTemporary: true // Flag to indicate this is not yet saved to backend
+        }
+        
+        console.log('saveNewRule: Created rule in memory:', newRule)
         showCreateRuleDialog.value = false
         showSnackMessage('Rule created successfully')
         // Emit event to parent to track the new rule
@@ -377,7 +390,7 @@ export default {
       showCreateRuleDialog.value = false
       createRuleTransaction.value = null
       createRuleData.value = {
-        type: 'contains',
+        match_type: 'contains',
         pattern: '',
         category: '',
         labels: []

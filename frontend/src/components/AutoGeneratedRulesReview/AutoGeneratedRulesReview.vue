@@ -119,7 +119,7 @@
           <div class="rule-form">
             <div class="form-row">
               <label>Match Type:</label>
-              <select v-model="createRuleData.type" class="form-input">
+              <select v-model="createRuleData.match_type" class="form-input">
                 <option value="contains">Contains</option>
                 <option value="regex">Regex</option>
                 <option value="exact">Exact</option>
@@ -132,12 +132,12 @@
                 v-model="createRuleData.pattern" 
                 class="form-input pattern-input"
                 placeholder="Enter pattern to match..."
-                :class="{ 'regex-input': createRuleData.type === 'regex' }"
+                :class="{ 'regex-input': createRuleData.match_type === 'regex' }"
               >
               <small class="form-help">
-                <span v-if="createRuleData.type === 'contains'">Text that must be contained in the merchant name</span>
-                <span v-else-if="createRuleData.type === 'regex'">Regular expression pattern</span>
-                <span v-else-if="createRuleData.type === 'exact'">Exact merchant name match</span>
+                <span v-if="createRuleData.match_type === 'contains'">Text that must be contained in the merchant name</span>
+                <span v-else-if="createRuleData.match_type === 'regex'">Regular expression pattern</span>
+                <span v-else-if="createRuleData.match_type === 'exact'">Exact merchant name match</span>
               </small>
               <div v-if="createRuleData.pattern" class="pattern-preview">
                 <strong>Preview:</strong> This rule will match transactions containing "<code>{{ createRuleData.pattern }}</code>"

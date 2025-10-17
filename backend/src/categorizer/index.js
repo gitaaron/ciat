@@ -172,7 +172,7 @@ export async function addUserRule({ category, match_type, pattern, explain, labe
   // Automatically reapply categorization to all non-manually-overridden transactions
   await reapplyCategories();
   
-  return ruleId;
+  return newRule;
 }
 
 export async function updateUserRule(ruleId, { category, match_type, pattern, explain, labels }) {
