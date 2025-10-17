@@ -50,7 +50,10 @@ onMounted(async () => {
 <template>
   <v-app>
     <v-app-bar color="primary" dark>
-      <v-app-bar-title>Can I Afford That</v-app-bar-title>
+      <v-app-bar-title class="d-flex align-center">
+        <v-icon class="mr-2">mdi-wallet</v-icon>
+        Can I Afford That
+      </v-app-bar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="selected = 'versions'" title="Database Versions">
         <v-icon>mdi-cog</v-icon>
@@ -82,7 +85,6 @@ onMounted(async () => {
           <v-window-item value="import">
             <v-card v-if="!hasTransactions" class="mb-4" color="primary" dark>
               <v-card-text class="text-center pa-8">
-                <v-icon size="64" class="mb-4">mdi-wallet</v-icon>
                 <h2 class="text-h4 mb-2">Welcome to CIAT!</h2>
                 <p class="text-h6">Get started by importing transactions to begin tracking your finances.</p>
               </v-card-text>
