@@ -397,6 +397,7 @@ app.post('/api/import/commit', (req, res) => {
       category: it.category,
       category_source: it.category_source,
       category_explain: it.category_explain,
+      labels: it.labels || null,
       note: it.note || null,
       hash: it.hash,
       manual_override: 0

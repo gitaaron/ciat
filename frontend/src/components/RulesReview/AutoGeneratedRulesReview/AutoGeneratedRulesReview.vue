@@ -8,9 +8,6 @@
       
     </div>
 
-    <!-- Pre-existing Rules Section - Now handled by separate PreexistingRulesReview component -->
-
-    <!-- Auto-generated Rules Section -->
     <div v-if="autoRules && autoRules.rules && autoRules.rules.length > 0" class="rules-section auto-rules">
       <div class="section-header">
         <h4>🤖 Auto-Generated Rules</h4>
@@ -69,7 +66,6 @@
           :accounts="accounts"
           :is-expanded="expandedAutoRules.has(rule.id)"
           :is-editing="editingAutoRule === rule.id"
-          :applying="applying"
           :show-create-rule-button="true"
           @edit="startEditingAutoRule"
           @save-edit="saveAutoRuleEdit"
@@ -86,19 +82,6 @@
       <p>No rules were applied or suggested for this import.</p>
     </div>
 
-    <!-- Actions -->
-    <div class="actions">
-      <div class="actions-info">
-        <p>Review rules as needed. All auto-generated rules will be applied automatically when you continue to import.</p>
-      </div>
-      <button 
-        class="btn btn-primary" 
-        @click="handleCommit"
-        :disabled="applying"
-      >
-        {{ applying ? 'Processing...' : 'Continue to Import' }}
-      </button>
-    </div>
 
     <!-- Create Rule Dialog -->
     <div v-if="showCreateRuleDialog" class="dialog-overlay" @click="cancelCreateRule">

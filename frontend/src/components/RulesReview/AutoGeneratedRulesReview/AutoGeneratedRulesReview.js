@@ -17,7 +17,7 @@ export default {
     transactions: Array,
     accounts: Array
   },
-  emits: ['commit', 'rule-created'],
+  emits: ['rule-created'],
   setup(props, { emit }) {
     // Use shared rules review functionality
     const {
@@ -39,7 +39,6 @@ export default {
     // Auto rules state
     const expandedAutoRules = ref(new Set())
     const editingAutoRule = ref(null)
-    const applying = ref(false)
     const ruleFrequencies = ref(new Map())
     const ruleExplanations = ref(new Map())
     const rulePreviewCounts = ref(new Map())
@@ -174,77 +173,7 @@ export default {
       }
     }
 
-    async function applySingleRule(rule) {
-      applying.value = true
-      try {
-        const newRule = await api.createRule({
-          match_type: rule.type,
-          pattern: rule.pattern,
-          category: rule.category,
-          explain: rule.explain,
-          labels: rule.labels || []
-        })
-        
-        // Mark as applied
-        rule.applied = true
-        showSnackMessage('Rule applied successfully')
-        // Emit event to parent to track the new rule
-        emit('rule-created', newRule)
-      } catch (error) {
-        console.error('Error applying rule:', error)
-        showSnackMessage('Error applying rule: ' + error.message)
-      } finally {
-        applying.value = false
-      }
-    }
 
-    async function applyAllAutoRules() {
-      applying.value = true
-      try {
-        const rulesToApply = effectiveAutoRules.value.filter(rule => !rule.applied)
-        
-        if (rulesToApply.length === 0) {
-          showSnackMessage('No auto-generated rules to apply')
-          return
-        }
-
-        let successCount = 0
-        let errorCount = 0
-
-        for (const rule of rulesToApply) {
-          try {
-            const newRule = await api.createRule({
-              match_type: rule.type,
-              pattern: rule.pattern,
-              category: rule.category,
-              explain: rule.explain,
-              labels: rule.labels || []
-            })
-            
-            // Mark as applied
-            rule.applied = true
-            successCount++
-            // Emit event to parent to track the new rule
-            emit('rule-created', newRule)
-          } catch (error) {
-            console.error('Error applying rule:', error)
-            errorCount++
-          }
-        }
-
-        if (successCount > 0) {
-          showSnackMessage(`Successfully applied ${successCount} auto-generated rules`)
-        }
-        if (errorCount > 0) {
-          showSnackMessage(`Failed to apply ${errorCount} rules`)
-        }
-      } catch (error) {
-        console.error('Error applying auto rules:', error)
-        showSnackMessage('Error applying auto rules: ' + error.message)
-      } finally {
-        applying.value = false
-      }
-    }
 
     function loadRuleMatches(ruleId, unmatchedTransactions) {
       if (ruleMatches.value.has(ruleId)) return
@@ -399,14 +328,6 @@ export default {
 
     // showSnackMessage is now provided by the shared mixin
 
-    async function handleCommit() {
-      // Apply all auto-generated rules first
-      await applyAllAutoRules()
-      
-      // Then emit the commit event
-      emit('commit')
-    }
-
     // Initialize rule frequencies and explanations
     function initializeRuleData() {
       console.log('initializeRuleData: Called with autoRules:', !!props.autoRules)
@@ -434,7 +355,6 @@ export default {
       editingRule,
       expandedAutoRules,
       editingAutoRule,
-      applying,
       ruleFrequencies,
       ruleExplanations,
       rulePreviewCounts,
@@ -464,7 +384,6 @@ export default {
       saveAutoRuleEdit,
       cancelAutoRuleEdit,
       removeAutoRule,
-      applyAllAutoRules,
       loadRuleMatches,
       loadAllRuleMatches,
       getPreviewCount,
@@ -477,7 +396,6 @@ export default {
       saveNewRule,
       cancelCreateRule,
       showSnackMessage,
-      handleCommit,
       initializeRuleData
     }
   }
