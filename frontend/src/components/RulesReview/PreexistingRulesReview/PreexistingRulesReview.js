@@ -18,6 +18,16 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
   // Component-specific state
   const expandedRules = ref(new Set())
   const editingRule = ref(null)
+  
+  // Create rule dialog state
+  const showCreateRuleDialog = ref(false)
+  const createRuleTransaction = ref(null)
+  const createRuleData = ref({
+    match_type: 'contains',
+    pattern: '',
+    category: '',
+    labels: []
+  })
 
   // Computed properties
   const existingRules = computed(() => {
@@ -53,10 +63,62 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
     await sharedDeleteRule(rule, emit)
   }
 
+  // Create rule from transaction
+  function createRuleFromTransaction(transaction, rule) {
+    createRuleTransaction.value = transaction
+    createRuleData.value = {
+      match_type: 'contains',
+      pattern: transaction.name,
+      category: rule?.category || '',
+      labels: []
+    }
+    showCreateRuleDialog.value = true
+  }
+
+  function handleCreateRuleSave(ruleData) {
+    try {
+      console.log('handleCreateRuleSave: Creating rule in memory:', ruleData)
+      
+      // Create a rule object in memory (don't send to backend yet)
+      const newRule = {
+        id: `temp_rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        ...ruleData,
+        priority: 1000, // High priority for user-created rules
+        enabled: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        isTemporary: true // Flag to indicate this is not yet saved to backend
+      }
+      
+      console.log('handleCreateRuleSave: Created rule in memory:', newRule)
+      showCreateRuleDialog.value = false
+      showSnackMessage('Rule created successfully')
+      // Emit event to parent to track the new rule
+      emit('rule-created', newRule)
+    } catch (error) {
+      console.error('Error creating rule:', error)
+      showSnackMessage('Error creating rule: ' + error.message)
+    }
+  }
+
+  function cancelCreateRule() {
+    showCreateRuleDialog.value = false
+    createRuleTransaction.value = null
+    createRuleData.value = {
+      match_type: 'contains',
+      pattern: '',
+      category: '',
+      labels: []
+    }
+  }
+
   return {
     // State
     expandedRules,
     editingRule,
+    showCreateRuleDialog,
+    createRuleTransaction,
+    createRuleData,
     showSnack,
     snackMessage,
     
@@ -70,6 +132,9 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
     startEditing,
     saveEdit,
     cancelEdit,
-    deleteRule
+    deleteRule,
+    createRuleFromTransaction,
+    handleCreateRuleSave,
+    cancelCreateRule
   }
 }

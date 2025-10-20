@@ -84,81 +84,13 @@
 
 
     <!-- Create Rule Dialog -->
-    <div v-if="showCreateRuleDialog" class="dialog-overlay" @click="cancelCreateRule">
-      <div class="dialog" @click.stop>
-        <div class="dialog-header">
-          <h3>Create New Rule</h3>
-          <button class="close-btn" @click="cancelCreateRule">×</button>
-        </div>
-        
-        <div class="dialog-content">
-          <div class="transaction-info">
-            <h4>From Transaction:</h4>
-            <p><strong>Merchant:</strong> {{ createRuleTransaction?.name }}</p>
-            <p><strong>Amount:</strong> {{ formatAmount(createRuleTransaction?.amount) }}</p>
-            <p><strong>Date:</strong> {{ formatDate(createRuleTransaction?.date) }}</p>
-          </div>
-          
-          <div class="rule-form">
-            <div class="form-row">
-              <label>Match Type:</label>
-              <select v-model="createRuleData.match_type" class="form-input">
-                <option value="contains">Contains</option>
-                <option value="regex">Regex</option>
-                <option value="exact">Exact</option>
-              </select>
-            </div>
-            
-            <div class="form-row">
-              <label>Pattern:</label>
-              <input 
-                v-model="createRuleData.pattern" 
-                class="form-input pattern-input"
-                placeholder="Enter pattern to match..."
-                :class="{ 'regex-input': createRuleData.match_type === 'regex' }"
-              >
-              <small class="form-help">
-                <span v-if="createRuleData.match_type === 'contains'">Text that must be contained in the merchant name</span>
-                <span v-else-if="createRuleData.match_type === 'regex'">Regular expression pattern</span>
-                <span v-else-if="createRuleData.match_type === 'exact'">Exact merchant name match</span>
-              </small>
-              <div v-if="createRuleData.pattern" class="pattern-preview">
-                <strong>Preview:</strong> This rule will match transactions containing "<code>{{ createRuleData.pattern }}</code>"
-              </div>
-            </div>
-            
-            <div class="form-row">
-              <label>Category:</label>
-              <select v-model="createRuleData.category" class="form-input">
-                <option value="fixed_costs">Fixed Costs</option>
-                <option value="investments">Investments</option>
-                <option value="guilt_free">Guilt Free</option>
-                <option value="short_term_savings">Short Term Savings</option>
-                <option value="">Uncategorized</option>
-              </select>
-            </div>
-            
-            <div class="form-row">
-              <label>Labels (Optional):</label>
-              <div class="label-autocomplete-container">
-                <MultiLabelSelector
-                  v-model="createRuleData.labels"
-                  label=""
-                  placeholder="e.g., Coffee, Travel, Work"
-                  hint=""
-                />
-              </div>
-              <small class="form-help">Optional labels for grouping transactions</small>
-            </div>
-          </div>
-        </div>
-        
-        <div class="dialog-actions">
-          <button class="btn btn-secondary" @click="cancelCreateRule">Cancel</button>
-          <button class="btn btn-primary" @click="saveNewRule">Create Rule</button>
-        </div>
-      </div>
-    </div>
+    <CreateRuleDialog
+      :show="showCreateRuleDialog"
+      :transaction="createRuleTransaction"
+      :initial-data="createRuleData"
+      @save="handleCreateRuleSave"
+      @cancel="cancelCreateRule"
+    />
 
     <!-- Snack Message -->
     <div v-if="showSnack" class="snack-message">

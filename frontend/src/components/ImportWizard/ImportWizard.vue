@@ -334,6 +334,7 @@
         :accounts="accounts"
         :applying="processing"
         @refresh-rules="handleRulesRefresh"
+        @rule-created="addNewRule"
       />
       
       <!-- Pre-existing Rules Review -->
@@ -342,6 +343,7 @@
         :accounts="accounts"
         :applying="processing"
         @refresh-rules="handleRulesRefresh"
+        @rule-created="addNewRule"
       />
       
       <!-- Auto-Generated Rules Review -->

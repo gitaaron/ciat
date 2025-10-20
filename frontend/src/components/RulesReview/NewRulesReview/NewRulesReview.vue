@@ -59,15 +59,25 @@
           :is-expanded="expandedRules.has(rule.id)"
           :is-editing="editingRule === rule.id"
           :applying="applying"
-          :show-create-rule-button="false"
+          :show-create-rule-button="true"
           @edit="startEditing"
           @save-edit="saveEdit"
           @cancel-edit="cancelEdit"
           @remove="deleteRule"
           @toggle-expanded="toggleExpanded"
+          @create-rule="createRuleFromTransaction"
         />
       </div>
     </div>
+
+    <!-- Create Rule Dialog -->
+    <CreateRuleDialog
+      :show="showCreateRuleDialog"
+      :transaction="createRuleTransaction"
+      :initial-data="createRuleData"
+      @save="handleCreateRuleSave"
+      @cancel="cancelCreateRule"
+    />
 
     <!-- Snackbar for messages -->
     <v-snackbar
@@ -83,12 +93,14 @@
 <script>
 import NewRulesReviewJS from './NewRulesReview.js'
 import RuleItem from '../../RuleItem.vue'
+import CreateRuleDialog from '../../shared/CreateRuleDialog.vue'
 import './NewRulesReview.css'
 
 export default {
   name: 'NewRulesReview',
   components: {
-    RuleItem
+    RuleItem,
+    CreateRuleDialog
   },
   props: {
     newRules: {
@@ -101,7 +113,7 @@ export default {
       default: false
     }
   },
-  emits: ['refresh-rules'],
+  emits: ['refresh-rules', 'rule-created'],
   setup(props, { emit }) {
     return NewRulesReviewJS(props, { emit })
   }
