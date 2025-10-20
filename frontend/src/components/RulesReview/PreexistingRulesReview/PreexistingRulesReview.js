@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
-import { useRulesReview } from '../shared/RulesReviewMixin.js'
+import { useRulesReview } from '../../shared/RulesReviewMixin.js'
 
-export default function NewRulesReviewJS(props, { emit }) {
+export default function PreexistingRulesReviewJS(props, { emit }) {
   // Use shared rules review functionality
   const {
     showSnack,
@@ -20,40 +20,16 @@ export default function NewRulesReviewJS(props, { emit }) {
   const editingRule = ref(null)
 
   // Computed properties
-  const totalMatches = computed(() => {
-    return props.newRules.reduce((total, rule) => {
-      return total + (rule.transactions?.length || 0)
-    }, 0)
-  })
-
-  const uniqueCategories = computed(() => {
-    const categories = new Set()
-    props.newRules.forEach(rule => {
-      if (rule.category) {
-        categories.add(rule.category)
-      }
-    })
-    return categories
-  })
-
-  const ruleTypeCounts = computed(() => {
-    const counts = {
-      contains: 0,
-      regex: 0,
-      exact: 0
-    }
+  const existingRules = computed(() => {
+    if (!props.usedRules) return []
     
-    props.newRules.forEach(rule => {
-      console.log('rule', rule)
-      const matchType = rule.match_type || rule.type || 'contains'
-      if (counts.hasOwnProperty(matchType)) {
-        counts[matchType]++
-      } else {
-        counts.contains++ // Default fallback
-      }
-    })
-    
-    return counts
+    return props.usedRules
+      .filter(rule => rule.type === 'user_rule')
+      .sort((a, b) => {
+        // Sort by priority (higher first)
+        if (a.priority !== b.priority) return b.priority - a.priority
+        return 0
+      })
   })
 
   // Wrapper functions that use the shared functionality
@@ -85,9 +61,7 @@ export default function NewRulesReviewJS(props, { emit }) {
     snackMessage,
     
     // Computed
-    totalMatches,
-    uniqueCategories,
-    ruleTypeCounts,
+    existingRules,
     
     // Methods
     getCategoryName,

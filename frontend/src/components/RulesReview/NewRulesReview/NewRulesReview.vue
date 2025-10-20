@@ -1,5 +1,5 @@
 <template>
-  <div class="new-rules-review">
+  <div class="new-rules-review" v-if="newRules.length > 0">
     <div class="header">
       <h3>✨ New Rules Created</h3>
       <p class="subtitle">
@@ -8,7 +8,7 @@
     </div>
 
     <!-- New Rules Section -->
-    <div v-if="newRules.length > 0" class="rules-section new-rules">
+    <div class="rules-section new-rules">
       <div class="section-header">
         <h4>✨ New User-Created Rules</h4>
         <p class="section-subtitle">
@@ -69,15 +69,6 @@
       </div>
     </div>
 
-    <!-- No Rules Message -->
-    <div v-else class="no-rules-message">
-      <div class="no-rules-content">
-        <v-icon size="48" color="grey-lighten-1">mdi-plus-circle-outline</v-icon>
-        <h4>No New Rules Created</h4>
-        <p>No new rules were created during this import process.</p>
-      </div>
-    </div>
-
     <!-- Snackbar for messages -->
     <v-snackbar
       v-model="showSnack"
@@ -91,7 +82,7 @@
 
 <script>
 import NewRulesReviewJS from './NewRulesReview.js'
-import RuleItem from '../RuleItem.vue'
+import RuleItem from '../../RuleItem.vue'
 import './NewRulesReview.css'
 
 export default {
