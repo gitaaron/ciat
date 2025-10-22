@@ -34,7 +34,14 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
     if (!props.usedRules) return []
     
     return props.usedRules
-      .filter(rule => rule.type === 'user_rule')
+      .map(rule => {
+        // Use centralized rule matches instead of rule.transactions
+        const transactions = props.ruleMatches.get(rule.id) || []
+        return {
+          ...rule,
+          transactions
+        }
+      })
       .sort((a, b) => {
         // Sort by priority (higher first)
         if (a.priority !== b.priority) return b.priority - a.priority

@@ -78,7 +78,7 @@
     </div>
 
     <!-- No Rules Message -->
-    <div v-if="existingRules.length === 0 && (!autoRules || !autoRules.rules || autoRules.rules.length === 0)" class="no-rules">
+    <div v-if="(!autoRules || !autoRules.rules || autoRules.rules.length === 0)" class="no-rules">
       <p>No rules were applied or suggested for this import.</p>
     </div>
 

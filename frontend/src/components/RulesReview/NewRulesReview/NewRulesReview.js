@@ -31,9 +31,12 @@ export default function NewRulesReviewJS(props, { emit }) {
 
   // Computed properties
   const totalMatches = computed(() => {
-    return props.newRules.reduce((total, rule) => {
-      return total + (rule.transactions?.length || 0)
-    }, 0)
+    if (!props.ruleMatches) return 0
+    let total = 0
+    for (const transactions of props.ruleMatches.values()) {
+      total += transactions.length
+    }
+    return total
   })
 
   const uniqueCategories = computed(() => {

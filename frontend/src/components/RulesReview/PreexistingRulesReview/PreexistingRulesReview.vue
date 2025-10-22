@@ -72,6 +72,10 @@ export default {
   },
   props: {
     usedRules: Array,
+    ruleMatches: {
+      type: Map,
+      default: () => new Map()
+    },
     accounts: Array,
     applying: {
       type: Boolean,

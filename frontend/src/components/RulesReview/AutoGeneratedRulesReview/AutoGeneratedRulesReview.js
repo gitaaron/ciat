@@ -14,8 +14,11 @@ export default {
     CreateRuleDialog
   },
   props: {
-    usedRules: Array,
     autoRules: Object,
+    ruleMatches: {
+      type: Map,
+      default: () => new Map()
+    },
     transactions: Array,
     accounts: Array
   },
@@ -43,8 +46,6 @@ export default {
     const editingAutoRule = ref(null)
     const ruleFrequencies = ref(new Map())
     const ruleExplanations = ref(new Map())
-    const rulePreviewCounts = ref(new Map())
-    const ruleMatches = ref(new Map())
 
     // Create rule dialog state
     const showCreateRuleDialog = ref(false)
@@ -57,25 +58,14 @@ export default {
     })
 
     // Computed properties
-    const existingRules = computed(() => {
-      if (!props.usedRules) return []
-      
-      return props.usedRules
-        .filter(rule => rule.type === 'user_rule')
-        .sort((a, b) => {
-          // Sort by priority (higher first)
-          if (a.priority !== b.priority) return b.priority - a.priority
-          return 0
-        })
-    })
 
     const effectiveAutoRules = computed(() => {
       if (!props.autoRules || !props.autoRules.rules) return []
       const rules = props.autoRules.rules
         .filter(rule => !rule.applied)
         .map(rule => {
-          const transactions = ruleMatches.value.get(rule.id) || []
-          const hasInMap = ruleMatches.value.has(rule.id)
+          const transactions = props.ruleMatches.get(rule.id) || []
+          const hasInMap = props.ruleMatches.has(rule.id)
           console.log(`effectiveAutoRules: Rule ${rule.id} (${rule.pattern}) has ${transactions.length} transactions, exists in map: ${hasInMap}`)
           return {
             ...rule,
@@ -138,8 +128,6 @@ export default {
         expandedAutoRules.value.delete(ruleId)
       } else {
         expandedAutoRules.value.add(ruleId)
-        // Load all rule matches to ensure proper priority handling
-        loadAllRuleMatches()
       }
     }
 
@@ -177,106 +165,30 @@ export default {
 
 
 
-    function loadRuleMatches(ruleId, unmatchedTransactions) {
-      if (ruleMatches.value.has(ruleId)) return
 
-      try {
-        // Find the rule to get its pattern and match type
-        const rule = props.autoRules?.rules?.find(r => r.id === ruleId)
-        if (!rule || !unmatchedTransactions) {
-          ruleMatches.value.set(ruleId, [])
-          rulePreviewCounts.value.set(ruleId, 0)
-          return
-        }
-
-        // Use the same rule matching logic as the main matching function
-        const matches = unmatchedTransactions.filter(tx => matchesRule(rule, tx))
-
-        // Store matches
-        ruleMatches.value.set(ruleId, matches)
-        rulePreviewCounts.value.set(ruleId, matches.length)
-      } catch (error) {
-        console.error('Error loading rule matches:', error)
-        ruleMatches.value.set(ruleId, [])
-        rulePreviewCounts.value.set(ruleId, 0)
-      }
-    }
-
-    function loadAllRuleMatches() {
-      console.log('loadAllRuleMatches: FUNCTION CALLED - Starting execution')
-      if (!props.autoRules?.rules || !props.transactions) {
-        console.log('loadAllRuleMatches: Missing autoRules or transactions', {
-          hasAutoRules: !!props.autoRules?.rules,
-          hasTransactions: !!props.transactions,
-          autoRulesCount: props.autoRules?.rules?.length || 0,
-          transactionsCount: props.transactions?.length || 0
-        })
-        return
-      }
-
-      // Get all auto rules sorted by priority (highest first)
-      const allAutoRules = props.autoRules.rules
-        .filter(r => !r.applied)
-        .sort((a, b) => (b.priority || 0) - (a.priority || 0))
-
-      console.log('loadAllRuleMatches: Processing auto rules', {
-        totalAutoRules: props.autoRules.rules.length,
-        unappliedAutoRules: allAutoRules.length,
-        sampleRule: allAutoRules[0],
-        transactionsCount: props.transactions.length
-      })
-
-      // Start with all transactions (they are raw transactions from ImportWizard)
-      const unmatchedTransactions = props.transactions
-
-      // Use the centralized rule matching logic
-      console.log('loadAllRuleMatches: About to call applyRulesWithDetails')
-      const result = applyRulesWithDetails(unmatchedTransactions, allAutoRules)
-      console.log('loadAllRuleMatches: applyRulesWithDetails completed')
-      
-      console.log('loadAllRuleMatches: Rule matching result', {
-        ruleMatchesCount: result.ruleMatches.size,
-        categorizedTransactionsCount: result.categorizedTransactions.length,
-        sampleMatches: Array.from(result.ruleMatches.entries()).slice(0, 3)
-      })
-      
-      // Store the rule matches for preview
-      console.log('loadAllRuleMatches: Storing rule matches')
-      for (const [ruleId, matchingTransactions] of result.ruleMatches) {
-        console.log(`loadAllRuleMatches: Storing rule ${ruleId} with ${matchingTransactions.length} transactions`)
-        ruleMatches.value.set(ruleId, matchingTransactions)
-        rulePreviewCounts.value.set(ruleId, matchingTransactions.length)
-      }
-      
-      console.log('loadAllRuleMatches: Final ruleMatches map size:', ruleMatches.value.size)
-      console.log('loadAllRuleMatches: Sample ruleMatches keys:', Array.from(ruleMatches.value.keys()).slice(0, 5))
-    }
 
     function getPreviewCount(ruleId) {
-      return rulePreviewCounts.value.get(ruleId) || 0
+      return props.ruleMatches.get(ruleId)?.length || 0
     }
 
     function getPreviewMatches(ruleId) {
-      return (ruleMatches.value.get(ruleId) || []).slice(0, 3)
+      return (props.ruleMatches.get(ruleId) || []).slice(0, 3)
     }
 
     function getExistingRulePreviewCount(ruleId) {
-      const rule = props.usedRules?.find(r => r.id === ruleId)
-      return rule?.transactions?.length || 0
+      return props.ruleMatches.get(ruleId)?.length || 0
     }
 
     function getExistingRulePreviewMatches(ruleId) {
-      const rule = props.usedRules?.find(r => r.id === ruleId)
-      return (rule?.transactions || []).slice(0, 3)
+      return (props.ruleMatches.get(ruleId) || []).slice(0, 3)
     }
 
     function getExistingRuleSingleMatch(ruleId) {
-      const rule = props.usedRules?.find(r => r.id === ruleId)
-      return (rule?.transactions || []).slice(0, 1)
+      return (props.ruleMatches.get(ruleId) || []).slice(0, 1)
     }
 
     function getSinglePreviewMatch(ruleId) {
-      return (ruleMatches.value.get(ruleId) || []).slice(0, 1)
+      return (props.ruleMatches.get(ruleId) || []).slice(0, 1)
     }
 
     // Create rule from transaction
@@ -345,9 +257,7 @@ export default {
           ruleExplanations.value.set(rule.id, rule.explain || '')
         })
         
-        // Load all rule matches to ensure proper priority handling
-        console.log('initializeRuleData: Calling loadAllRuleMatches')
-        loadAllRuleMatches()
+        // Rule matches are now provided via centralized matching
       }
     }
 
@@ -364,8 +274,6 @@ export default {
       editingAutoRule,
       ruleFrequencies,
       ruleExplanations,
-      rulePreviewCounts,
-      ruleMatches,
       showCreateRuleDialog,
       createRuleTransaction,
       createRuleData,
@@ -373,7 +281,6 @@ export default {
       snackMessage,
       
       // Computed
-      existingRules,
       effectiveAutoRules,
       
       // Methods
@@ -391,8 +298,6 @@ export default {
       saveAutoRuleEdit,
       cancelAutoRuleEdit,
       removeAutoRule,
-      loadRuleMatches,
-      loadAllRuleMatches,
       getPreviewCount,
       getPreviewMatches,
       getExistingRulePreviewCount,

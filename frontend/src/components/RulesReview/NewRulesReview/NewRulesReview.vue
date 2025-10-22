@@ -107,6 +107,10 @@ export default {
       type: Array,
       default: () => []
     },
+    ruleMatches: {
+      type: Map,
+      default: () => new Map()
+    },
     accounts: Array,
     applying: {
       type: Boolean,
