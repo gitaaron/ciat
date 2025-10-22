@@ -4,8 +4,6 @@ import { useRulesReview } from '../../shared/RulesReviewMixin.js'
 export default function NewRulesReviewJS(props, { emit }) {
   // Use shared rules review functionality
   const {
-    showSnack,
-    snackMessage,
     getCategoryName,
     showSnackMessage,
     toggleExpanded: sharedToggleExpanded,
@@ -132,8 +130,6 @@ export default function NewRulesReviewJS(props, { emit }) {
     showCreateRuleDialog,
     createRuleTransaction,
     createRuleData,
-    showSnack,
-    snackMessage,
     
     // Computed
     totalMatches,

@@ -12,8 +12,6 @@
     :show-create-rule-dialog="showCreateRuleDialog"
     :create-rule-transaction="createRuleTransaction"
     :create-rule-data="createRuleData"
-    :show-snack="showSnack"
-    :snack-message="snackMessage"
     no-rules-message="No new rules were created during this import process."
   />
 </template>

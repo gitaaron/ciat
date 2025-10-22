@@ -4,8 +4,6 @@ import { useRulesReview } from '../../shared/RulesReviewMixin.js'
 export default function PreexistingRulesReviewJS(props, { emit }) {
   // Use shared rules review functionality
   const {
-    showSnack,
-    snackMessage,
     getCategoryName,
     showSnackMessage,
     toggleExpanded: sharedToggleExpanded,
@@ -112,8 +110,6 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
     showCreateRuleDialog,
     createRuleTransaction,
     createRuleData,
-    showSnack,
-    snackMessage,
     
     // Computed
     existingRules,
