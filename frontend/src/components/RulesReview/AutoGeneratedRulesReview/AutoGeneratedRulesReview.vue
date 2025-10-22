@@ -3,58 +3,11 @@
     <div class="header">
       <h3>🤖 Auto-Generated Rules Review</h3>
       <p class="subtitle">
-        Review and manage auto-generated rules suggested based on your transaction patterns.
+        {{ autoRules.length}} auto-generated rules suggested based on your transaction patterns.
       </p>
-      
     </div>
 
     <div v-if="autoRules && autoRules.rules && autoRules.rules.length > 0" class="rules-section auto-rules">
-      <div class="section-header">
-        <h4>🤖 Auto-Generated Rules</h4>
-        <p class="section-subtitle">
-          {{ autoRules.rules.length }} potential rules suggested based on your transaction patterns
-        </p>
-      </div>
-
-      <!-- Statistics -->
-      <div class="stats">
-        <div class="stat-item">
-          <span class="stat-number">{{ autoRules.stats?.totalTransactions || 0 }}</span>
-          <span class="stat-label">Transactions Analyzed</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-number">{{ autoRules.stats?.rulesGenerated || 0 }}</span>
-          <span class="stat-label">Rules Generated</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-number">{{ effectiveAutoRules.length }}</span>
-          <span class="stat-label">Available</span>
-        </div>
-      </div>
-
-      <!-- Rule Types Breakdown -->
-      <div class="rule-types">
-        <div class="rule-type" v-if="autoRules.stats?.frequencyRules > 0">
-          <span class="type-label">Frequency-based:</span>
-          <span class="type-count">{{ autoRules.stats.frequencyRules }}</span>
-        </div>
-        <div class="rule-type" v-if="autoRules.stats?.storePattern > 0">
-          <span class="type-label">Store patterns:</span>
-          <span class="type-count">{{ autoRules.stats.storePattern }}</span>
-        </div>
-        <div class="rule-type" v-if="autoRules.stats?.mccRules > 0">
-          <span class="type-label">MCC-based:</span>
-          <span class="type-count">{{ autoRules.stats.mccRules }}</span>
-        </div>
-        <div class="rule-type" v-if="autoRules.stats?.recurringRules > 0">
-          <span class="type-label">Recurring:</span>
-          <span class="type-count">{{ autoRules.stats.recurringRules }}</span>
-        </div>
-        <div class="rule-type" v-if="autoRules.stats?.marketplaceRules > 0">
-          <span class="type-label">Marketplace:</span>
-          <span class="type-count">{{ autoRules.stats.marketplaceRules }}</span>
-        </div>
-      </div>
 
       <!-- Auto Rules List -->
       <div class="rules-list">

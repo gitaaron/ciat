@@ -3,7 +3,7 @@
     <div class="header">
       <h3>🔧 Pre-existing Rules</h3>
       <p class="subtitle">
-        {{ existingRules.length }} rules that were already in your system and applied to these transactions
+        {{ existingRules.length }} rules were already in your system and applied to these transactions
       </p>
     </div>
 
@@ -31,11 +31,7 @@
 
     <!-- No Rules Message -->
     <div v-else class="no-rules-message">
-      <div class="no-rules-content">
-        <v-icon size="48" color="grey-lighten-1">mdi-rule</v-icon>
-        <h4>No Pre-existing Rules Applied</h4>
-        <p>No rules from your existing rule set matched these transactions.</p>
-      </div>
+      <p>No rules were applied or suggested for this import.</p> -->
     </div>
 
     <!-- Create Rule Dialog -->
@@ -88,7 +84,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-/* Styles are imported from PreexistingRulesReview.css */
-</style>
