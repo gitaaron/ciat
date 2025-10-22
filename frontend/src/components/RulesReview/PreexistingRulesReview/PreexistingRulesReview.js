@@ -49,26 +49,12 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
       })
   })
 
-  // Wrapper functions that use the shared functionality
-  function toggleExpanded(rule) {
-    sharedToggleExpanded(expandedRules, rule)
-  }
-
-  function startEditing(rule) {
-    sharedStartEditing(editingRule, rule)
-  }
-
-  async function saveEdit(rule, editData) {
-    await sharedSaveEdit(rule, editData, editingRule, emit)
-  }
-
-  function cancelEdit() {
-    sharedCancelEdit(editingRule)
-  }
-
-  async function deleteRule(rule) {
-    await sharedDeleteRule(rule, emit)
-  }
+  // Direct use of shared functions with bound parameters
+  const toggleExpanded = (rule) => sharedToggleExpanded(expandedRules, rule)
+  const startEditing = (rule) => sharedStartEditing(editingRule, rule)
+  const saveEdit = (rule, editData) => sharedSaveEdit(rule, editData, editingRule, emit)
+  const cancelEdit = () => sharedCancelEdit(editingRule)
+  const remove = (rule) => sharedDeleteRule(rule, emit)
 
   // Create rule from transaction
   function createRuleFromTransaction(transaction, rule) {
@@ -139,7 +125,7 @@ export default function PreexistingRulesReviewJS(props, { emit }) {
     startEditing,
     saveEdit,
     cancelEdit,
-    deleteRule,
+    remove,
     createRuleFromTransaction,
     handleCreateRuleSave,
     cancelCreateRule

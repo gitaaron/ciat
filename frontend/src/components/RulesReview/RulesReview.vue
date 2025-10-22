@@ -20,12 +20,12 @@
           :is-editing="isEditing(rule.id)"
           :applying="applying"
           :show-create-rule-button="showCreateRuleButton"
-          @edit="handleEdit"
-          @save-edit="handleSaveEdit"
-          @cancel-edit="handleCancelEdit"
-          @remove="handleRemove"
-          @toggle-expanded="handleToggleExpanded"
-          @create-rule="handleCreateRule"
+          @edit="startEditing"
+          @save-edit="saveEdit"
+          @cancel-edit="cancelEdit"
+          @remove="remove"
+          @toggle-expanded="toggleExpanded"
+          @create-rule="createRuleFromTransaction"
         />
       </div>
     </div>
@@ -41,7 +41,7 @@
       :transaction="createRuleTransaction"
       :initial-data="createRuleData"
       @save="handleCreateRuleSave"
-      @cancel="handleCancelCreateRule"
+      @cancel="cancelCreateRule"
     />
 
     <!-- Snackbar for messages -->
@@ -158,34 +158,34 @@ export default {
   },
   methods: {
     isExpanded(ruleId) {
-      return this.expandedRules.has(ruleId)
+      return this.$props.expandedRules.has(ruleId)
     },
     
     isEditing(ruleId) {
       return this.editingRule === ruleId
     },
     
-    handleEdit(rule) {
+    startEditing(rule) {
       this.$emit('edit', rule)
     },
     
-    handleSaveEdit(rule, editData) {
+    saveEdit(rule, editData) {
       this.$emit('save-edit', rule, editData)
     },
     
-    handleCancelEdit() {
+    cancelEdit() {
       this.$emit('cancel-edit')
     },
     
-    handleRemove(rule) {
+    remove(rule) {
       this.$emit('remove', rule)
     },
     
-    handleToggleExpanded(rule) {
+    toggleExpanded(rule) {
       this.$emit('toggle-expanded', rule)
     },
     
-    handleCreateRule(transaction, rule) {
+    createRuleFromTransaction(transaction, rule) {
       this.$emit('create-rule', transaction, rule)
     },
     
@@ -193,7 +193,7 @@ export default {
       this.$emit('create-rule-save', ruleData)
     },
     
-    handleCancelCreateRule() {
+    cancelCreateRule() {
       this.$emit('cancel-create-rule')
     },
     

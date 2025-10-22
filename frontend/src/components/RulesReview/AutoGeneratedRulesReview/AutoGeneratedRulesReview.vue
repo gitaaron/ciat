@@ -13,15 +13,6 @@
     :create-rule-data="createRuleData"
     :show-snack="showSnack"
     :snack-message="snackMessage"
-    @edit="startEditingAutoRule"
-    @save-edit="saveAutoRuleEdit"
-    @cancel-edit="cancelAutoRuleEdit"
-    @remove="removeAutoRule"
-    @toggle-expanded="toggleAutoRuleExpanded"
-    @create-rule="createRuleFromTransaction"
-    @create-rule-save="handleCreateRuleSave"
-    @cancel-create-rule="cancelCreateRule"
-    @update:showSnack="showSnack = $event"
   />
 </template>
 
