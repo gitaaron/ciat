@@ -1,8 +1,6 @@
-- after importing, why are rules that appear in ‘ backend/src/categorizer/rules.json’ show up as auto generated rules?
+- review and clean up code ensuring that ‘pre existing’ rules are handled similarly to ‘auto generated’ rules 
 
-—
-
-- review and clean up code ensuring that ‘pre existing’ rules are handled similarly to ‘auto generated’ rules (the only thing that should be different is the rules list they are operating on
+    - the only thing that should be different is the rules list they are operating on
 
 —
 
@@ -11,7 +9,7 @@
 —
 
 - fix logic for adding new rules
-	- it should not get created in back-end until ‘continue to import’ button is pressed similarly as auto generated rules
+    - it should not get created in back-end until ‘continue to import’ button is pressed similarly as auto generated rules
 
 —
 
@@ -25,9 +23,9 @@
 
 - what does the ‘delete rule’ action do?
 
-	- when importing rules and showing auto generated rules, update the ‘delete’ rule action so that it prompts the user if they want to add it to an exclude list; if the user says “yes” then the same auto generated rule should not be created in the future; excluded rules should be persisted
+    - when importing rules and showing auto generated rules, update the ‘delete’ rule action so that it prompts the user if they want to add it to an exclude list; if the user says “yes” then the same auto generated rule should not be created in the future; excluded rules should be persisted
 
 
 - rules should have a field ‘source’ that is enum of either ‘auto’ or ‘user’ and rule cards should include this instead of ‘USER_RULE’
 
-	- when creating an auto-generated rule the explanation should be empty
+    - when creating an auto-generated rule the explanation should be empty
