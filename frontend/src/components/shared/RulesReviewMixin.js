@@ -42,10 +42,12 @@ export function useRulesReview() {
 
   async function saveEdit(rule, editData, editingRule, emit) {
     try {
-      await api.updateRule(rule.id, editData)
+      // Apply edit data to rule object in-memory
+      Object.assign(rule, editData)
+      rule.hasChanges = true
       editingRule.value = null
-      showSnackMessage('Rule updated successfully')
-      // Emit refresh event to parent
+      showSnackMessage('Rule updated (changes will be saved when you continue to import)')
+      // Emit refresh event to parent to trigger rule match recomputation
       emit('refresh-rules')
     } catch (error) {
       console.error('Error updating rule:', error)

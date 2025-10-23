@@ -96,7 +96,8 @@ export default function useRulesReviewLogic(props, { emit }) {
         enabled: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        isTemporary: true // Flag to indicate this is not yet saved to backend
+        hasChanges: true, // Flag to indicate this rule has changes to persist
+        isNew: true // Flag to indicate this is a new rule (not edited existing)
       }
       
       console.log('handleCreateRuleSave: Created rule in memory:', newRule)
