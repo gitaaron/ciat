@@ -368,19 +368,30 @@
             <v-btn 
               color="primary" 
               size="large"
-              @click="handleCombinedRulesCommit"
+              @click="handleSaveRules"
               :loading="processing"
               :disabled="processing"
             >
-              {{ processing ? 'Processing...' : 'Continue to Import' }}
+              {{ processing ? 'Saving Rules...' : 'Save Rules' }}
             </v-btn>
           </div>
         </v-card-text>
       </v-card>
     </v-card-text>
 
-    <!-- Step 4: Complete -->
+    <!-- Step 4: Transaction Review -->
     <v-card-text v-if="step === 4">
+      <TransactionReview
+        :previews-by-account="previewsByAccount"
+        :accounts="accounts"
+        :processing="processing"
+        @back-to-rules="goBackToRules"
+        @import-transactions="handleImportTransactions"
+      />
+    </v-card-text>
+
+    <!-- Step 5: Complete -->
+    <v-card-text v-if="step === 5">
       <v-card variant="outlined" class="text-center">
         <v-card-text class="pa-8">
           <v-icon size="80" color="success" class="mb-4">mdi-check-circle</v-icon>
