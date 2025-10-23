@@ -151,42 +151,25 @@ export default {
   setup(props, { emit }) {
     const sharedLogic = useRulesReviewLogic(props, { emit })
     
+    // Add helper functions for template
+    const isExpanded = (ruleId) => {
+      return sharedLogic.expandedRules.value.has(ruleId)
+    }
+    
+    const isEditing = (ruleId) => {
+      return sharedLogic.editingRule.value === ruleId
+    }
+    
     return {
       ...sharedLogic,
-      hasRules: () => props.rules && props.rules.length > 0
+      hasRules: () => props.rules && props.rules.length > 0,
+      isExpanded,
+      isEditing
     }
   },
   methods: {
-    isExpanded(ruleId) {
-      return this.$props.expandedRules.has(ruleId)
-    },
-    
-    isEditing(ruleId) {
-      return this.editingRule === ruleId
-    },
-    
-    startEditing(rule) {
-      this.$emit('edit', rule)
-    },
-    
-    saveEdit(rule, editData) {
-      this.$emit('save-edit', rule, editData)
-    },
-    
-    cancelEdit() {
-      this.$emit('cancel-edit')
-    },
-    
-    remove(rule) {
-      this.$emit('remove', rule)
-    },
-    
-    toggleExpanded(rule) {
-      this.$emit('toggle-expanded', rule)
-    },
-    
-    createRuleFromTransaction(transaction, rule) {
-      this.$emit('create-rule', transaction, rule)
+    updateShowSnack(value) {
+      this.$emit('update:showSnack', value)
     },
     
     handleCreateRuleSave(ruleData) {
@@ -195,10 +178,6 @@ export default {
     
     cancelCreateRule() {
       this.$emit('cancel-create-rule')
-    },
-    
-    updateShowSnack(value) {
-      this.$emit('update:showSnack', value)
     }
   }
 }
