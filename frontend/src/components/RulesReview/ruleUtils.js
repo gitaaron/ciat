@@ -1,21 +1,12 @@
-import { ref } from 'vue'
 import api from '../api.js'
-import { getCategoryName } from '../../config/categories.js'
 
 /**
- * Shared functionality for rules review components
- * Provides common rule management functions
+ * Shared utility functions for rule management
  */
-export function useRulesReview() {
-  // Common state
-  const showSnack = ref(false)
-  const snackMessage = ref('')
-
+export function createRuleUtils() {
   // Helper functions
-
   function showSnackMessage(message) {
-    snackMessage.value = message
-    showSnack.value = true
+    console.log('Snack message:', message)
   }
 
   // Rule management functions
@@ -70,12 +61,6 @@ export function useRulesReview() {
   }
 
   return {
-    // State
-    showSnack,
-    snackMessage,
-    
-    // Methods
-    getCategoryName,
     showSnackMessage,
     toggleExpanded,
     startEditing,
@@ -84,4 +69,3 @@ export function useRulesReview() {
     deleteRule
   }
 }
-

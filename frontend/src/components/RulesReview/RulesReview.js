@@ -1,22 +1,30 @@
 import { ref, computed } from 'vue'
-import { useRulesReview } from '../shared/RulesReviewMixin.js'
+import { getCategoryName } from '../../config/categories.js'
+import { createRuleUtils } from './ruleUtils.js'
 
 /**
  * Shared logic for RulesReview component
  */
 export default function useRulesReviewLogic(props, { emit }) {
-  // Use shared rules review functionality
+  // Common state
+  const showSnack = ref(false)
+  const snackMessage = ref('')
+
+  // Get shared rule utilities
   const {
-    showSnack,
-    snackMessage,
-    getCategoryName,
-    showSnackMessage,
+    showSnackMessage: sharedShowSnackMessage,
     toggleExpanded: sharedToggleExpanded,
     startEditing: sharedStartEditing,
     saveEdit: sharedSaveEdit,
     cancelEdit: sharedCancelEdit,
     deleteRule: sharedDeleteRule
-  } = useRulesReview()
+  } = createRuleUtils()
+
+  // Component-specific snackbar implementation
+  function showSnackMessage(message) {
+    snackMessage.value = message
+    showSnack.value = true
+  }
 
   // Component-specific state
   const expandedRules = ref(new Set())
@@ -32,26 +40,6 @@ export default function useRulesReviewLogic(props, { emit }) {
     labels: []
   })
 
-  // Wrapper functions that use the shared functionality
-  function toggleExpanded(rule) {
-    sharedToggleExpanded(expandedRules, rule)
-  }
-
-  function startEditing(rule) {
-    sharedStartEditing(editingRule, rule)
-  }
-
-  async function saveEdit(rule, editData) {
-    await sharedSaveEdit(rule, editData, editingRule, emit)
-  }
-
-  function cancelEdit() {
-    sharedCancelEdit(editingRule)
-  }
-
-  async function deleteRule(rule) {
-    await sharedDeleteRule(rule, emit)
-  }
 
   // Create rule from transaction
   function createRuleFromTransaction(transaction, rule) {
@@ -116,11 +104,11 @@ export default function useRulesReviewLogic(props, { emit }) {
     // Methods
     getCategoryName,
     showSnackMessage,
-    toggleExpanded,
-    startEditing,
-    saveEdit,
-    cancelEdit,
-    deleteRule,
+    toggleExpanded: (rule) => sharedToggleExpanded(expandedRules, rule),
+    startEditing: (rule) => sharedStartEditing(editingRule, rule),
+    saveEdit: (rule, editData) => sharedSaveEdit(rule, editData, editingRule, emit),
+    cancelEdit: () => sharedCancelEdit(editingRule),
+    deleteRule: (rule) => sharedDeleteRule(rule, emit),
     createRuleFromTransaction,
     handleCreateRuleSave,
     cancelCreateRule
