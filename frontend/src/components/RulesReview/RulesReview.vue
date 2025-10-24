@@ -166,10 +166,6 @@ export default {
     
     handleCreateRuleSave(ruleData) {
       this.$emit('create-rule-save', ruleData)
-    },
-    
-    cancelCreateRule() {
-      this.$emit('cancel-create-rule')
     }
   }
 }

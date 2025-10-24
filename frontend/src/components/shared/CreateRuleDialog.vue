@@ -194,6 +194,7 @@ export default {
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  margin-top: 80px;
 }
 
 .dialog-header {
