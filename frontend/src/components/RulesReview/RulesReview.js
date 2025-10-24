@@ -1,24 +1,5 @@
 import { ref, computed } from 'vue'
 import { useRulesReview } from '../shared/RulesReviewMixin.js'
-import RulesReview from './RulesReview.vue'
-
-/**
- * Shared component factory for rules review components
- * Creates a standardized Vue component with common structure
- */
-export function createRulesReviewComponent(name, componentJS, props, emits = ['refresh-rules', 'rule-created']) {
-  return {
-    name,
-    components: {
-      RulesReview
-    },
-    props,
-    emits,
-    setup(props, { emit }) {
-      return componentJS(props, { emit })
-    }
-  }
-}
 
 /**
  * Shared logic for RulesReview component
