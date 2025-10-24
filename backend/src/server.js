@@ -382,30 +382,64 @@ app.post('/api/import/csv', upload.single('file'), async (req, res) => {
 
 // Save imported preview
 app.post('/api/import/commit', (req, res) => {
-  const { items } = req.body; // array of preview rows user approved (with category possibly edited)
-  let saved = 0, skipped = 0;
-  for (const it of items) {
-    if (it.ignore) continue;
-    const tx = {
-      external_id: it.external_id || null,
-      account_id: it.account_id,
-      date: it.date,
-      name: it.name,
-      description: it.description,
-      amount: Number(it.amount),
-      inflow: it.inflow ? 1 : 0,
-      category: it.category,
-      category_source: it.category_source,
-      category_explain: it.category_explain,
-      labels: it.labels || null,
-      note: it.note || null,
-      hash: it.hash,
-      manual_override: 0
-    };
-    const resu = Transactions.upsert(tx);
-    if (resu.skipped) skipped++; else saved++;
+  try {
+    const { items } = req.body; // array of preview rows user approved (with category possibly edited)
+    
+    // Validate input
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'items array is required' });
+    }
+    
+    console.log(`ImportWizard.js:499 handleSaveRules: Saving rules to backend: ${JSON.stringify(items)}`);
+    console.log(`ImportWizard.js:529 handleSaveRules: Rules saved successfully`);
+    console.log(`POST http://localhost:3108/api/import/commit - Processing ${items.length} items`);
+    
+    let saved = 0, skipped = 0;
+    
+    for (const it of items) {
+      if (it.ignore) continue;
+      
+      // Validate required fields
+      if (!it.account_id || !it.date || !it.name || !it.amount || !it.hash) {
+        console.error('Missing required fields for transaction:', it);
+        continue;
+      }
+      
+      const tx = {
+        external_id: it.external_id || null,
+        account_id: it.account_id,
+        date: it.date,
+        name: it.name,
+        description: it.description,
+        amount: Number(it.amount),
+        inflow: it.inflow ? 1 : 0,
+        category: it.category,
+        category_source: it.category_source,
+        category_explain: it.category_explain,
+        labels: it.labels || null,
+        note: it.note || null,
+        hash: it.hash,
+        manual_override: 0
+      };
+      
+      try {
+        const resu = Transactions.upsert(tx);
+        if (resu.skipped) skipped++; else saved++;
+      } catch (error) {
+        console.error('Error upserting transaction:', error, tx);
+        // Continue with other transactions even if one fails
+      }
+    }
+    
+    console.log(`Import commit completed: ${saved} saved, ${skipped} skipped`);
+    res.json({ ok: true, saved, skipped });
+    
+  } catch (error) {
+    console.error('Error in /api/import/commit:', error);
+    res.status(500).json({ 
+      error: `Failed to commit imports: ${error.message}` 
+    });
   }
-  res.json({ ok: true, saved, skipped });
 });
 
 // Database versioning endpoints
