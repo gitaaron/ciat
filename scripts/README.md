@@ -1,0 +1,264 @@
+# CIAT Database Scripts
+
+This directory contains utility scripts to help you interrogate and analyze your CIAT database.
+
+## Scripts Overview
+
+### 📋 Core Scripts
+
+#### `list-transactions.js`
+List and filter transactions with various options.
+
+```bash
+# Basic usage
+node list-transactions.js
+
+# Show 100 transactions
+node list-transactions.js --limit 100
+
+# Filter by category
+node list-transactions.js --category "Food" --limit 20
+
+# Show uncategorized transactions
+node list-transactions.js --uncategorized
+
+# Filter by date range
+node list-transactions.js --start 2024-01-01 --end 2024-12-31
+
+# Search transactions
+node list-transactions.js --search "starbucks" --income
+
+# Show help
+node list-transactions.js --help
+```
+
+**Options:**
+- `-l, --limit <number>` - Number of transactions to show (default: 50)
+- `-c, --category <category>` - Filter by category
+- `-a, --account <account>` - Filter by account name
+- `-s, --start <date>` - Start date (YYYY-MM-DD)
+- `-e, --end <date>` - End date (YYYY-MM-DD)
+- `--search <term>` - Search in name, description, or note
+- `--sort <field>` - Sort by: date, amount, name (default: date)
+- `--order <direction>` - Sort order: ASC, DESC (default: DESC)
+- `-u, --uncategorized` - Show only uncategorized transactions
+- `-i, --income` - Show only income transactions
+- `-x, --expenses` - Show only expense transactions
+
+#### `database-stats.js`
+Show comprehensive database statistics and analysis.
+
+```bash
+# Show all statistics
+node database-stats.js
+```
+
+**Features:**
+- Basic counts (transactions, accounts, uncategorized)
+- Date range analysis
+- Financial summary (totals, averages, income vs expenses)
+- Account breakdown
+- Category analysis
+- Monthly trends
+- Labels analysis
+- Recent activity
+- Database size information
+
+#### `category-analysis.js`
+Analyze categories, rules, and categorization patterns.
+
+```bash
+# Show category overview
+node category-analysis.js
+
+# Analyze specific category
+node category-analysis.js --category "Food"
+
+# Show uncategorized transactions
+node category-analysis.js --uncategorized
+
+# Show categorization rules
+node category-analysis.js --rules
+
+# Show common patterns
+node category-analysis.js --patterns
+
+# Show help
+node category-analysis.js --help
+```
+
+**Options:**
+- `-c, --category <category>` - Analyze specific category
+- `-r, --rules` - Show categorization rules
+- `-u, --uncategorized` - Show uncategorized transactions
+- `-p, --patterns` - Show common patterns for categorization
+
+#### `transaction-search.js`
+Advanced search with multiple criteria.
+
+```bash
+# Search by query
+node transaction-search.js --query "starbucks"
+
+# Search by amount range
+node transaction-search.js --amount-min 100 --amount-max 500
+
+# Search by category and type
+node transaction-search.js --category "Food" --income
+
+# Search by date range
+node transaction-search.js --start 2024-01-01 --end 2024-12-31
+
+# Exact match search
+node transaction-search.js --query "amazon" --exact
+
+# Search by labels
+node transaction-search.js --labels "business"
+
+# Show help
+node transaction-search.js --help
+```
+
+**Options:**
+- `-q, --query <term>` - Search in name, description, or note
+- `--amount-min <amount>` - Minimum transaction amount
+- `--amount-max <amount>` - Maximum transaction amount
+- `--start, --date-start <date>` - Start date (YYYY-MM-DD)
+- `--end, --date-end <date>` - End date (YYYY-MM-DD)
+- `-c, --category <category>` - Filter by category
+- `-a, --account <account>` - Filter by account name
+- `-i, --income` - Show only income transactions
+- `-e, --expenses` - Show only expense transactions
+- `-l, --labels <label>` - Filter by label
+- `--limit <number>` - Maximum results (default: 50)
+- `--exact` - Exact match for query
+- `--case-sensitive` - Case sensitive search
+
+#### `export-data.js`
+Export transactions to various formats (CSV, JSON, XLSX).
+
+```bash
+# Export to CSV
+node export-data.js --format csv --output transactions.csv
+
+# Export to JSON with date filter
+node export-data.js --format json --start 2024-01-01 --end 2024-12-31
+
+# Export to XLSX with category filter
+node export-data.js --format xlsx --category "Food" --output food-transactions.xlsx
+
+# Show help
+node export-data.js --help
+```
+
+**Options:**
+- `-f, --format <format>` - Export format: csv, json, xlsx (default: csv)
+- `-o, --output <file>` - Output file path
+- `-s, --start <date>` - Start date (YYYY-MM-DD)
+- `-e, --end <date>` - End date (YYYY-MM-DD)
+- `-c, --category <category>` - Filter by category
+- `-a, --account <account>` - Filter by account name
+- `--no-labels` - Exclude labels from export
+- `--no-notes` - Exclude notes from export
+
+### 🔍 Analysis Scripts
+
+#### `duplicate-finder.js`
+Find exact and similar duplicate transactions.
+
+```bash
+# Find exact duplicates
+node duplicate-finder.js --exact
+
+# Find similar transactions
+node duplicate-finder.js --similar --threshold 0.9
+
+# Show help
+node duplicate-finder.js --help
+```
+
+**Options:**
+- `-t, --threshold <number>` - Similarity threshold (0.0-1.0, default: 0.8)
+- `-s, --similar` - Show similar transactions
+- `-e, --exact` - Show exact duplicates
+
+#### `quick-summary.js`
+Show a quick overview of your database.
+
+```bash
+# Show quick summary
+node quick-summary.js
+```
+
+**Features:**
+- Basic transaction and account counts
+- Date range
+- Financial summary (total, income, expenses)
+- Top categories
+- Recent activity
+- Last 3 months breakdown
+
+## Usage Tips
+
+### Running Scripts
+All scripts are located in the `scripts/` directory and should be run from the project root:
+
+```bash
+# From project root
+node scripts/list-transactions.js --help
+
+# Or navigate to scripts directory
+cd scripts
+node list-transactions.js --help
+```
+
+### Database Location
+Scripts automatically connect to the database at `backend/data/ciat.sqlite`. Make sure your CIAT backend is set up and the database exists.
+
+### Common Use Cases
+
+1. **Quick Overview**: `node scripts/quick-summary.js`
+2. **Find Uncategorized**: `node scripts/list-transactions.js --uncategorized`
+3. **Export Data**: `node scripts/export-data.js --format csv`
+4. **Search Transactions**: `node scripts/transaction-search.js --query "amazon"`
+5. **Category Analysis**: `node scripts/category-analysis.js --category "Food"`
+6. **Find Duplicates**: `node scripts/duplicate-finder.js --exact`
+
+### Dependencies
+
+Most scripts use only built-in Node.js modules and `better-sqlite3` (which should already be installed in your backend).
+
+For XLSX export, you may need to install the `xlsx` package:
+```bash
+npm install xlsx
+```
+
+## Script Development
+
+To add new scripts:
+
+1. Create a new `.js` file in the `scripts/` directory
+2. Use the same database connection pattern as existing scripts
+3. Add command-line argument parsing
+4. Include help documentation
+5. Update this README
+
+Example template:
+```javascript
+#!/usr/bin/env node
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Connect to database
+const dbPath = path.join(__dirname, '..', 'backend', 'data', 'ciat.sqlite');
+const db = new Database(dbPath);
+
+// Your script logic here
+
+db.close();
+```
