@@ -5,7 +5,7 @@
   "scripts": {
     "api": "node src/server.js",
     "reapply": "node scripts/reapplyCategories.js",
-    "db": "node src/cli.js",
+    "db": "node src/cli.js --",
     "test": "node tests/simple-test-runner.js",
     "test:all": "node tests/simple-test-runner.js all",
     "test:normalization": "node tests/simple-test-runner.js normalization",

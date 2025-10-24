@@ -176,6 +176,21 @@ class DatabaseVersioner {
     
     console.log(`Cleaned up ${toDelete.length} old versions`);
   }
+
+  // Wipe all versions (complete cleanup)
+  wipeAllVersions() {
+    const versions = this.listVersions();
+    if (versions.length === 0) {
+      console.log('No versions to wipe');
+      return;
+    }
+    
+    for (const version of versions) {
+      this.deleteVersion(version.id);
+    }
+    
+    console.log(`Wiped ${versions.length} versions`);
+  }
 }
 
 // Create singleton instance

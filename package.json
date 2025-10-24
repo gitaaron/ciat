@@ -7,7 +7,7 @@
     "web": "cd frontend && npm run dev",
     "dev": "concurrently -n api,web,watch -c green,cyan,yellow \"npm:api\" \"npm:web\" \"npm:watch\"",
     "reapply": "cd backend && npm run reapply",
-    "db": "cd backend && npm run db",
+    "db": "cd backend && npm run db --",
     "watch": "cd backend && npm run db watch"
   },
   "devDependencies": {

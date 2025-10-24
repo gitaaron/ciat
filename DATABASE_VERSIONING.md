@@ -31,11 +31,17 @@ npm run db list
 # Create a new version
 npm run db create "Description of changes"
 
-# Revert to a specific version
-npm run db revert <version-id> --force
+# Revert to a specific version (interactive confirmation or --force flag)
+npm run db revert <version-id>
+npm run db revert <version-id> -- --force
 
-# Delete a version
-npm run db delete <version-id> --force
+# Delete a version (interactive confirmation or --force flag)
+npm run db delete <version-id>
+npm run db delete <version-id> -- --force
+
+# Wipe ALL versions (interactive confirmation or --force flag)
+npm run db wipe
+npm run db wipe -- --force
 
 # Start watching for changes
 npm run db watch
@@ -46,6 +52,26 @@ npm run db status
 # Clean up old versions (keep last 10)
 npm run db cleanup
 ```
+
+**Alternative Direct CLI Usage** (if npm script arguments don't work properly):
+
+```bash
+# Run CLI directly from backend directory
+cd backend
+
+# Delete a version
+node src/cli.js delete <version-id> --force
+
+# Wipe ALL versions
+node src/cli.js wipe --force
+
+# Revert to a version
+node src/cli.js revert <version-id> --force
+```
+
+**Note**: For commands that require the `--force` flag, use `-- --force` to separate npm's `--force` from the CLI's `--force` flag. If this doesn't work, use the direct CLI approach.
+
+**Interactive Confirmation**: When running commands without the `--force` flag, the CLI will prompt for confirmation. Type `y` or `yes` to confirm, or `n`/`no`/anything else to cancel.
 
 #### Web Interface
 
@@ -109,7 +135,15 @@ By default, the system keeps the 10 most recent versions. Clean up old versions:
 ```bash
 # Keep only 5 most recent versions
 npm run db cleanup --keep 5
+
+# Wipe ALL versions (complete cleanup)
+npm run db wipe -- --force
+
+# Alternative direct CLI usage
+cd backend && node src/cli.js wipe --force
 ```
+
+**⚠️ Warning**: The `wipe` command permanently deletes ALL database versions. Use with extreme caution!
 
 ## Best Practices
 

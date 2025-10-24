@@ -2,6 +2,22 @@
 
 import { versioner } from './versioning.js';
 import { program } from 'commander';
+import readline from 'readline';
+
+// Helper function for interactive confirmation
+function askConfirmation(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase().trim() === 'y' || answer.toLowerCase().trim() === 'yes');
+    });
+  });
+}
 
 program
   .name('ciat-db')
@@ -76,16 +92,17 @@ program
   .description('Revert to a specific database version')
   .argument('<version-id>', 'Version ID to revert to')
   .option('-f, --force', 'Skip confirmation prompt')
-  .action((versionId, options) => {
+  .action(async (versionId, options) => {
     try {
       if (!options.force) {
         console.log(`⚠️  This will revert the database to version: ${versionId}`);
         console.log('A backup of the current database will be created automatically.');
-        console.log('Are you sure you want to continue? (y/N)');
         
-        // For CLI, we'll just show the warning and require manual confirmation
-        console.log('Use --force flag to skip this confirmation.');
-        return;
+        const confirmed = await askConfirmation('Are you sure you want to continue? (y/N): ');
+        if (!confirmed) {
+          console.log('Operation cancelled.');
+          return;
+        }
       }
       
       const metadata = versioner.revertToVersion(versionId);
@@ -106,13 +123,16 @@ program
   .description('Delete a specific database version')
   .argument('<version-id>', 'Version ID to delete')
   .option('-f, --force', 'Skip confirmation prompt')
-  .action((versionId, options) => {
+  .action(async (versionId, options) => {
     try {
       if (!options.force) {
         console.log(`⚠️  This will permanently delete version: ${versionId}`);
-        console.log('Are you sure you want to continue? (y/N)');
-        console.log('Use --force flag to skip this confirmation.');
-        return;
+        
+        const confirmed = await askConfirmation('Are you sure you want to continue? (y/N): ');
+        if (!confirmed) {
+          console.log('Operation cancelled.');
+          return;
+        }
       }
       
       versioner.deleteVersion(versionId);
@@ -159,6 +179,32 @@ program
       
     } catch (error) {
       console.error('Error during cleanup:', error.message);
+      process.exit(1);
+    }
+  });
+
+// Wipe command
+program
+  .command('wipe')
+  .description('Wipe all database versions (complete cleanup)')
+  .option('-f, --force', 'Skip confirmation prompt')
+  .action(async (options) => {
+    try {
+      if (!options.force) {
+        console.log('⚠️  This will permanently delete ALL database versions');
+        
+        const confirmed = await askConfirmation('Are you sure you want to continue? (y/N): ');
+        if (!confirmed) {
+          console.log('Operation cancelled.');
+          return;
+        }
+      }
+      
+      versioner.wipeAllVersions();
+      console.log('✅ Successfully wiped all database versions');
+      
+    } catch (error) {
+      console.error('Error wiping versions:', error.message);
       process.exit(1);
     }
   });
