@@ -1,3 +1,22 @@
+- during import instead of showing a "save rules" button show a "review transactions" button
+    - clicking the "review transactions" button does not persist the rules to the backend
+    - instead the "import transactions" button should be renamed to "save"
+    - clicking 'save' at the final step updates persists both rules and transactions similarly to how they are currently persisted
+
+---
+
+- the "manage rules" should should use the same "rules review" components as used during import
+
+- from the "manage rules" section after editing a set of rules
+    - display a 'review transactions' button at the bottom when clicking displays:
+        - the transactions table for review (same view component as used during import)
+        - save button that updates both rules and transactions
+
+- improve 'auto generate rules' algo
+
+    - "the home depot #7073 EAST YORK" should result in "the home depot" or "home depot" instead of "the"
+
+
 - review and clean up code ensuring that ‘pre existing’ rules are handled similarly to ‘auto generated’ rules 
 
     - the only thing that should be different is the rules list they are operating on

@@ -390,8 +390,6 @@ app.post('/api/import/commit', (req, res) => {
       return res.status(400).json({ error: 'items array is required' });
     }
     
-    console.log(`ImportWizard.js:499 handleSaveRules: Saving rules to backend: ${JSON.stringify(items)}`);
-    console.log(`ImportWizard.js:529 handleSaveRules: Rules saved successfully`);
     console.log(`POST http://localhost:3108/api/import/commit - Processing ${items.length} items`);
     
     let saved = 0, skipped = 0;
@@ -416,7 +414,7 @@ app.post('/api/import/commit', (req, res) => {
         category: it.category,
         category_source: it.category_source,
         category_explain: it.category_explain,
-        labels: it.labels || null,
+        labels: it.labels ? JSON.stringify(it.labels) : null,
         note: it.note || null,
         hash: it.hash,
         manual_override: 0

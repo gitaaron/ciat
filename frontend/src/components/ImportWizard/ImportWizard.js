@@ -303,6 +303,7 @@ export default {
         for (const [accountId, preview] of previewsByAccount.value) {
           const itemsToImport = preview.filter(x => !x.ignore)
           if (itemsToImport.length > 0) {
+            console.log('commitAllImports: Committing imports:', itemsToImport.length)
             await api.commitImport(itemsToImport)
             totalImported += itemsToImport.length
           }

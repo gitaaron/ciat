@@ -134,15 +134,15 @@ export function applyRulesToTransactions(transactions, rules) {
       if (coveredTransactions.has(transaction.hash)) continue;
       
       if (matchesRule(rule, transaction)) {
-        categorizedTransactions.push({
-          ...transaction,
-          category: rule.category,
-          labels: rule.labels || [],
-          source: 'rule',
-          explain: rule.explain || 'Rule match',
-          rule_id: rule.id,
-          rule_type: 'user_rule'
-        });
+      categorizedTransactions.push({
+        ...transaction,
+        category: rule.category,
+        labels: rule.labels || [],
+        category_source: 'rule',
+        category_explain: rule.explain || 'Rule match',
+        rule_id: rule.id,
+        rule_type: 'user_rule'
+      });
         coveredTransactions.add(transaction.hash);
         matched = true;
         break; // First match wins
@@ -155,8 +155,8 @@ export function applyRulesToTransactions(transactions, rules) {
         ...transaction,
         category: null,
         labels: [],
-        source: 'none',
-        explain: 'No match',
+        category_source: 'none',
+        category_explain: 'No match',
         rule_type: 'none'
       });
     }
@@ -252,8 +252,8 @@ export function applyRulesWithDetails(transactions, rules) {
           ...transaction,
           category: rule.category,
           labels: rule.labels || [],
-          source: 'rule',
-          explain: rule.explain || 'Rule match',
+          category_source: 'rule',
+          category_explain: rule.explain || 'Rule match',
           rule_id: rule.id,
           rule_type: 'user_rule'
         };
@@ -272,8 +272,8 @@ export function applyRulesWithDetails(transactions, rules) {
         ...transaction,
         category: null,
         labels: [],
-        source: 'none',
-        explain: 'No match',
+        category_source: 'none',
+        category_explain: 'No match',
         rule_type: 'none'
       });
     }
