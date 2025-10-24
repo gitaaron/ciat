@@ -9,8 +9,10 @@
       rules-section-class="new-rules"
       :accounts="accounts"
       :applying="applying"
+      :show-create-rule-button="true"
       no-rules-message="No new rules were created during this import process."
       @remove="removeNew"
+      @rule-created="handleRuleCreated"
     />
     
     <!-- Pre-existing Rules Review -->
@@ -22,7 +24,9 @@
       rules-section-class="existing-rules"
       :accounts="accounts"
       :applying="applying"
+      :show-create-rule-button="true"
       @remove="removeExisting"
+      @rule-created="handleRuleCreated"
     />
     
     <!-- Auto-Generated Rules Review -->
@@ -33,7 +37,9 @@
       rule-type="auto-rule"
       rules-section-class="auto-rules"
       :accounts="accounts"
+      :show-create-rule-button="true"
       @remove="removeAuto"
+      @rule-created="handleRuleCreated"
     />
   </div>
 </template>

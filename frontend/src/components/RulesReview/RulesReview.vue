@@ -108,14 +108,6 @@ export default {
       default: true
     },
     
-    // Dialog state
-    showCreateRuleDialog: {
-      type: Boolean,
-      default: false
-    },
-    createRuleTransaction: Object,
-    createRuleData: Object,
-    
     // Snackbar state
     showSnack: {
       type: Boolean,

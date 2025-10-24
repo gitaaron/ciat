@@ -94,6 +94,10 @@ export default function ManageRulesJS(props, { emit }) {
   // Auto Rules section functions
   const removeAuto = (rule) => deleteRule(rule, emit)
 
+  // Handle rule creation from any RulesReview component
+  const handleRuleCreated = (newRule) => {
+    emit('rule-created', newRule)
+  }
 
   return {
     
@@ -115,6 +119,9 @@ export default function ManageRulesJS(props, { emit }) {
     removeExisting,
     
     // Auto Rules section methods
-    removeAuto
+    removeAuto,
+    
+    // Rule creation handling
+    handleRuleCreated
   }
 }
