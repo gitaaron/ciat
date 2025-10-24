@@ -2,6 +2,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../api.js'
 import MultiLabelSelector from '../MultiLabelSelector.vue'
 import { CATEGORY_STEPS, CATEGORY_NAMES } from '../../config/categories.js'
+import { showError, showSuccess, showDeleteConfirm } from '../../utils/notifications.js'
 
 export default {
   name: 'RuleManager',
@@ -118,9 +119,12 @@ export default {
     }
 
     async function deleteRule(rule) {
-      if (!confirm(`Are you sure you want to delete this rule?\n\nPattern: ${rule.pattern}\nCategory: ${rule.category}`)) {
-        return
-      }
+      const confirmed = await showDeleteConfirm(
+        `Are you sure you want to delete this rule?\n\nPattern: ${rule.pattern}\nCategory: ${rule.category}`,
+        'Confirm Rule Deletion'
+      )
+      
+      if (!confirmed) return
       
       try {
         await api.deleteRule(rule.id)

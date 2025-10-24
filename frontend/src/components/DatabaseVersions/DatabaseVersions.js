@@ -1,5 +1,6 @@
 import { ref, onMounted, computed } from 'vue'
 import api from '../api.js'
+import { showError, showSuccess, showDeleteConfirm, showRevertConfirm } from '../../utils/notifications.js'
 
 export default {
   name: 'DatabaseVersions',
@@ -29,7 +30,7 @@ export default {
         status.value = statusData
       } catch (error) {
         console.error('Failed to load versions:', error)
-        alert('Failed to load versions: ' + error.message)
+        showError('Failed to load versions: ' + error.message)
       } finally {
         loading.value = false
       }
@@ -43,46 +44,52 @@ export default {
       try {
         await api.post('/versions', { description })
         await loadVersions()
-        alert('Version created successfully!')
+        showSuccess('Version created successfully!')
       } catch (error) {
         console.error('Failed to create version:', error)
-        alert('Failed to create version: ' + error.message)
+        showError('Failed to create version: ' + error.message)
       } finally {
         loading.value = false
       }
     }
 
     async function revertVersion(versionId) {
-      if (!confirm(`Are you sure you want to revert to version ${versionId}? This will create a backup of the current database.`)) {
-        return
-      }
+      const confirmed = await showRevertConfirm(
+        `Are you sure you want to revert to version ${versionId}? This will create a backup of the current database.`,
+        'Confirm Revert'
+      )
+      
+      if (!confirmed) return
       
       loading.value = true
       try {
         await api.post(`/versions/${versionId}/revert`)
         await loadVersions()
-        alert('Successfully reverted to the selected version!')
+        showSuccess('Successfully reverted to the selected version!')
       } catch (error) {
         console.error('Failed to revert version:', error)
-        alert('Failed to revert version: ' + error.message)
+        showError('Failed to revert version: ' + error.message)
       } finally {
         loading.value = false
       }
     }
 
     async function deleteVersion(versionId) {
-      if (!confirm(`Are you sure you want to delete version ${versionId}? This action cannot be undone.`)) {
-        return
-      }
+      const confirmed = await showDeleteConfirm(
+        `Are you sure you want to delete version ${versionId}? This action cannot be undone.`,
+        'Confirm Deletion'
+      )
+      
+      if (!confirmed) return
       
       loading.value = true
       try {
         await api.delete(`/versions/${versionId}`)
         await loadVersions()
-        alert('Version deleted successfully!')
+        showSuccess('Version deleted successfully!')
       } catch (error) {
         console.error('Failed to delete version:', error)
-        alert('Failed to delete version: ' + error.message)
+        showError('Failed to delete version: ' + error.message)
       } finally {
         loading.value = false
       }

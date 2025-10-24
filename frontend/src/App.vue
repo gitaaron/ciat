@@ -8,6 +8,7 @@ import LineChart from './components/LineChart.vue'
 import DatabaseVersions from './components/DatabaseVersions/DatabaseVersions.vue'
 import NewCategoryWizard from './components/NewCategoryWizard/NewCategoryWizard.vue'
 import RuleManager from './components/RuleManager/RuleManager.vue'
+import GlobalNotifications from './components/GlobalNotifications.vue'
 import api from './components/api.js'
 
 const accounts = ref([])
@@ -121,6 +122,9 @@ onMounted(async () => {
         </v-window>
       </v-container>
     </v-main>
+    
+    <!-- Global Notifications -->
+    <GlobalNotifications />
   </v-app>
 </template>
 

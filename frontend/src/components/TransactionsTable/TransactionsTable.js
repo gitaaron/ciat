@@ -1,6 +1,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api.js'
 import { CATEGORY_OPTIONS, CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
+import { showError } from '../../utils/notifications.js'
 
 export default {
   name: 'TransactionsTable',
@@ -69,7 +70,7 @@ export default {
         await loadTransactions()
       } catch (error) {
         console.error('Error updating transaction category:', error)
-        alert('Error updating transaction category: ' + error.message)
+        showError('Error updating transaction category: ' + error.message)
       }
     }
 

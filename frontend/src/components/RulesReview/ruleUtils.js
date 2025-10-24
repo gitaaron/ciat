@@ -1,4 +1,5 @@
 import api from '../api.js'
+import { showError, showSuccess, showDeleteConfirm } from '../../utils/notifications.js'
 
 /**
  * Shared utility functions for rule management
@@ -43,20 +44,23 @@ export function createRuleUtils() {
   }
 
   async function deleteRule(rule, emit) {
-    if (!confirm(`Are you sure you want to delete the rule "${rule.pattern}"?`)) {
-      return
-    }
+    const confirmed = await showDeleteConfirm(
+      `Are you sure you want to delete the rule "${rule.pattern}"?`,
+      'Confirm Rule Deletion'
+    )
+    
+    if (!confirmed) return
 
     try {
       const ruleId = rule.id
       
       await api.deleteRule(ruleId)
-      showSnackMessage('Rule deleted successfully')
+      showSuccess('Rule deleted successfully')
       // Emit refresh event to parent
       emit('refresh-rules')
     } catch (error) {
       console.error('Error deleting rule:', error)
-      showSnackMessage('Error deleting rule: ' + error.message)
+      showError('Error deleting rule: ' + error.message)
     }
   }
 

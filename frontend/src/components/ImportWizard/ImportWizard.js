@@ -5,6 +5,7 @@ import ManageRules from '../RulesReview/ManageRules.vue'
 import TransactionReview from '../TransactionReview/TransactionReview.vue'
 import AccountManager from '../AccountManager/AccountManager.vue'
 import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule } from '../../utils/ruleMatcher.js'
+import { showError, showSuccess, showWarning, showInfo } from '../../utils/notifications.js'
 
 export default {
   name: 'ImportWizard',
@@ -123,12 +124,12 @@ export default {
       })
       
       if (droppedFiles.length === 0) {
-        alert('Please drop a CSV or QFX file only')
+        showWarning('Please drop a CSV or QFX file only')
         return
       }
       
       if (droppedFiles.length > 1) {
-        alert('Please drop only one file at a time')
+        showWarning('Please drop only one file at a time')
         return
       }
       
@@ -143,12 +144,12 @@ export default {
       })
       
       if (selectedFiles.length === 0) {
-        alert('Please select a CSV or QFX file only')
+        showWarning('Please select a CSV or QFX file only')
         return
       }
       
       if (selectedFiles.length > 1) {
-        alert('Please select only one file at a time')
+        showWarning('Please select only one file at a time')
         return
       }
       
@@ -178,7 +179,7 @@ export default {
         step.value = 2
       } catch (error) {
         console.error('Error analyzing files:', error)
-        alert('Error analyzing files: ' + error.message)
+        showError('Error analyzing files: ' + error.message)
       } finally {
         processing.value = false
       }
@@ -266,7 +267,7 @@ export default {
             // Note: newRules.value starts empty, so no filtering needed here
           } catch (error) {
             console.error(`Error processing file ${file.name}:`, error)
-            alert(`Error processing file ${file.name}: ${error.message}`)
+            showError(`Error processing file ${file.name}: ${error.message}`)
           }
         }
         
@@ -275,7 +276,7 @@ export default {
         currentCategoryStep.value = 0
       } catch (error) {
         console.error('Error processing file:', error)
-        alert('Error processing file: ' + error.message)
+        showError('Error processing file: ' + error.message)
       } finally {
         processing.value = false
       }
@@ -314,7 +315,7 @@ export default {
         previewsByAccount.value.clear()
         step.value = 5
         
-        alert(`Import complete! ${totalImported} transactions imported.`)
+        showSuccess(`Import complete! ${totalImported} transactions imported.`)
         
         // Emit import complete event
         emit('import-complete')
@@ -327,7 +328,7 @@ export default {
         
       } catch (error) {
         console.error('Error committing imports:', error)
-        alert('Error committing imports: ' + error.message)
+        showError('Error committing imports: ' + error.message)
       } finally {
         processing.value = false
       }
@@ -371,7 +372,7 @@ export default {
       const matchingTransactions = testMatches.ruleMatches.get(rule.id) || []
       
       if (matchingTransactions.length === 0) {
-        alert('This rule does not match any of the currently imported transactions. Please adjust the pattern or create the rule later.')
+        showWarning('This rule does not match any of the currently imported transactions. Please adjust the pattern or create the rule later.')
         return
       }
       
@@ -529,7 +530,7 @@ export default {
         console.log('handleSaveRules: Rules saved successfully')
       } catch (error) {
         console.error('Error in handleSaveRules:', error)
-        alert('Error saving rules: ' + error.message)
+        showError('Error saving rules: ' + error.message)
       } finally {
         processing.value = false
       }
