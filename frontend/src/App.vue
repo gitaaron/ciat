@@ -12,7 +12,7 @@ import GlobalNotifications from './components/GlobalNotifications.vue'
 import api from './components/api.js'
 
 const accounts = ref([])
-const selected = ref('transactions')
+const selected = ref('reports')
 const hasTransactions = ref(false)
 const showNewCategoryWizard = ref(false)
 
@@ -25,17 +25,23 @@ async function checkTransactions() {
     const transactions = await api.listTransactions()
     hasTransactions.value = transactions.length > 0
     // If no transactions exist, default to import tab
-    if (!hasTransactions.value && selected.value === 'transactions') {
+    if (!hasTransactions.value) {
       selected.value = 'import'
+    } else {
+      // If transactions exist, default to reports tab
+      selected.value = 'reports'
     }
   } catch (error) {
     console.error('Error checking transactions:', error)
     hasTransactions.value = false
+    selected.value = 'import'
   }
 }
 
 async function handleImportComplete() {
   await checkTransactions()
+  // Navigate to reports tab after import completion
+  selected.value = 'reports'
 }
 
 async function handleAccountsUpdated() {
@@ -64,13 +70,13 @@ onMounted(async () => {
     <v-main>
       <v-container max-width="1200" class="pa-4">
         <v-tabs v-if="hasTransactions" v-model="selected" class="mb-4">
-          <v-tab value="transactions">
-            <v-icon left>mdi-format-list-bulleted</v-icon>
-            Transactions
-          </v-tab>
           <v-tab value="reports">
             <v-icon left>mdi-chart-pie</v-icon>
             Reports
+          </v-tab>
+          <v-tab value="transactions">
+            <v-icon left>mdi-format-list-bulleted</v-icon>
+            Transactions
           </v-tab>
           <v-tab value="manage-rules">
             <v-icon left>mdi-cog</v-icon>
