@@ -17,7 +17,7 @@ export default {
       default: false
     }
   },
-  emits: ['back-to-rules', 'import-transactions'],
+  emits: ['back-to-rules', 'import-transactions', 'save-and-import'],
   setup(props, { emit }) {
     // Search and filter state
     const searchQuery = ref('')
@@ -205,7 +205,7 @@ export default {
     }
 
     function importTransactions() {
-      emit('import-transactions')
+      emit('save-and-import')
     }
 
     // Auto-expand categories with transactions

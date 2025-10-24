@@ -526,14 +526,24 @@ export default {
           }
         }
         
-        // Navigate to Transaction Review step
-        step.value = 4
+        console.log('handleSaveRules: Rules saved successfully')
       } catch (error) {
         console.error('Error in handleSaveRules:', error)
         alert('Error saving rules: ' + error.message)
       } finally {
         processing.value = false
       }
+    }
+
+    function goToTransactionReview() {
+      // Navigate to Transaction Review step
+      step.value = 4
+    }
+
+    async function handleSaveAndImport() {
+      // First save rules, then import transactions
+      await handleSaveRules()
+      await commitAllImports()
     }
 
     async function handleImportTransactions() {
@@ -592,6 +602,8 @@ export default {
       handleCombinedRulesSkip,
       handleSaveRules,
       handleImportTransactions,
+      handleSaveAndImport,
+      goToTransactionReview,
       goBackToRules: () => { step.value = 3 }
     }
   }

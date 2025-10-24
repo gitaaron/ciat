@@ -293,8 +293,8 @@
               :loading="processing"
               :disabled="processing || totalTransactions === 0"
             >
-              <v-icon left>mdi-import</v-icon>
-              {{ processing ? 'Importing...' : 'Import Transactions' }}
+              <v-icon left>mdi-content-save</v-icon>
+              {{ processing ? 'Saving...' : 'Save' }}
             </v-btn>
           </div>
         </div>

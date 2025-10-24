@@ -234,11 +234,11 @@
             <v-btn 
               color="primary" 
               size="large"
-              @click="handleSaveRules"
+              @click="goToTransactionReview"
               :loading="processing"
               :disabled="processing"
             >
-              {{ processing ? 'Saving Rules...' : 'Save Rules' }}
+              Review Transactions
             </v-btn>
           </div>
         </v-card-text>
@@ -253,6 +253,7 @@
         :processing="processing"
         @back-to-rules="goBackToRules"
         @import-transactions="handleImportTransactions"
+        @save-and-import="handleSaveAndImport"
       />
     </v-card-text>
 
