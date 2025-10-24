@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import api from '../api.js'
+import { getCategoryName } from '../../config/categories.js'
 
 /**
  * Shared functionality for rules review components
@@ -11,15 +12,6 @@ export function useRulesReview() {
   const snackMessage = ref('')
 
   // Helper functions
-  function getCategoryName(category) {
-    const categoryNames = {
-      'fixed_costs': 'Fixed Costs',
-      'investments': 'Investments', 
-      'guilt_free': 'Guilt Free',
-      'short_term_savings': 'Short Term Savings'
-    }
-    return categoryNames[category] || category
-  }
 
   function showSnackMessage(message) {
     snackMessage.value = message

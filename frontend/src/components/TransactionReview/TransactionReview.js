@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import { CATEGORY_OPTIONS, getCategoryName, getCategoryIcon, getCategoryColor } from '../../config/categories.js'
 
 export default {
   name: 'TransactionReview',
@@ -39,14 +40,7 @@ export default {
     ]
 
     // Category options for filter
-    const categoryOptions = computed(() => [
-      { title: 'All Categories', value: '' },
-      { title: 'Fixed Costs', value: 'fixed_costs' },
-      { title: 'Investments', value: 'investments' },
-      { title: 'Guilt Free', value: 'guilt_free' },
-      { title: 'Short Term Savings', value: 'short_term_savings' },
-      { title: 'Uncategorized', value: 'uncategorized' }
-    ])
+    const categoryOptions = computed(() => CATEGORY_OPTIONS)
 
     // Account options for filter
     const accountOptions = computed(() => {
@@ -181,35 +175,7 @@ export default {
       selectedAccount.value = ''
     }
 
-    function getCategoryDisplayName(category) {
-      const names = {
-        'fixed_costs': 'Fixed Costs',
-        'investments': 'Investments',
-        'guilt_free': 'Guilt Free',
-        'short_term_savings': 'Short Term Savings'
-      }
-      return names[category] || category
-    }
-
-    function getCategoryIcon(category) {
-      const icons = {
-        'fixed_costs': 'mdi-home',
-        'investments': 'mdi-trending-up',
-        'guilt_free': 'mdi-heart',
-        'short_term_savings': 'mdi-piggy-bank'
-      }
-      return icons[category] || 'mdi-folder'
-    }
-
-    function getCategoryColor(category) {
-      const colors = {
-        'fixed_costs': 'blue',
-        'investments': 'green',
-        'guilt_free': 'pink',
-        'short_term_savings': 'orange'
-      }
-      return colors[category] || 'grey'
-    }
+    // Use imported functions directly
 
     function formatDate(dateString) {
       if (!dateString) return 'Unknown'
@@ -285,7 +251,7 @@ export default {
       // Methods
       toggleCategory,
       clearFilters,
-      getCategoryDisplayName,
+      getCategoryDisplayName: getCategoryName,
       getCategoryIcon,
       getCategoryColor,
       formatDate,

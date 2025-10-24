@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import api from '../api.js'
 import MultiLabelSelector from '../MultiLabelSelector.vue'
+import { CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
 
 export default {
   name: 'NewCategoryWizard',
@@ -37,6 +38,8 @@ export default {
     const changedCount = computed(() => {
       return previewData.value.affectedTransactions.filter(tx => tx.wouldChange).length
     })
+
+    const categorySelectOptions = computed(() => CATEGORY_SELECT_OPTIONS)
 
     function getPatternPlaceholder() {
       switch (ruleForm.value.match_type) {
@@ -115,6 +118,7 @@ export default {
       previewData,
       isFormValid,
       changedCount,
+      categorySelectOptions,
       getPatternPlaceholder,
       getPatternHelp,
       previewRule,

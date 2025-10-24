@@ -1,5 +1,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api.js'
+import { CATEGORY_OPTIONS, CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
 
 export default {
   name: 'TransactionsTable',
@@ -72,6 +73,10 @@ export default {
       }
     }
 
+    // Computed properties for category options
+    const categoryFilterOptions = computed(() => CATEGORY_OPTIONS)
+    const categorySelectOptions = computed(() => CATEGORY_SELECT_OPTIONS)
+
     return {
       // Reactive properties
       q,
@@ -83,6 +88,9 @@ export default {
       order,
       rows,
       loading,
+      // Computed properties
+      categoryFilterOptions,
+      categorySelectOptions,
       // Methods
       loadTransactions,
       getLabels,

@@ -18,13 +18,7 @@
           <v-col cols="12" md="6">
             <v-select
               v-model="ruleForm.category"
-              :items="[
-                { title: 'Select a category', value: '' },
-                { title: 'Guilt Free', value: 'guilt_free' },
-                { title: 'Short Term Savings', value: 'short_term_savings' },
-                { title: 'Fixed Costs', value: 'fixed_costs' },
-                { title: 'Investments', value: 'investments' }
-              ]"
+              :items="categorySelectOptions"
               item-title="title"
               item-value="value"
               label="Category"

@@ -1,6 +1,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '../api.js'
 import MultiLabelSelector from '../MultiLabelSelector.vue'
+import { CATEGORY_STEPS, CATEGORY_NAMES } from '../../config/categories.js'
 
 export default {
   name: 'RuleManager',
@@ -29,8 +30,8 @@ export default {
       { value: 'regex', label: 'Regular Expression' }
     ]
 
-    const categorySteps = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings']
-    const categoryStepNames = ['Fixed Costs', 'Investments', 'Guilt Free', 'Short Term Savings']
+    const categorySteps = CATEGORY_STEPS
+    const categoryStepNames = CATEGORY_STEPS.map(step => CATEGORY_NAMES[step])
 
     const sortedRules = computed(() => {
       return [...rules.value].sort((a, b) => {

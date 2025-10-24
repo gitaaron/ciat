@@ -45,11 +45,13 @@
           <div class="form-row">
             <label>Category:</label>
             <select v-model="ruleData.category" class="form-input">
-              <option value="fixed_costs">Fixed Costs</option>
-              <option value="investments">Investments</option>
-              <option value="guilt_free">Guilt Free</option>
-              <option value="short_term_savings">Short Term Savings</option>
-              <option value="">Uncategorized</option>
+              <option 
+                v-for="option in categoryOptions" 
+                :key="option.value" 
+                :value="option.value"
+              >
+                {{ option.title }}
+              </option>
             </select>
           </div>
           
@@ -78,6 +80,7 @@
 
 <script>
 import MultiLabelSelector from '../MultiLabelSelector.vue'
+import { CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
 
 export default {
   name: 'CreateRuleDialog',
@@ -125,6 +128,11 @@ export default {
         this.initializeData()
       },
       deep: true
+    }
+  },
+  computed: {
+    categoryOptions() {
+      return CATEGORY_SELECT_OPTIONS
     }
   },
   methods: {

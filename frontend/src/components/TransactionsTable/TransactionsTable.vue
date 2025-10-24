@@ -41,13 +41,7 @@
         <v-col cols="12" md="2">
           <v-select
             v-model="category"
-            :items="[
-              { title: 'All categories', value: '' },
-              { title: 'Guilt Free', value: 'guilt_free' },
-              { title: 'Short Term Savings', value: 'short_term_savings' },
-              { title: 'Fixed Costs', value: 'fixed_costs' },
-              { title: 'Investments', value: 'investments' }
-            ]"
+            :items="categoryFilterOptions"
             item-title="title"
             item-value="value"
             label="Category"
@@ -132,13 +126,7 @@
         <template v-slot:item.category="{ item }">
           <v-select
             v-model="item.category"
-            :items="[
-              { title: '(none)', value: '' },
-              { title: 'Guilt Free', value: 'guilt_free' },
-              { title: 'Short Term Savings', value: 'short_term_savings' },
-              { title: 'Fixed Costs', value: 'fixed_costs' },
-              { title: 'Investments', value: 'investments' }
-            ]"
+            :items="categorySelectOptions"
             item-title="title"
             item-value="value"
             variant="outlined"

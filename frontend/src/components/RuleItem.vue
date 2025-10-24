@@ -66,11 +66,13 @@
             <div class="edit-row">
               <label>Category:</label>
               <select v-model="editData.category" class="edit-input">
-                <option value="fixed_costs">Fixed Costs</option>
-                <option value="investments">Investments</option>
-                <option value="guilt_free">Guilt Free</option>
-                <option value="short_term_savings">Short Term Savings</option>
-                <option value="">Uncategorized</option>
+                <option 
+                  v-for="option in categoryOptions" 
+                  :key="option.value" 
+                  :value="option.value"
+                >
+                  {{ option.title }}
+                </option>
               </select>
             </div>
             <div class="edit-actions">
@@ -179,6 +181,8 @@
 </template>
 
 <script>
+import { CATEGORY_SELECT_OPTIONS, getCategoryName } from '../config/categories.js'
+
 export default {
   name: 'RuleItem',
   props: {
@@ -224,16 +228,14 @@ export default {
       }
     }
   },
+  computed: {
+    categoryOptions() {
+      return CATEGORY_SELECT_OPTIONS
+    }
+  },
   methods: {
     getCategoryName(category) {
-      const categoryNames = {
-        'fixed_costs': 'Fixed Costs',
-        'investments': 'Investments',
-        'guilt_free': 'Guilt Free',
-        'short_term_savings': 'Short Term Savings',
-        '': 'Uncategorized'
-      }
-      return categoryNames[category] || category
+      return getCategoryName(category)
     },
 
     getAccountName(accountId) {
