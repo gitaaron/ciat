@@ -177,29 +177,6 @@ export default {
 
     // Use imported functions directly
 
-    function formatDate(dateString) {
-      if (!dateString) return 'Unknown'
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return 'Unknown'
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      })
-    }
-
-    function getLabels(transaction) {
-      if (!transaction.labels) return []
-      if (typeof transaction.labels === 'string') {
-        try {
-          return JSON.parse(transaction.labels)
-        } catch {
-          return transaction.labels.split(',').map(l => l.trim()).filter(l => l)
-        }
-      }
-      return Array.isArray(transaction.labels) ? transaction.labels : []
-    }
-
     function goBackToRules() {
       emit('back-to-rules')
     }
@@ -254,8 +231,6 @@ export default {
       getCategoryDisplayName: getCategoryName,
       getCategoryIcon,
       getCategoryColor,
-      formatDate,
-      getLabels,
       goBackToRules,
       importTransactions
     }

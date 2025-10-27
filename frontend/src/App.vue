@@ -100,7 +100,7 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="transactions">
-            <TransactionsTable />
+            <TransactionsTable :accounts="accounts" />
           </v-window-item>
 
           <v-window-item value="reports">

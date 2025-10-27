@@ -7,168 +7,52 @@
 
     <v-card-text>
       <!-- Filters -->
-      <v-row class="mb-4">
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="q"
-            label="Search name/amount/note"
-            variant="outlined"
-            density="compact"
-            prepend-inner-icon="mdi-magnify"
-            clearable
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            v-model="start"
-            label="Start Date"
-            placeholder="YYYY-MM-DD"
-            variant="outlined"
-            density="compact"
-            type="date"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            v-model="end"
-            label="End Date"
-            placeholder="YYYY-MM-DD"
-            variant="outlined"
-            density="compact"
-            type="date"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-select
-            v-model="category"
-            :items="categoryFilterOptions"
-            item-title="title"
-            item-value="value"
-            label="Category"
-            variant="outlined"
-            density="compact"
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field
-            v-model="label"
-            label="Label"
-            variant="outlined"
-            density="compact"
-            placeholder="Filter by label"
-            clearable
-          />
-        </v-col>
-        <v-col cols="12" md="2">
-          <v-select
-            v-model="sort"
-            :items="[
-              { title: 'Date', value: 'date' },
-              { title: 'Amount', value: 'amount' },
-              { title: 'Name', value: 'name' }
-            ]"
-            item-title="title"
-            item-value="value"
-            label="Sort by"
-            variant="outlined"
-            density="compact"
-          />
-        </v-col>
-        <v-col cols="12" md="1">
-          <v-select
-            v-model="order"
-            :items="[
-              { title: 'DESC', value: 'DESC' },
-              { title: 'ASC', value: 'ASC' }
-            ]"
-            item-title="title"
-            item-value="value"
-            label="Order"
-            variant="outlined"
-            density="compact"
-          />
-        </v-col>
-      </v-row>
+      <TransactionFilters
+        v-model:search-query="q"
+        v-model:selected-category="category"
+        v-model:selected-account="account"
+        v-model:start-date="start"
+        v-model:end-date="end"
+        v-model:selected-label="label"
+        :category-options="categoryFilterOptions"
+        :account-options="accountOptions"
+        :show-category-filter="true"
+        :show-account-filter="true"
+        :show-date-filters="true"
+        :show-label-filter="true"
+        search-placeholder="Search name/amount/note"
+        @clear-filters="clearFilters"
+      />
+
+      <!-- Summary Stats -->
+      <TransactionStats
+        :total-transactions="totalTransactions"
+        :categorized-count="categorizedCount"
+        :uncategorized-count="uncategorizedCount"
+        :total-amount="totalAmount"
+        :show-categorized="true"
+        :show-uncategorized="true"
+        :show-total-amount="true"
+        :show-uncategorized-amount="false"
+      />
 
       <!-- Data Table -->
-      <v-data-table
-        :headers="[
-          { title: 'Date', key: 'date', sortable: true },
-          { title: 'Account', key: 'account_name', sortable: true },
-          { title: 'Name', key: 'name', sortable: true },
-          { title: 'Description', key: 'description', sortable: true },
-          { title: 'Amount', key: 'amount', sortable: true },
-          { title: 'Type', key: 'inflow', sortable: true },
-          { title: 'Category', key: 'category', sortable: false },
-          { title: 'Labels', key: 'labels', sortable: false },
-          { title: 'Explain', key: 'category_explain', sortable: false },
-          { title: 'Actions', key: 'actions', sortable: false }
-        ]"
+      <TransactionTable
         :items="rows"
-        class="elevation-1"
-      >
-        <template v-slot:item.amount="{ item }">
-          <span class="font-weight-medium">
-            ${{ item.amount !== null && item.amount !== undefined && !isNaN(item.amount) ? Number(item.amount).toFixed(2) : '0.00' }}
-          </span>
-        </template>
-        
-        <template v-slot:item.inflow="{ item }">
-          <v-chip
-            :color="item.inflow ? 'success' : 'error'"
-            size="small"
-            variant="outlined"
-          >
-            {{ item.inflow ? 'Income' : 'Expense' }}
-          </v-chip>
-        </template>
-        
-        <template v-slot:item.category="{ item }">
-          <v-select
-            v-model="item.category"
-            :items="categorySelectOptions"
-            item-title="title"
-            item-value="value"
-            variant="outlined"
-            density="compact"
-            hide-details
-            style="min-width: 150px;"
-          />
-        </template>
-        
-        <template v-slot:item.labels="{ item }">
-          <div v-if="getLabels(item).length > 0" class="d-flex flex-wrap ga-1">
-            <v-chip
-              v-for="label in getLabels(item)"
-              :key="label"
-              size="small"
-              color="primary"
-              variant="tonal"
-            >
-              {{ label }}
-            </v-chip>
-          </div>
-          <span v-else class="text-caption text-grey">No labels</span>
-        </template>
-        
-        <template v-slot:item.category_explain="{ item }">
-          <span class="text-caption">{{ item.category_explain }}</span>
-        </template>
-        
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            @click="overrideCategory(item)"
-            color="primary"
-            variant="outlined"
-            size="small"
-          >
-            <v-icon left>mdi-content-save</v-icon>
-            Save
-          </v-btn>
-        </template>
-      </v-data-table>
+        :headers="tableHeaders"
+        :grouped="false"
+        :loading="loading"
+        :show-category-edit="true"
+        @save-item="overrideCategory"
+      />
     </v-card-text>
   </v-card>
 </template>
 
-<script src="./TransactionsTable.js"></script>
+<script>
+import TransactionsTableJS from './TransactionsTable.js'
+
+export default {
+  ...TransactionsTableJS
+}
+</script>
