@@ -43,6 +43,10 @@ npm run db delete <version-id> -- --force
 npm run db wipe
 npm run db wipe -- --force
 
+# Clear ALL data from database (transactions and accounts)
+npm run db clear
+npm run db clear -- --force
+
 # Start watching for changes
 npm run db watch
 
@@ -72,6 +76,12 @@ node src/cli.js revert <version-id> --force
 **Note**: For commands that require the `--force` flag, use `-- --force` to separate npm's `--force` from the CLI's `--force` flag. If this doesn't work, use the direct CLI approach.
 
 **Interactive Confirmation**: When running commands without the `--force` flag, the CLI will prompt for confirmation. Type `y` or `yes` to confirm, or `n`/`no`/anything else to cancel.
+
+**Important Command Differences**:
+- **`wipe`** - Deletes all database version snapshots (backups), but keeps your actual data intact
+- **`clear`** - Deletes all transactions and accounts from the database (this removes your actual data!)
+- **`delete <version-id>`** - Deletes a specific version snapshot
+- **`revert <version-id>`** - Restores the database to a previous version snapshot
 
 #### Web Interface
 

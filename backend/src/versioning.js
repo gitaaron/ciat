@@ -191,6 +191,24 @@ class DatabaseVersioner {
     
     console.log(`Wiped ${versions.length} versions`);
   }
+
+  // Clear all data from the database (transactions and accounts)
+  clearAllData() {
+    const db = new Database(this.dbPath);
+    try {
+      // Delete all transactions
+      const txResult = db.prepare('DELETE FROM transactions').run();
+      console.log(`Deleted ${txResult.changes} transactions`);
+      
+      // Delete all accounts
+      const accountResult = db.prepare('DELETE FROM accounts').run();
+      console.log(`Deleted ${accountResult.changes} accounts`);
+      
+      console.log('✅ Successfully cleared all data from database');
+    } finally {
+      db.close();
+    }
+  }
 }
 
 // Create singleton instance

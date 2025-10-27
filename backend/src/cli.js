@@ -209,6 +209,32 @@ program
     }
   });
 
+// Clear command
+program
+  .command('clear')
+  .description('Clear all data from the database (transactions and accounts)')
+  .option('-f, --force', 'Skip confirmation prompt')
+  .action(async (options) => {
+    try {
+      if (!options.force) {
+        console.log('⚠️  This will permanently delete ALL transactions and accounts from the database');
+        console.log('This action cannot be undone!');
+        
+        const confirmed = await askConfirmation('Are you sure you want to continue? (y/N): ');
+        if (!confirmed) {
+          console.log('Operation cancelled.');
+          return;
+        }
+      }
+      
+      versioner.clearAllData();
+      
+    } catch (error) {
+      console.error('Error clearing database:', error.message);
+      process.exit(1);
+    }
+  });
+
 // Status command
 program
   .command('status')
