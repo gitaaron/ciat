@@ -3,8 +3,7 @@
 import { ref, onMounted, computed } from 'vue'
 import ImportWizard from './components/ImportWizard/ImportWizard.vue'
 import TransactionsTable from './components/TransactionsTable/TransactionsTable.vue'
-import PieChart from './components/PieChart.vue'
-import LineChart from './components/LineChart.vue'
+import Reports from './components/Reports/Reports.vue'
 import DatabaseVersions from './components/DatabaseVersions/DatabaseVersions.vue'
 import NewCategoryWizard from './components/NewCategoryWizard/NewCategoryWizard.vue'
 import RuleManager from './components/RuleManager/RuleManager.vue'
@@ -104,14 +103,7 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="reports">
-            <v-row>
-              <v-col cols="12" md="6">
-                <PieChart />
-              </v-col>
-              <v-col cols="12" md="6">
-                <LineChart />
-              </v-col>
-            </v-row>
+            <Reports @navigate-to-import="selected = 'import'" />
           </v-window-item>
 
           <v-window-item value="manage-rules">
