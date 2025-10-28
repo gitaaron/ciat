@@ -11,6 +11,7 @@ const CONFIG = {
   MIN_CATEGORY_CONFIDENCE: 0.8, // 80% - lowered for testing
   MIN_CLUSTER_SIMILARITY: 0.85,
   MAX_RULES_PER_IMPORT: 50,
+  SHORT_TERM_AMOUNT_THRESHOLD: 500, // Amount threshold for short_term_savings category
   STORE_NUMBER_PATTERN: /#?\d{2,5}/g,
   PHONE_PATTERN: /\(\d{3}\)\s*\d{3}-\d{4}|\d{3}-\d{3}-\d{4}/g,
   AMOUNT_PATTERN: /\$[\d,]+\.?\d*/g,
@@ -146,6 +147,97 @@ const CONFIG = {
     '6099': 'guilt_free' // Financial institutions
   }
 };
+
+/**
+ * Determine category for a rule based on pattern and transaction context
+ * @param {string} pattern - The rule pattern
+ * @param {string} ruleType - Type of rule (contains, regex, exact, mcc)
+ * @param {Array} matchingTransactions - Transactions that would match this rule
+ * @returns {string} - Category for the rule
+ */
+export function determineRuleCategory(pattern, ruleType, matchingTransactions = []) {
+  const normalizedPattern = pattern.toLowerCase();
+  
+  // 1. Frequency-based rules are always fixed_costs
+  if (ruleType === 'contains' || ruleType === 'regex') {
+    // Check for food/groceries keywords
+    const foodKeywords = [
+      'grocery', 'supermarket', 'food', 'fresh', 'market', 'produce',
+      'meat', 'dairy', 'bakery', 'deli', 'organic', 'whole foods',
+      'safeway', 'kroger', 'publix', 'wegmans', 'trader joe',
+      'costco', 'walmart', 'target', 'loblaws', 'metro', 'sobeys',
+      'restaurant', 'cafe', 'diner', 'eatery', 'kitchen', 'grill',
+      'pizza', 'burger', 'sandwich', 'coffee', 'starbucks', 'tim hortons',
+      'mcdonalds', 'subway', 'kfc', 'taco bell', 'wendys', 'burger king'
+    ];
+    
+    const isFoodRelated = foodKeywords.some(keyword => 
+      normalizedPattern.includes(keyword)
+    );
+    
+    if (isFoodRelated) {
+      return 'fixed_costs';
+    }
+    
+    // Check for automotive keywords
+    const automotiveKeywords = [
+      'gas', 'gasoline', 'fuel', 'petro', 'esso', 'shell', 'chevron',
+      'parking', 'impark', 'park', 'garage', 'auto', 'car', 'vehicle',
+      'maintenance', 'repair', 'service', 'oil change', 'tire', 'brake',
+      'insurance', 'geico', 'state farm', 'progressive', 'allstate',
+      'dmv', 'registration', 'license', 'inspection'
+    ];
+    
+    const isAutomotiveRelated = automotiveKeywords.some(keyword => 
+      normalizedPattern.includes(keyword)
+    );
+    
+    if (isAutomotiveRelated) {
+      return 'fixed_costs';
+    }
+    
+    // Check transaction amounts for short_term_savings
+    if (matchingTransactions.length > 0) {
+      const hasHighAmount = matchingTransactions.some(tx => 
+        Math.abs(Number(tx.amount)) >= CONFIG.SHORT_TERM_AMOUNT_THRESHOLD
+      );
+      
+      if (hasHighAmount) {
+        return 'short_term_savings';
+      }
+    }
+    
+    // Default for frequency-based rules is fixed_costs
+    return 'fixed_costs';
+  }
+  
+  // 2. MCC-based rules use predefined mappings or default logic
+  if (ruleType === 'mcc') {
+    const predefinedCategory = CONFIG.MCC_CATEGORY_MAPPING[pattern];
+    if (predefinedCategory) {
+      return predefinedCategory;
+    }
+    
+    // Default MCC rules to fixed_costs
+    return 'fixed_costs';
+  }
+  
+  // 3. Merchant ID rules - check amounts
+  if (ruleType === 'exact' && matchingTransactions.length > 0) {
+    const hasHighAmount = matchingTransactions.some(tx => 
+      Math.abs(Number(tx.amount)) >= CONFIG.SHORT_TERM_AMOUNT_THRESHOLD
+    );
+    
+    if (hasHighAmount) {
+      return 'short_term_savings';
+    }
+    
+    return 'guilt_free';
+  }
+  
+  // 4. Default fallback
+  return 'guilt_free';
+}
 
 /**
  * Normalize merchant string for pattern matching
@@ -284,7 +376,7 @@ export function detectStoreNumberPattern(merchant) {
 }
 
 /**
- * Analyze transaction frequency and category consistency
+ * Analyze transaction frequency patterns (without category tracking)
  * @param {Array} transactions - Array of transactions with normalized merchant names
  * @returns {Object} - Analysis results
  */
@@ -302,20 +394,20 @@ export function analyzeTransactionPatterns(transactions) {
     
     // Track merchant frequency
     if (!merchantFrequency.has(normalized)) {
-      merchantFrequency.set(normalized, { count: 0, categories: new Map(), raw });
+      merchantFrequency.set(normalized, { count: 0, raw, transactions: [] });
     }
     const merchant = merchantFrequency.get(normalized);
     merchant.count++;
-    merchant.categories.set(tx.category, (merchant.categories.get(tx.category) || 0) + 1);
+    merchant.transactions.push(tx);
     
     // Track token frequency
     for (const token of tokens) {
       if (!tokenFrequency.has(token)) {
-        tokenFrequency.set(token, { count: 0, categories: new Map() });
+        tokenFrequency.set(token, { count: 0, transactions: [] });
       }
       const tokenData = tokenFrequency.get(token);
       tokenData.count++;
-      tokenData.categories.set(tx.category, (tokenData.categories.get(tx.category) || 0) + 1);
+      tokenData.transactions.push(tx);
     }
     
     // Track store number patterns
@@ -323,31 +415,31 @@ export function analyzeTransactionPatterns(transactions) {
     if (storePattern) {
       const key = storePattern.brand;
       if (!storePatterns.has(key)) {
-        storePatterns.set(key, { count: 0, categories: new Map(), pattern: storePattern.pattern });
+        storePatterns.set(key, { count: 0, pattern: storePattern.pattern, transactions: [] });
       }
       const pattern = storePatterns.get(key);
       pattern.count++;
-      pattern.categories.set(tx.category, (pattern.categories.get(tx.category) || 0) + 1);
+      pattern.transactions.push(tx);
     }
     
     // Track MCC mappings
     if (tx.mcc) {
       if (!mccMappings.has(tx.mcc)) {
-        mccMappings.set(tx.mcc, { count: 0, categories: new Map() });
+        mccMappings.set(tx.mcc, { count: 0, transactions: [] });
       }
       const mcc = mccMappings.get(tx.mcc);
       mcc.count++;
-      mcc.categories.set(tx.category, (mcc.categories.get(tx.category) || 0) + 1);
+      mcc.transactions.push(tx);
     }
     
     // Track merchant ID mappings
     if (tx.merchant_id) {
       if (!merchantIdMappings.has(tx.merchant_id)) {
-        merchantIdMappings.set(tx.merchant_id, { count: 0, categories: new Map() });
+        merchantIdMappings.set(tx.merchant_id, { count: 0, transactions: [] });
       }
       const merchantId = merchantIdMappings.get(tx.merchant_id);
       merchantId.count++;
-      merchantId.categories.set(tx.category, (merchantId.categories.get(tx.category) || 0) + 1);
+      merchantId.transactions.push(tx);
     }
   }
   
@@ -374,27 +466,21 @@ export function generateFrequencyBasedRules(analysis) {
   for (const [token, data] of analysis.tokenFrequency) {
     if (data.count >= CONFIG.MIN_FREQUENCY) {
       const totalCount = data.count;
-      const categoryCounts = Array.from(data.categories.entries());
-      const [topCategory, topCount] = categoryCounts.reduce((a, b) => b[1] > a[1] ? b : a);
-      const confidence = topCount / totalCount;
+      const category = determineRuleCategory(token, 'contains', data.transactions);
       
-      if (confidence >= CONFIG.MIN_CATEGORY_CONFIDENCE) {
-        console.log(`Generated frequency rule: "${token}" -> ${topCategory} (${Math.round(confidence * 100)}% confidence, ${totalCount} occurrences)`);
-        rules.push({
-          id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'contains',
-          pattern: token,
-          category: topCategory,
-          confidence,
-          frequency: totalCount,
-          applied: false,
-          enabled: true,
-          explain: `Auto-generated: "${token}" appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
-          source: 'frequency_analysis'
-        });
-      } else {
-        console.log(`Skipped token "${token}": confidence ${Math.round(confidence * 100)}% < ${Math.round(CONFIG.MIN_CATEGORY_CONFIDENCE * 100)}%`);
-      }
+      console.log(`Generated frequency rule: "${token}" -> ${category} (${totalCount} occurrences)`);
+      rules.push({
+        id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'contains',
+        pattern: token,
+        category,
+        confidence: 1.0, // Always 100% confidence since we're using business logic
+        frequency: totalCount,
+        applied: false,
+        enabled: true,
+        explain: `Auto-generated: "${token}" appears ${totalCount} times, categorized as ${category}`,
+        source: 'frequency_analysis'
+      });
     }
   }
   
@@ -402,23 +488,19 @@ export function generateFrequencyBasedRules(analysis) {
   for (const [brand, data] of analysis.storePatterns) {
     if (data.count >= CONFIG.MIN_FREQUENCY) {
       const totalCount = data.count;
-      const categoryCounts = Array.from(data.categories.entries());
-      const [topCategory, topCount] = categoryCounts.reduce((a, b) => b[1] > a[1] ? b : a);
-      const confidence = topCount / totalCount;
+      const category = determineRuleCategory(brand, 'regex', data.transactions);
       
-      if (confidence >= CONFIG.MIN_CATEGORY_CONFIDENCE) {
-        rules.push({
-          id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'regex',
-          pattern: data.pattern,
-          category: topCategory,
-          confidence,
-          frequency: totalCount,
-          explain: `Auto-generated: ${brand} store pattern appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
-          source: 'store_pattern',
-          applied: false
-        });
-      }
+      rules.push({
+        id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'regex',
+        pattern: data.pattern,
+        category,
+        confidence: 1.0, // Always 100% confidence since we're using business logic
+        frequency: totalCount,
+        explain: `Auto-generated: ${brand} store pattern appears ${totalCount} times, categorized as ${category}`,
+        source: 'store_pattern',
+        applied: false
+      });
     }
   }
   
@@ -436,27 +518,19 @@ export function generateMCCRules(analysis) {
   for (const [mcc, data] of analysis.mccMappings) {
     if (data.count >= CONFIG.MIN_FREQUENCY) {
       const totalCount = data.count;
-      const categoryCounts = Array.from(data.categories.entries());
-      const [topCategory, topCount] = categoryCounts.reduce((a, b) => b[1] > a[1] ? b : a);
-      const confidence = topCount / totalCount;
+      const category = determineRuleCategory(mcc, 'mcc', data.transactions);
       
-      if (confidence >= CONFIG.MIN_CATEGORY_CONFIDENCE) {
-        // Check if we have a predefined mapping
-        const predefinedCategory = CONFIG.MCC_CATEGORY_MAPPING[mcc];
-        const finalCategory = predefinedCategory || topCategory;
-        
-        rules.push({
-          id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'mcc',
-          pattern: mcc,
-          category: finalCategory,
-          confidence,
-          frequency: totalCount,
-          explain: `Auto-generated: MCC ${mcc} appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${finalCategory}`,
-          source: 'mcc_analysis',
-          applied: false
-        });
-      }
+      rules.push({
+        id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'mcc',
+        pattern: mcc,
+        category,
+        confidence: 1.0, // Always 100% confidence since we're using business logic
+        frequency: totalCount,
+        explain: `Auto-generated: MCC ${mcc} appears ${totalCount} times, categorized as ${category}`,
+        source: 'mcc_analysis',
+        applied: false
+      });
     }
   }
   
@@ -474,23 +548,19 @@ export function generateMerchantIdRules(analysis) {
   for (const [merchantId, data] of analysis.merchantIdMappings) {
     if (data.count >= CONFIG.MIN_FREQUENCY) {
       const totalCount = data.count;
-      const categoryCounts = Array.from(data.categories.entries());
-      const [topCategory, topCount] = categoryCounts.reduce((a, b) => b[1] > a[1] ? b : a);
-      const confidence = topCount / totalCount;
+      const category = determineRuleCategory(merchantId, 'exact', data.transactions);
       
-      if (confidence >= CONFIG.MIN_CATEGORY_CONFIDENCE) {
-        rules.push({
-          id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'exact',
-          pattern: merchantId,
-          category: topCategory,
-          confidence,
-          frequency: totalCount,
-          explain: `Auto-generated: Merchant ID ${merchantId} appears ${totalCount} times, ${Math.round(confidence * 100)}% categorized as ${topCategory}`,
-          source: 'merchant_id_analysis',
-          applied: false
-        });
-      }
+      rules.push({
+        id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'exact',
+        pattern: merchantId,
+        category,
+        confidence: 1.0, // Always 100% confidence since we're using business logic
+        frequency: totalCount,
+        explain: `Auto-generated: Merchant ID ${merchantId} appears ${totalCount} times, categorized as ${category}`,
+        source: 'merchant_id_analysis',
+        applied: false
+      });
     }
   }
   
@@ -537,7 +607,7 @@ export function detectRecurringTransactions(transactions) {
       
       if (consistentIntervals.length >= intervals.length * 0.8) { // 80% consistency
         const [merchant, amount] = key.split(':');
-        const category = txs[0].category;
+        const category = determineRuleCategory(merchant, 'contains', txs);
         
         recurring.push({
           id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -594,7 +664,7 @@ export function generateMarketplaceRules(transactions) {
                 type: 'contains',
                 pattern: keyword,
                 category,
-                confidence: 0.8,
+                confidence: 1.0, // Always 100% confidence since we're using business logic
                 frequency: 1,
                 explain: `Auto-generated: ${marketplace} marketplace keyword "${keyword}" → ${category}`,
                 source: 'marketplace_analysis',
