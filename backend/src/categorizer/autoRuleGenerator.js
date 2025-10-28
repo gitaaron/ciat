@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 // Configuration for auto rule generation
 const CONFIG = {
   MIN_FREQUENCY: 2, // Lowered for testing
-  MIN_CATEGORY_CONFIDENCE: 0.8, // 80% - lowered for testing
   MIN_CLUSTER_SIMILARITY: 0.85,
   MAX_RULES_PER_IMPORT: 50,
   SHORT_TERM_AMOUNT_THRESHOLD: 500, // Amount threshold for short_term_savings category
@@ -474,7 +473,6 @@ export function generateFrequencyBasedRules(analysis) {
         type: 'contains',
         pattern: token,
         category,
-        confidence: 1.0, // Always 100% confidence since we're using business logic
         frequency: totalCount,
         applied: false,
         enabled: true,
@@ -495,7 +493,6 @@ export function generateFrequencyBasedRules(analysis) {
         type: 'regex',
         pattern: data.pattern,
         category,
-        confidence: 1.0, // Always 100% confidence since we're using business logic
         frequency: totalCount,
         explain: `Auto-generated: ${brand} store pattern appears ${totalCount} times, categorized as ${category}`,
         source: 'store_pattern',
@@ -525,7 +522,6 @@ export function generateMCCRules(analysis) {
         type: 'mcc',
         pattern: mcc,
         category,
-        confidence: 1.0, // Always 100% confidence since we're using business logic
         frequency: totalCount,
         explain: `Auto-generated: MCC ${mcc} appears ${totalCount} times, categorized as ${category}`,
         source: 'mcc_analysis',
@@ -555,7 +551,6 @@ export function generateMerchantIdRules(analysis) {
         type: 'exact',
         pattern: merchantId,
         category,
-        confidence: 1.0, // Always 100% confidence since we're using business logic
         frequency: totalCount,
         explain: `Auto-generated: Merchant ID ${merchantId} appears ${totalCount} times, categorized as ${category}`,
         source: 'merchant_id_analysis',
@@ -664,7 +659,6 @@ export function generateMarketplaceRules(transactions) {
                 type: 'contains',
                 pattern: keyword,
                 category,
-                confidence: 1.0, // Always 100% confidence since we're using business logic
                 frequency: 1,
                 explain: `Auto-generated: ${marketplace} marketplace keyword "${keyword}" → ${category}`,
                 source: 'marketplace_analysis',
@@ -725,7 +719,7 @@ export function generateExceptionRules(rules) {
 }
 
 /**
- * Calculate priority scores for rules based on confidence, specificity, and support
+ * Calculate priority scores for rules based on specificity and support
  * @param {Array} rules - Array of rules
  * @returns {Array} - Rules with priority scores
  */
@@ -733,8 +727,8 @@ export function calculateRulePriorities(rules) {
   return rules.map(rule => {
     let priority = 0;
     
-    // Base priority from confidence (0-100)
-    priority += rule.confidence * 100;
+    // Base priority (all rules start with same base)
+    priority += 50;
     
     // Specificity bonus (exact > regex > contains)
     switch (rule.type) {
@@ -775,13 +769,6 @@ export function calculateRulePriorities(rules) {
         break;
     }
     
-    // Confidence tier bonus
-    if (rule.confidence >= 0.95) {
-      priority += 30; // High confidence
-    } else if (rule.confidence >= 0.85) {
-      priority += 15; // Medium confidence
-    }
-    
     // User-created rules get highest priority
     if (rule.source === 'user_created') {
       priority += 100; // User-created rules always win
@@ -790,8 +777,7 @@ export function calculateRulePriorities(rules) {
     return {
       ...rule,
       priority: Math.round(priority),
-      support: rule.frequency,
-      purity: rule.confidence
+      support: rule.frequency
     };
   });
 }
@@ -923,7 +909,6 @@ export function generateAutoRules(transactions) {
       type: r.type, 
       pattern: r.pattern, 
       category: r.category, 
-      confidence: Math.round(r.confidence * 100) + '%',
       priority: r.priority,
       actualMatches: r.actualMatches || r.frequency,
       coverage: r.coverage ? Math.round(r.coverage * 100) + '%' : 'N/A'

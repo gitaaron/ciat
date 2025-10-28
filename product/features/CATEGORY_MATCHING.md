@@ -22,16 +22,12 @@ This mirrors the command‑line and import flows for consistency.
   - `merchant_regex` – regex on normalized text.【19†REQUIREMENTS.md】
 
 
-### Confidence Scoring
+### Rule Scoring
 
 Store and display for each rule:
 - **Support**: number of matched transactions.
-- **Purity**: % of matched transactions that share the target category.
 - **Specificity**: rule type (exact / regex / contains).
-- **Confidence tier**:
-  - High (≥ 95% purity) → enabled by default.
-  - Medium (85–95%) → suggested but disabled (or “shadow apply”).
-  - Low (< 85%) → available on request only.
+- **Priority**: calculated based on specificity, support, and source.
 
 
 #### Rule Data Model
@@ -46,7 +42,7 @@ Store and display for each rule:
 | priority | int | Execution order |
 | support | int | # of matched transactions |
 | exceptions | array<string> | Exclusion tokens |
-| enabled | bool | Default true for high-confidence |
+| enabled | bool | Default true |
 | explain | string | User defined explanation of rule |
 | created_at | datetime | When the entry was first created |
 | updated_at | datetime | When the entry was last updated |

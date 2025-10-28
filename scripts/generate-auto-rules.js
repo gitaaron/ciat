@@ -10,7 +10,6 @@ const options = {
   file: null,
   output: null,
   format: 'json', // json, csv, table
-  minConfidence: 0.8,
   minFrequency: 2,
   maxRules: 50,
   help: false
@@ -30,9 +29,6 @@ for (let i = 0; i < args.length; i++) {
       break;
     case '--format':
       options.format = args[++i];
-      break;
-    case '--min-confidence':
-      options.minConfidence = parseFloat(args[++i]) || 0.8;
       break;
     case '--min-frequency':
       options.minFrequency = parseInt(args[++i]) || 2;
@@ -57,7 +53,6 @@ Arguments:
   -f, --file <path>              Path to transaction file (CSV or QFX)
   -o, --output <path>            Output file path (optional, prints to console if not specified)
   --format <format>              Output format: json, csv, table (default: json)
-  --min-confidence <number>      Minimum confidence threshold (0.0-1.0, default: 0.8)
   --min-frequency <number>       Minimum frequency threshold (default: 2)
   --max-rules <number>           Maximum number of rules to generate (default: 50)
   -h, --help                     Show this help message
@@ -66,7 +61,7 @@ Examples:
   node generate-auto-rules.js --file transactions.csv
   node generate-auto-rules.js --file transactions.qfx --format table
   node generate-auto-rules.js --file data.csv --output rules.json --format json
-  node generate-auto-rules.js --file data.csv --min-confidence 0.9 --min-frequency 3
+  node generate-auto-rules.js --file data.csv --min-frequency 3
 
 Supported file formats:
   - CSV files (.csv) - comma or tab delimited
@@ -93,11 +88,6 @@ if (!validFormats.includes(options.format)) {
   process.exit(1);
 }
 
-// Validate confidence threshold
-if (options.minConfidence < 0 || options.minConfidence > 1) {
-  console.error('❌ Error: min-confidence must be between 0.0 and 1.0');
-  process.exit(1);
-}
 
 // Validate frequency threshold
 if (options.minFrequency < 1) {
@@ -175,7 +165,6 @@ async function main() {
     }));
     
     console.log(\`🤖 Generating auto rules...\`);
-    console.log(\`   Min confidence: \${Math.round(minConfidence * 100)}%\`);
     console.log(\`   Min frequency: \${minFrequency}\`);
     console.log(\`   Max rules: \${maxRules}\`);
     
@@ -186,7 +175,7 @@ async function main() {
     
     if (result.rules.length === 0) {
       console.log('ℹ️  No rules could be generated with the current thresholds');
-      console.log('   Try lowering --min-confidence or --min-frequency');
+      console.log('   Try lowering --min-frequency');
       process.exit(0);
     }
     
@@ -221,12 +210,11 @@ async function main() {
         break;
         
       case 'csv':
-        const csvHeader = 'Type,Pattern,Category,Confidence,Frequency,Priority,Source,Explanation';
+        const csvHeader = 'Type,Pattern,Category,Frequency,Priority,Source,Explanation';
         const csvRows = result.rules.map(rule => [
           rule.type,
           \`"\${rule.pattern}"\`,
           rule.category || 'null',
-          Math.round(rule.confidence * 100) + '%',
           rule.frequency,
           rule.priority,
           rule.source,
@@ -257,7 +245,6 @@ async function main() {
       console.log(\`\\n\${index + 1}. \${rule.type.toUpperCase()} Rule\`);
       console.log(\`   Pattern: "\${rule.pattern}"\`);
       console.log(\`   Category: \${rule.category || 'null'}\`);
-      console.log(\`   Confidence: \${Math.round(rule.confidence * 100)}%\`);
       console.log(\`   Frequency: \${rule.frequency}\`);
       console.log(\`   Priority: \${rule.priority}\`);
       console.log(\`   Source: \${rule.source}\`);
@@ -280,7 +267,6 @@ function formatRulesAsTable(rules) {
     'Type'.padEnd(8),
     'Pattern'.padEnd(maxPatternLength),
     'Category'.padEnd(maxCategoryLength),
-    'Conf%'.padEnd(6),
     'Freq'.padEnd(5),
     'Priority'.padEnd(8),
     'Source'.padEnd(maxSourceLength)
@@ -292,7 +278,6 @@ function formatRulesAsTable(rules) {
     rule.type.padEnd(8),
     rule.pattern.padEnd(maxPatternLength),
     (rule.category || 'null').padEnd(maxCategoryLength),
-    (Math.round(rule.confidence * 100) + '%').padEnd(6),
     rule.frequency.toString().padEnd(5),
     rule.priority.toString().padEnd(8),
     rule.source.padEnd(maxSourceLength)

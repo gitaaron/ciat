@@ -88,9 +88,6 @@
             <span class="stat">
               <strong>{{ getTransactionCount() }}</strong> transactions
             </span>
-            <span v-if="rule.confidence" class="stat">
-              <strong>{{ Math.round(rule.confidence * 100) }}%</strong> confidence
-            </span>
             <span v-if="rule.explain" class="stat">
               <strong>{{ rule.explain }}</strong>
             </span>
