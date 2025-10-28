@@ -228,7 +228,7 @@ export default {
             // Generate auto rules for unmatched transactions
             // Send categorized transactions so auto rule generator can learn from existing patterns
             let autoRulesResult = null
-            if (unmatchedTransactions.length >= 5) {
+            if (unmatchedTransactions.length >= 0) {
               try {
                 autoRulesResult = await api.generateAutoRules(categorizedTransactions)
               } catch (error) {
