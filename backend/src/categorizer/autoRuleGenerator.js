@@ -157,25 +157,37 @@ const CONFIG = {
 export function determineRuleCategory(pattern, ruleType, matchingTransactions = []) {
   const normalizedPattern = pattern.toLowerCase();
   
-  // 1. Frequency-based rules are always fixed_costs
+  // 1. Frequency-based rules - categorize based on type of spending
   if (ruleType === 'contains' || ruleType === 'regex') {
-    // Check for food/groceries keywords
-    const foodKeywords = [
+    // Essential food/groceries keywords (fixed costs)
+    const essentialFoodKeywords = [
       'grocery', 'supermarket', 'food', 'fresh', 'market', 'produce',
       'meat', 'dairy', 'bakery', 'deli', 'organic', 'whole foods',
       'safeway', 'kroger', 'publix', 'wegmans', 'trader joe',
-      'costco', 'walmart', 'target', 'loblaws', 'metro', 'sobeys',
+      'costco', 'walmart', 'target', 'loblaws', 'metro', 'sobeys'
+    ];
+    
+    // Discretionary food/restaurant keywords (guilt free)
+    const discretionaryFoodKeywords = [
       'restaurant', 'cafe', 'diner', 'eatery', 'kitchen', 'grill',
       'pizza', 'burger', 'sandwich', 'coffee', 'starbucks', 'tim hortons',
       'mcdonalds', 'subway', 'kfc', 'taco bell', 'wendys', 'burger king'
     ];
     
-    const isFoodRelated = foodKeywords.some(keyword => 
+    const isEssentialFood = essentialFoodKeywords.some(keyword => 
       normalizedPattern.includes(keyword)
     );
     
-    if (isFoodRelated) {
+    const isDiscretionaryFood = discretionaryFoodKeywords.some(keyword => 
+      normalizedPattern.includes(keyword)
+    );
+    
+    if (isEssentialFood) {
       return 'fixed_costs';
+    }
+    
+    if (isDiscretionaryFood) {
+      return 'guilt_free';
     }
     
     // Check for automotive keywords
@@ -695,7 +707,8 @@ export function calculateRulePriorities(rules) {
     priority += 50;
     
     // Specificity bonus (exact > regex > contains)
-    switch (rule.type) {
+    const ruleType = rule.type || rule.match_type;
+    switch (ruleType) {
       case 'exact':
         priority += 50;
         break;
@@ -711,7 +724,8 @@ export function calculateRulePriorities(rules) {
     }
     
     // Support bonus (more transactions = higher priority, but with diminishing returns)
-    const supportBonus = Math.min(rule.frequency * 2, 20);
+    const frequency = rule.frequency || rule.support || 0;
+    const supportBonus = Math.min(frequency * 2, 20);
     priority += supportBonus;
     
     // Pattern length bonus (longer patterns get higher priority)
@@ -748,7 +762,7 @@ export function calculateRulePriorities(rules) {
     return {
       ...rule,
       priority: Math.round(priority),
-      support: rule.frequency
+      support: rule.frequency || rule.support
     };
   });
 }

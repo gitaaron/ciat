@@ -25,10 +25,12 @@ Retain both **raw** and **normalized** strings for rule generation and preview.
 Rules are assigned categories using deterministic business logic rather than learning from existing transaction categories:
 
 **Category Assignment Rules:**
-1. **Frequency-based rules** (contains/regex patterns) → `fixed_costs` by default
-2. **Food/Groceries keywords** → `fixed_costs`
-   - Includes: grocery, supermarket, food, fresh, market, produce, meat, dairy, bakery, deli, organic, whole foods, safeway, kroger, publix, wegmans, trader joe, costco, walmart, target, loblaws, metro, sobeys, restaurant, cafe, diner, eatery, kitchen, grill, pizza, burger, sandwich, coffee, starbucks, tim hortons, mcdonalds, subway, kfc, taco bell, wendys, burger king
+1. **Essential food/groceries keywords** → `fixed_costs`
+   - Includes: grocery, supermarket, food, fresh, market, produce, meat, dairy, bakery, deli, organic, whole foods, safeway, kroger, publix, wegmans, trader joe, costco, walmart, target, loblaws, metro, sobeys
+2. **Discretionary food/restaurant keywords** → `guilt_free`
+   - Includes: restaurant, cafe, diner, eatery, kitchen, grill, pizza, burger, sandwich, coffee, starbucks, tim hortons, mcdonalds, subway, kfc, taco bell, wendys, burger king
 3. **Automotive keywords** → `fixed_costs`
+4. **Frequency-based rules** (other patterns) → `fixed_costs` by default
    - Includes: gas, gasoline, fuel, petro, esso, shell, chevron, parking, impark, park, garage, auto, car, vehicle, maintenance, repair, service, oil change, tire, brake, insurance, geico, state farm, progressive, allstate, dmv, registration, license, inspection
 4. **High amount transactions** (≥$500) → `short_term_savings`
 5. **Default fallback** → `guilt_free`
@@ -46,7 +48,7 @@ Detect repeating structures like:
 - `shoppers drug mart 2041`
 - `metro store 043 toronto`
 Generate anchored regexes with business logic category assignment:
-- `regex("^starbucks(?:\\s*#?\\d{2,5})?$")` → `fixed_costs` (food-related)
+- `regex("^starbucks(?:\\s*#?\\d{2,5})?$")` → `guilt_free` (discretionary food)
 - `regex("^shoppers drug mart\\s+\\d{3,5}")` → `fixed_costs` (pharmacy/grocery)
 Regex rules take precedence over generic "contains".
 
