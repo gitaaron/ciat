@@ -76,8 +76,21 @@
               </select>
             </div>
             <div class="edit-actions">
-              <button class="btn btn-sm btn-primary" @click="saveEdit">Save</button>
-              <button class="btn btn-sm btn-secondary" @click="cancelEdit">Cancel</button>
+              <button 
+                class="btn btn-sm btn-primary" 
+                @click="saveEdit"
+                :disabled="isSaving"
+              >
+                <span v-if="isSaving">Saving...</span>
+                <span v-else>Save</span>
+              </button>
+              <button 
+                class="btn btn-sm btn-secondary" 
+                @click="cancelEdit"
+                :disabled="isSaving"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -208,6 +221,10 @@ export default {
       type: Boolean,
       default: false
     },
+    isSaving: {
+      type: Boolean,
+      default: false
+    },
     showCreateRuleButton: {
       type: Boolean,
       default: false
@@ -299,7 +316,7 @@ export default {
     },
 
     cancelEdit() {
-      this.$emit('cancel-edit')
+      this.$emit('cancel-edit', this.rule)
     },
 
     removeRule() {

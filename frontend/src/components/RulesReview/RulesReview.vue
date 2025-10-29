@@ -19,6 +19,7 @@
           :is-expanded="isExpanded(rule.id)"
           :is-editing="isEditing(rule.id)"
           :applying="applying"
+          :is-saving="isRuleSaving(rule.id)"
           :show-create-rule-button="showCreateRuleButton"
           @edit="startEditing"
           @save-edit="saveEdit"
@@ -132,6 +133,10 @@ export default {
     editingRule: {
       type: [String, Number],
       default: null
+    },
+    isRuleSaving: {
+      type: Function,
+      default: () => false
     }
   },
   emits: [
@@ -144,7 +149,12 @@ export default {
     'create-rule-save',
     'cancel-create-rule',
     'update:showSnack',
-    'rule-created'
+    'rule-created',
+    'refresh-rules',
+    'rule-edited',
+    'rule-canceled',
+    'rule-save-start',
+    'rule-save-end'
   ],
   setup(props, { emit }) {
     const sharedLogic = useRulesReviewLogic(props, { emit })

@@ -219,7 +219,12 @@
         :auto-rule-matches="autoRuleMatches"
         :accounts="accounts"
         :applying="processing"
+        :is-rule-saving="isRuleSaving"
         @refresh-rules="handleRulesRefresh"
+        @rule-edited="handleRuleEdited"
+        @rule-canceled="handleRuleCanceled"
+        @rule-save-start="handleRuleSaveStart"
+        @rule-save-end="handleRuleSaveEnd"
         @rule-created="addNewRule"
         ref="manageRules"
       />

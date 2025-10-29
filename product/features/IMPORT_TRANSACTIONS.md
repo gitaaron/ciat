@@ -16,6 +16,13 @@ Import historical transactions from multiple accounts using common bank formats,
 - **Deduplicate** if the same transaction is imported more than once.
 - Show **rules created** rather than lists of transactions to revieww; clicking **Expand** reveals affected transactions; allow **edit/delete** rules with preview. Categories shown step‑by‑step: **Fixed → Investments → Guilt Free → Short‑Term**.
     - When previewing the rule, it should be possible to edit the rule (match type, pattern, category)
+    - **Rule editing behavior**:
+        - When editing a rule, changes to match type or pattern trigger a full re-match of all transactions
+        - Changes to category or labels only update the rule without re-matching
+        - If a rule edit results in zero matching transactions, show a confirmation dialog asking if the user wants to remove the rule
+        - If a rule edit causes other lower-priority rules to lose all matches, automatically remove those empty rules
+        - Provide a "Cancel" button that reverts the rule to its original state before editing
+        - Show progress indicators during save operations to prevent UI freezing
     - In the expanded 'transactions' section I should be able to click a button on each transaction to create a new rule from the transaction. 
         - Clicking 'create rule' should open a dialog where i can edit the pattern/category/match type.  After creating the new rule it should appear at the top of the list of rules to apply and take precedence over all previous rules and all transactions should be updated based on the new rule. 
 - The **same categorization algorithm** is used in CLI and import flows.

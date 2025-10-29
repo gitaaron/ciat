@@ -107,7 +107,7 @@ export default function useRulesReviewLogic(props, { emit }) {
     toggleExpanded: (rule) => sharedToggleExpanded(expandedRules, rule),
     startEditing: (rule) => sharedStartEditing(editingRule, rule),
     saveEdit: (rule, editData) => sharedSaveEdit(rule, editData, editingRule, emit),
-    cancelEdit: () => sharedCancelEdit(editingRule),
+    cancelEdit: (rule) => sharedCancelEdit(editingRule, rule, emit),
     deleteRule: (rule) => sharedDeleteRule(rule, emit),
     createRuleFromTransaction,
     handleCreateRuleSave,

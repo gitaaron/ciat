@@ -5,7 +5,7 @@ import ManageRules from '../RulesReview/ManageRules.vue'
 import TransactionReview from '../TransactionReview/TransactionReview.vue'
 import AccountManager from '../AccountManager/AccountManager.vue'
 import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule } from '../../utils/ruleMatcher.js'
-import { showError, showSuccess, showWarning, showInfo } from '../../utils/notifications.js'
+import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm } from '../../utils/notifications.js'
 
 export default {
   name: 'ImportWizard',
@@ -43,6 +43,7 @@ export default {
     const autoRuleMatches = ref(new Map())
     const isDragOver = ref(false)
     const processing = ref(false)
+    const ruleSaving = ref(new Set()) // Track which rules are being saved
     const currentCategoryStep = ref(0) // 0: fixed, 1: investments, 2: guilt_free, 3: short_term
     const categorySteps = CATEGORY_STEPS
     const categoryStepNames = CATEGORY_STEPS.map(step => CATEGORY_NAMES[step])
@@ -589,6 +590,161 @@ export default {
       computeAllRuleMatches()
     }
 
+    function handleRuleEdited(payload) {
+      const { ruleId, matchChanged, updatedRule } = payload || {}
+      if (!ruleId) return
+
+      // If only category/labels changed, skip recompute and just update local state
+      if (!matchChanged) {
+        // Update rule in whichever collection it belongs to
+        const updateInArray = (arr) => {
+          const idx = arr.findIndex(r => r.id === ruleId)
+          if (idx !== -1) {
+            arr[idx] = { ...arr[idx], ...updatedRule }
+            return true
+          }
+          return false
+        }
+        if (!updateInArray(usedRules.value)) {
+          if (!updateInArray(newRules.value)) {
+            if (autoRules.value?.rules) {
+              updateInArray(autoRules.value.rules)
+            }
+          }
+        }
+        return
+      }
+
+      // Snapshot previous matches to detect clobbered rules
+      const prevExisting = new Map(existingRuleMatches.value)
+      const prevNew = new Map(newRuleMatches.value)
+      const prevAuto = new Map(autoRuleMatches.value)
+
+      // Update the rule in-place in the appropriate collection
+      let editedRulePriority = updatedRule?.priority
+      const updateInArray = (arr) => {
+        const idx = arr.findIndex(r => r.id === ruleId)
+        if (idx !== -1) {
+          editedRulePriority = arr[idx]?.priority ?? editedRulePriority
+          arr[idx] = { ...arr[idx], ...updatedRule }
+          return true
+        }
+        return false
+      }
+      let found = updateInArray(usedRules.value)
+      if (!found) found = updateInArray(newRules.value)
+      if (!found && autoRules.value?.rules) found = updateInArray(autoRules.value.rules)
+
+      // Recompute matches after match-affecting edit
+      computeAllRuleMatches()
+
+      // Helper to get total matches for a rule across maps
+      const getTotalMatchesForRule = (id) => {
+        let total = 0
+        total += (existingRuleMatches.value.get(id) || []).length
+        total += (newRuleMatches.value.get(id) || []).length
+        total += (autoRuleMatches.value.get(id) || []).length
+        return total
+      }
+
+      // If edited rule now matches nothing, ask to delete
+      const totalNow = getTotalMatchesForRule(ruleId)
+      if (totalNow === 0) {
+        showDeleteConfirm(
+          'This rule no longer matches any transactions after your edit. Do you want to remove it?',
+          'Remove Empty Rule?'
+        ).then((confirmed) => {
+          if (confirmed) {
+            // Remove from whichever array contains it
+            const removeFromArray = (arr) => {
+              const idx = arr.findIndex(r => r.id === ruleId)
+              if (idx !== -1) arr.splice(idx, 1)
+            }
+            removeFromArray(usedRules.value)
+            removeFromArray(newRules.value)
+            if (autoRules.value?.rules) removeFromArray(autoRules.value.rules)
+            // Recompute after removal
+            computeAllRuleMatches()
+          }
+        })
+      }
+
+      // Remove subsequent rules that lost all matches due to clobbering
+      const collectClobbered = (prevMap, currMap, candidates) => {
+        for (const [id, prevMatches] of prevMap.entries()) {
+          const prevCount = prevMatches.length
+          const currCount = (currMap.get(id) || []).length
+          if (prevCount > 0 && currCount === 0) candidates.add(id)
+        }
+      }
+      const clobbered = new Set()
+      collectClobbered(prevExisting, existingRuleMatches.value, clobbered)
+      collectClobbered(prevNew, newRuleMatches.value, clobbered)
+      collectClobbered(prevAuto, autoRuleMatches.value, clobbered)
+
+      // If priority is available, only remove those with lower priority than the edited rule
+      const removeIfLowerPriority = (arr) => {
+        for (let i = arr.length - 1; i >= 0; i--) {
+          const r = arr[i]
+          if (clobbered.has(r.id)) {
+            if (typeof editedRulePriority === 'number' && typeof r.priority === 'number') {
+              if (r.priority < editedRulePriority) arr.splice(i, 1)
+            } else {
+              // If priorities undefined, assume subsequent and remove
+              arr.splice(i, 1)
+            }
+          }
+        }
+      }
+      removeIfLowerPriority(usedRules.value)
+      removeIfLowerPriority(newRules.value)
+      if (autoRules.value?.rules) removeIfLowerPriority(autoRules.value.rules)
+
+      // Final recompute after removals
+      computeAllRuleMatches()
+    }
+
+    function handleRuleCanceled(payload) {
+      const { ruleId, revertedRule } = payload || {}
+      if (!ruleId) return
+
+      // Update rule in whichever collection it belongs to with reverted state
+      const updateInArray = (arr) => {
+        const idx = arr.findIndex(r => r.id === ruleId)
+        if (idx !== -1) {
+          arr[idx] = { ...arr[idx], ...revertedRule }
+          return true
+        }
+        return false
+      }
+      
+      if (!updateInArray(usedRules.value)) {
+        if (!updateInArray(newRules.value)) {
+          if (autoRules.value?.rules) {
+            updateInArray(autoRules.value.rules)
+          }
+        }
+      }
+    }
+
+    function handleRuleSaveStart(payload) {
+      const { ruleId } = payload || {}
+      if (ruleId) {
+        ruleSaving.value.add(ruleId)
+      }
+    }
+
+    function handleRuleSaveEnd(payload) {
+      const { ruleId } = payload || {}
+      if (ruleId) {
+        ruleSaving.value.delete(ruleId)
+      }
+    }
+
+    function isRuleSaving(ruleId) {
+      return ruleSaving.value.has(ruleId)
+    }
+
     function addNewRule(rule) {
       console.log('addNewRule: Received rule (temporary):', rule)
       
@@ -725,6 +881,7 @@ export default {
       autoRuleMatches,
       isDragOver,
       processing,
+      ruleSaving,
       currentCategoryStep,
       categorySteps,
       categoryStepNames,
@@ -753,6 +910,11 @@ export default {
       handleRulesCancel,
       handleRefreshRules,
       handleRulesRefresh,
+      handleRuleEdited,
+      handleRuleCanceled,
+      handleRuleSaveStart,
+      handleRuleSaveEnd,
+      isRuleSaving,
       addNewRule,
       clearNewRules,
       handleCombinedRulesSkip,

@@ -18,6 +18,7 @@ This folder contains a set of docs for humans and AI code tools.
   - Auto Rule Generation → [`features/AUTO_RULE_GENERATION.md`](features/AUTO_RULE_GENERATION.md)
   - Import Transactions → [`features/IMPORT_TRANSACTIONS.md`](features/IMPORT_TRANSACTIONS.md)
   - New Rule Wizard → [`features/NEW_RULE_WIZARD.md`](features/NEW_RULE_WIZARD.md)
+  - Rule Editing → [`features/RULE_EDITING.md`](features/RULE_EDITING.md)
   - Persistence → [`features/PERSISTENCE.md`](features/PERSISTENCE.md)
   - Reports & Charts → [`features/REPORTS_AND_CHARTS.md`](features/REPORTS_AND_CHARTS.md)
   - Transaction Management → [`features/TRANSACTION_MANAGEMENT.md`](features/TRANSACTION_MANAGEMENT.md)

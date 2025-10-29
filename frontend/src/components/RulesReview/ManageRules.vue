@@ -9,10 +9,16 @@
       rules-section-class="new-rules"
       :accounts="accounts"
       :applying="applying"
+      :is-rule-saving="isRuleSaving"
       :show-create-rule-button="true"
       no-rules-message="No new rules were created during this import process."
       @remove="removeNew"
       @rule-created="handleRuleCreated"
+      @refresh-rules="$emit('refresh-rules', $event)"
+      @rule-edited="$emit('rule-edited', $event)"
+      @rule-canceled="$emit('rule-canceled', $event)"
+      @rule-save-start="$emit('rule-save-start', $event)"
+      @rule-save-end="$emit('rule-save-end', $event)"
     />
     
     <!-- Pre-existing Rules Review -->
@@ -24,9 +30,15 @@
       rules-section-class="existing-rules"
       :accounts="accounts"
       :applying="applying"
+      :is-rule-saving="isRuleSaving"
       :show-create-rule-button="true"
       @remove="removeExisting"
       @rule-created="handleRuleCreated"
+      @refresh-rules="$emit('refresh-rules', $event)"
+      @rule-edited="$emit('rule-edited', $event)"
+      @rule-canceled="$emit('rule-canceled', $event)"
+      @rule-save-start="$emit('rule-save-start', $event)"
+      @rule-save-end="$emit('rule-save-end', $event)"
     />
     
     <!-- Auto-Generated Rules Review -->
@@ -37,9 +49,15 @@
       rule-type="auto-rule"
       rules-section-class="auto-rules"
       :accounts="accounts"
+      :is-rule-saving="isRuleSaving"
       :show-create-rule-button="true"
       @remove="removeAuto"
       @rule-created="handleRuleCreated"
+      @refresh-rules="$emit('refresh-rules', $event)"
+      @rule-edited="$emit('rule-edited', $event)"
+      @rule-canceled="$emit('rule-canceled', $event)"
+      @rule-save-start="$emit('rule-save-start', $event)"
+      @rule-save-end="$emit('rule-save-end', $event)"
     />
   </div>
 </template>
@@ -76,9 +94,13 @@ export default {
     applying: {
       type: Boolean,
       default: false
+    },
+    isRuleSaving: {
+      type: Function,
+      default: () => false
     }
   },
-  emits: ['refresh-rules', 'rule-created'],
+  emits: ['refresh-rules', 'rule-created', 'rule-edited', 'rule-canceled', 'rule-save-start', 'rule-save-end'],
   setup(props, { emit }) {
     return ManageRulesJS(props, { emit })
   }
