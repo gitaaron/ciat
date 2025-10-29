@@ -3,41 +3,18 @@
  * This ensures consistency in rule application across the application
  */
 
-/**
- * Normalize merchant string for pattern matching
- * @param {string} merchant - Raw merchant string
- * @returns {string} - Normalized string
- */
-export function normalizeMerchant(merchant) {
-  if (!merchant) return '';
-  
-  let normalized = merchant.toLowerCase().trim();
-  
-  // Remove punctuation and emojis
-  normalized = normalized.replace(/[^\w\s]/g, ' ');
-  
-  // Remove extra whitespace
-  normalized = normalized.replace(/\s+/g, ' ').trim();
-  
-  // Remove variable tokens (store numbers, phone numbers, amounts, dates, references)
-  normalized = normalized.replace(/#?\d{2,5}/g, '');
-  normalized = normalized.replace(/\(\d{3}\)\s*\d{3}-\d{4}|\d{3}-\d{3}-\d{4}/g, '');
-  normalized = normalized.replace(/\$[\d,]+\.?\d*/g, '');
-  normalized = normalized.replace(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/g, '');
-  normalized = normalized.replace(/ref[#:]?\s*\d+/gi, '');
-  
-  // Remove payment rail noise
-  const paymentRailNoise = [
+// Configuration for normalization (matches backend autoRuleGenerator.js)
+const CONFIG = {
+  STORE_NUMBER_PATTERN: /#?\d{2,5}/g,
+  PHONE_PATTERN: /\(\d{3}\)\s*\d{3}-\d{4}|\d{3}-\d{3}-\d{4}/g,
+  AMOUNT_PATTERN: /\$[\d,]+\.?\d*/g,
+  DATE_PATTERN: /\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/g,
+  REFERENCE_PATTERN: /ref[#:]?\s*\d+/gi,
+  PAYMENT_RAIL_NOISE: [
     'visa debit', 'interac', 'pos', 'purchase', 'debit', 'credit',
     'atm', 'cash withdrawal', 'online banking', 'mobile payment'
-  ];
-  
-  for (const noise of paymentRailNoise) {
-    normalized = normalized.replace(new RegExp(`\\b${noise}\\b`, 'gi'), '');
-  }
-  
-  // Canonicalize brand variants
-  const brandCanonicalization = {
+  ],
+  BRAND_CANONICALIZATION: {
     'mcdonald\'s': 'mcdonalds',
     'mcdonalds': 'mcdonalds',
     'costco wholesale': 'costco',
@@ -48,9 +25,40 @@ export function normalizeMerchant(merchant) {
     'starbucks coffee': 'starbucks',
     'tim hortons': 'timhortons',
     'subway restaurants': 'subway'
-  };
+  }
+};
+
+/**
+ * Normalize merchant string for pattern matching
+ * @param {string} merchant - Raw merchant string
+ * @returns {Object} - { raw, normalized }
+ */
+export function normalizeMerchant(merchant) {
+  if (!merchant) return { raw: '', normalized: '' };
   
-  for (const [variant, canonical] of Object.entries(brandCanonicalization)) {
+  const raw = merchant.trim();
+  let normalized = raw.toLowerCase();
+  
+  // Remove punctuation and emojis
+  normalized = normalized.replace(/[^\w\s]/g, ' ');
+  
+  // Remove extra whitespace
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
+  // Remove variable tokens
+  normalized = normalized.replace(CONFIG.STORE_NUMBER_PATTERN, '');
+  normalized = normalized.replace(CONFIG.PHONE_PATTERN, '');
+  normalized = normalized.replace(CONFIG.AMOUNT_PATTERN, '');
+  normalized = normalized.replace(CONFIG.DATE_PATTERN, '');
+  normalized = normalized.replace(CONFIG.REFERENCE_PATTERN, '');
+  
+  // Remove payment rail noise
+  for (const noise of CONFIG.PAYMENT_RAIL_NOISE) {
+    normalized = normalized.replace(new RegExp(`\\b${noise}\\b`, 'gi'), '');
+  }
+  
+  // Canonicalize brand variants
+  for (const [variant, canonical] of Object.entries(CONFIG.BRAND_CANONICALIZATION)) {
     if (normalized.includes(variant)) {
       normalized = normalized.replace(new RegExp(`\\b${variant}\\b`, 'gi'), canonical);
     }
@@ -59,7 +67,7 @@ export function normalizeMerchant(merchant) {
   // Clean up again after replacements
   normalized = normalized.replace(/\s+/g, ' ').trim();
   
-  return normalized;
+  return { raw, normalized };
 }
 
 /**
@@ -73,11 +81,11 @@ export function matchesRule(rule, transaction) {
   const matchType = rule.match_type || rule.type || 'contains';
   
   // Normalize the pattern
-  const normalizedPattern = normalizeMerchant(pattern);
+  const normalizedPattern = normalizeMerchant(pattern).normalized;
   
   // Get normalized transaction text
-  const merchantNormalized = normalizeMerchant(transaction.name || '');
-  const descriptionNormalized = normalizeMerchant(transaction.description || '');
+  const merchantNormalized = normalizeMerchant(transaction.name || '').normalized;
+  const descriptionNormalized = normalizeMerchant(transaction.description || '').normalized;
   
   let result = false;
   switch (matchType) {

@@ -108,6 +108,12 @@ export default {
       default: true
     },
     
+    // Functions
+    remove: {
+      type: Function,
+      default: () => {}
+    },
+    
     // Snackbar state
     showSnack: {
       type: Boolean,

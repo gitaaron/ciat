@@ -86,7 +86,7 @@ export const Transactions = {
     
     const affected = [];
     // Import the same normalization function used by the categorizer
-    const { normalizeMerchant } = await import('./categorizer/autoRuleGenerator.js');
+    const { normalizeMerchant } = await import('../../common/src/ruleMatcher.js');
     const normalizedPattern = normalizeMerchant(pattern).normalized;
     
     for (const tx of allTransactions) {

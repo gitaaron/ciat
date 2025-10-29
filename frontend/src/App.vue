@@ -15,6 +15,10 @@ const selected = ref('reports')
 const hasTransactions = ref(false)
 const showNewCategoryWizard = ref(false)
 
+// Debug mode - can be enabled via URL parameter ?debug=true
+const isDebugMode = ref(false)
+const debugStep = ref(1) // 1: file selection, 2: account assignment, 3: rules review, 4: transaction review, 5: complete
+
 async function loadAccounts() {
   accounts.value = await api.getAccounts()
 }
@@ -47,9 +51,30 @@ async function handleAccountsUpdated() {
   await loadAccounts()
 }
 
+// Initialize debug mode from URL parameters
+function initializeDebugMode() {
+  const urlParams = new URLSearchParams(window.location.search)
+  isDebugMode.value = urlParams.get('debug') === 'true'
+  
+  if (isDebugMode.value) {
+    console.log('Debug mode enabled')
+    // In debug mode, always show import tab and set up mock data
+    selected.value = 'import'
+    hasTransactions.value = false
+    // Add mock accounts for testing
+    accounts.value = [
+      { id: 1, name: 'Test Account' }
+    ]
+  }
+}
+
 onMounted(async () => {
-  await loadAccounts()
-  await checkTransactions()
+  initializeDebugMode()
+  
+  if (!isDebugMode.value) {
+    await loadAccounts()
+    await checkTransactions()
+  }
 })
 </script>
 
@@ -59,6 +84,7 @@ onMounted(async () => {
       <v-app-bar-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-wallet</v-icon>
         Can I Afford That
+        <v-chip v-if="isDebugMode" color="orange" class="ml-2" small>DEBUG MODE</v-chip>
       </v-app-bar-title>
       <v-spacer></v-spacer>
       <v-btn icon @click="selected = 'versions'" title="Database Versions">
@@ -95,7 +121,46 @@ onMounted(async () => {
                 <p class="text-h6">Get started by importing transactions to begin tracking your finances.</p>
               </v-card-text>
             </v-card>
-            <ImportWizard :accounts="accounts" @refresh-accounts="loadAccounts" @import-complete="handleImportComplete" />
+            
+            <!-- Debug Controls -->
+            <v-card v-if="isDebugMode" class="mb-4" color="orange" dark>
+              <v-card-title>
+                <v-icon left>mdi-bug</v-icon>
+                Debug Controls
+              </v-card-title>
+              <v-card-text>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-btn color="white" @click="debugStep = 1" :disabled="debugStep === 1">
+                      Step 1: File Selection
+                    </v-btn>
+                    <v-btn color="white" @click="debugStep = 2" :disabled="debugStep === 2" class="ml-2">
+                      Step 2: Account Assignment
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-btn color="white" @click="debugStep = 3" :disabled="debugStep === 3">
+                      Step 3: Rules Review
+                    </v-btn>
+                    <v-btn color="white" @click="debugStep = 4" :disabled="debugStep === 4" class="ml-2">
+                      Step 4: Transaction Review
+                    </v-btn>
+                  </v-col>
+                </v-row>
+                <div class="mt-2">
+                  <v-chip color="white" class="mr-2">Current Step: {{ debugStep }}</v-chip>
+                  <v-chip color="white">Using Stub Backend</v-chip>
+                </div>
+              </v-card-text>
+            </v-card>
+            
+            <ImportWizard 
+              :accounts="accounts" 
+              :debug-mode="isDebugMode"
+              :debug-step="debugStep"
+              @refresh-accounts="loadAccounts" 
+              @import-complete="handleImportComplete" 
+            />
           </v-window-item>
 
           <v-window-item value="transactions">

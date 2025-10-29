@@ -15,7 +15,15 @@ export default {
     AccountManager
   },
   props: {
-    accounts: Array
+    accounts: Array,
+    debugMode: {
+      type: Boolean,
+      default: false
+    },
+    debugStep: {
+      type: Number,
+      default: 1
+    }
   },
   emits: ['refresh-accounts', 'import-complete'],
   setup(props, { emit }) {
@@ -38,6 +46,227 @@ export default {
     const currentCategoryStep = ref(0) // 0: fixed, 1: investments, 2: guilt_free, 3: short_term
     const categorySteps = CATEGORY_STEPS
     const categoryStepNames = CATEGORY_STEPS.map(step => CATEGORY_NAMES[step])
+    
+    /**
+     * Centralized function to compute all rule matches with proper priority handling
+     * This ensures no transaction double-counting and respects rule priorities
+     */
+    function computeAllRuleMatches() {
+      if (!allTransactions.value || allTransactions.value.length === 0) {
+        console.log('computeAllRuleMatches: No transactions to match')
+        return
+      }
+
+      console.log('computeAllRuleMatches: Computing matches for all rule types')
+      
+      // Get all rules from different sources
+      const existingRules = usedRules.value || []
+      const newRulesList = newRules.value || []
+      const autoRulesList = autoRules.value?.rules?.filter(r => !r.applied) || []
+      
+      console.log('computeAllRuleMatches: Rule counts', {
+        existing: existingRules.length,
+        new: newRulesList.length,
+        auto: autoRulesList.length,
+        totalTransactions: allTransactions.value.length
+      })
+
+      // Combine all rules and sort by priority
+      const allRules = [
+        ...existingRules.map(rule => ({ ...rule, source: 'existing' })),
+        ...newRulesList.map(rule => ({ ...rule, source: 'new' })),
+        ...autoRulesList.map(rule => ({ ...rule, source: 'auto' }))
+      ].sort((a, b) => {
+        // Sort by priority (highest first)
+        if (b.priority !== a.priority) return b.priority - a.priority
+        // If same priority, most recent wins
+        const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+        const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+        return bTime - aTime
+      })
+
+      console.log('computeAllRuleMatches: Combined and sorted rules', allRules.length)
+
+      // Use centralized rule matching logic
+      const result = applyRulesWithDetails(allTransactions.value, allRules)
+      
+      // Separate matches by rule source
+      existingRuleMatches.value.clear()
+      newRuleMatches.value.clear()
+      autoRuleMatches.value.clear()
+      
+      for (const [ruleId, matchingTransactions] of result.ruleMatches) {
+        const rule = allRules.find(r => r.id === ruleId)
+        if (!rule) continue
+        
+        switch (rule.source) {
+          case 'existing':
+            existingRuleMatches.value.set(ruleId, matchingTransactions)
+            break
+          case 'new':
+            newRuleMatches.value.set(ruleId, matchingTransactions)
+            break
+          case 'auto':
+            autoRuleMatches.value.set(ruleId, matchingTransactions)
+            break
+        }
+      }
+      
+      console.log('computeAllRuleMatches: Match results', {
+        existingMatches: existingRuleMatches.value.size,
+        newMatches: newRuleMatches.value.size,
+        autoMatches: autoRuleMatches.value.size
+      })
+    }
+
+    // Debug mode: override step if debugStep prop is provided
+    if (props.debugMode && props.debugStep) {
+      step.value = props.debugStep
+    }
+    
+    // Debug mode: initialize mock data
+    if (props.debugMode) {
+      // Set up mock files and analysis
+      files.value = [new File(['mock data'], 'test.csv', { type: 'text/csv' })]
+      fileAnalysis.value = [{
+        filename: 'test.csv',
+        size: 1024,
+        format: 'csv',
+        formatDisplayName: 'CSV',
+        isSupported: true,
+        suggestedAccount: { account: { id: 1, name: 'Test Account' }, score: 0.8 },
+        confidence: 0.8,
+        suggestedName: 'Test Account'
+      }]
+      
+      // Set up mock account assignment
+      filesByAccount.value.set(1, files.value)
+      
+      // Set up mock transactions
+      const mockTransactions = [
+        {
+          name: 'YORK SQUARE PARKING TORONTO',
+          amount: -15.00,
+          date: '2024-01-01',
+          hash: 'test1',
+          account_id: 1
+        },
+        {
+          name: 'SMOQUE BONES TORONTO',
+          amount: -25.00,
+          date: '2024-01-02',
+          hash: 'test2',
+          account_id: 1
+        },
+        {
+          name: 'JIAN HING SUPERMARKET NORTH',
+          amount: -45.00,
+          date: '2024-01-03',
+          hash: 'test3',
+          account_id: 1
+        },
+        {
+          name: 'AMAZON CHANNELS AMAZON CA',
+          amount: -8.99,
+          date: '2024-01-04',
+          hash: 'test4',
+          account_id: 1
+        },
+        {
+          name: 'YORK SQUARE PARKING TORONTO',
+          amount: -15.00,
+          date: '2024-01-08',
+          hash: 'test5',
+          account_id: 1
+        }
+      ]
+      
+      previewsByAccount.value.set(1, mockTransactions)
+      allTransactions.value = mockTransactions
+      
+      // Set up mock auto rules
+      autoRules.value = {
+        rules: [
+          {
+            id: 'auto_stub_1',
+            match_type: 'contains',
+            pattern: 'york square',
+            category: 'fixed_costs',
+            support: 2,
+            applied: false,
+            enabled: true,
+            explain: 'auto',
+            source: 'frequency_analysis',
+            priority: 500,
+            labels: [],
+            actualMatches: 2,
+            matchingTransactions: ['test1', 'test5']
+          },
+          {
+            id: 'auto_stub_2',
+            match_type: 'contains',
+            pattern: 'smoque bones',
+            category: 'guilt_free',
+            support: 1,
+            applied: false,
+            enabled: true,
+            explain: 'auto',
+            source: 'frequency_analysis',
+            priority: 500,
+            labels: [],
+            actualMatches: 1,
+            matchingTransactions: ['test2']
+          },
+          {
+            id: 'auto_stub_3',
+            match_type: 'contains',
+            pattern: 'amazon channels',
+            category: 'fixed_costs',
+            support: 1,
+            applied: false,
+            enabled: true,
+            explain: 'auto',
+            source: 'frequency_analysis',
+            priority: 500,
+            labels: [],
+            actualMatches: 1,
+            matchingTransactions: ['test4']
+          },
+          {
+            id: 'auto_stub_4',
+            match_type: 'contains',
+            pattern: 'jian hing',
+            category: 'fixed_costs',
+            support: 1,
+            applied: false,
+            enabled: true,
+            explain: 'auto',
+            source: 'frequency_analysis',
+            priority: 500,
+            labels: [],
+            actualMatches: 1,
+            matchingTransactions: ['test3']
+          }
+        ],
+        analysis: {},
+        stats: {
+          totalTransactions: 5,
+          rulesGenerated: 4,
+          frequencyRules: 4,
+          mccRules: 0,
+          merchantIdRules: 0,
+          recurringRules: 0,
+          marketplaceRules: 0,
+          exceptionRules: 0,
+          rulesWithMatches: 4,
+          rulesFilteredOut: 0
+        },
+        previews: []
+      }
+      
+      // Compute rule matches for debug mode
+      computeAllRuleMatches()
+    }
 
 
     const totalFiles = computed(() => files.value.length)
@@ -402,77 +631,7 @@ export default {
       step.value = 5
     }
 
-    /**
-     * Centralized function to compute all rule matches with proper priority handling
-     * This ensures no transaction double-counting and respects rule priorities
-     */
-    function computeAllRuleMatches() {
-      if (!allTransactions.value || allTransactions.value.length === 0) {
-        console.log('computeAllRuleMatches: No transactions to match')
-        return
-      }
-
-      console.log('computeAllRuleMatches: Computing matches for all rule types')
-      
-      // Get all rules from different sources
-      const existingRules = usedRules.value || []
-      const newRulesList = newRules.value || []
-      const autoRulesList = autoRules.value?.rules?.filter(r => !r.applied) || []
-      
-      console.log('computeAllRuleMatches: Rule counts', {
-        existing: existingRules.length,
-        new: newRulesList.length,
-        auto: autoRulesList.length,
-        totalTransactions: allTransactions.value.length
-      })
-
-      // Combine all rules and sort by priority
-      const allRules = [
-        ...existingRules.map(rule => ({ ...rule, source: 'existing' })),
-        ...newRulesList.map(rule => ({ ...rule, source: 'new' })),
-        ...autoRulesList.map(rule => ({ ...rule, source: 'auto' }))
-      ].sort((a, b) => {
-        // Sort by priority (highest first)
-        if (b.priority !== a.priority) return b.priority - a.priority
-        // If same priority, most recent wins
-        const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
-        const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
-        return bTime - aTime
-      })
-
-      console.log('computeAllRuleMatches: Combined and sorted rules', allRules.length)
-
-      // Use centralized rule matching logic
-      const result = applyRulesWithDetails(allTransactions.value, allRules)
-      
-      // Separate matches by rule source
-      existingRuleMatches.value.clear()
-      newRuleMatches.value.clear()
-      autoRuleMatches.value.clear()
-      
-      for (const [ruleId, matchingTransactions] of result.ruleMatches) {
-        const rule = allRules.find(r => r.id === ruleId)
-        if (!rule) continue
-        
-        switch (rule.source) {
-          case 'existing':
-            existingRuleMatches.value.set(ruleId, matchingTransactions)
-            break
-          case 'new':
-            newRuleMatches.value.set(ruleId, matchingTransactions)
-            break
-          case 'auto':
-            autoRuleMatches.value.set(ruleId, matchingTransactions)
-            break
-        }
-      }
-      
-      console.log('computeAllRuleMatches: Match results', {
-        existingMatches: existingRuleMatches.value.size,
-        newMatches: newRuleMatches.value.size,
-        autoMatches: autoRuleMatches.value.size
-      })
-    }
+    // Function moved to before debug mode initialization
 
     async function handleSaveRules() {
       processing.value = true

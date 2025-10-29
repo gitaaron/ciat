@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { normalizeMerchant, matchesRule } from '../../../common/src/ruleMatcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -237,47 +238,6 @@ export function determineRuleCategory(pattern, ruleType, matchingTransactions = 
   return 'guilt_free';
 }
 
-/**
- * Normalize merchant string for pattern matching
- * @param {string} merchant - Raw merchant string
- * @returns {Object} - { raw, normalized }
- */
-export function normalizeMerchant(merchant) {
-  if (!merchant) return { raw: '', normalized: '' };
-  
-  const raw = merchant.trim();
-  let normalized = raw.toLowerCase();
-  
-  // Remove punctuation and emojis
-  normalized = normalized.replace(/[^\w\s]/g, ' ');
-  
-  // Remove extra whitespace
-  normalized = normalized.replace(/\s+/g, ' ').trim();
-  
-  // Remove variable tokens
-  normalized = normalized.replace(CONFIG.STORE_NUMBER_PATTERN, '');
-  normalized = normalized.replace(CONFIG.PHONE_PATTERN, '');
-  normalized = normalized.replace(CONFIG.AMOUNT_PATTERN, '');
-  normalized = normalized.replace(CONFIG.DATE_PATTERN, '');
-  normalized = normalized.replace(CONFIG.REFERENCE_PATTERN, '');
-  
-  // Remove payment rail noise
-  for (const noise of CONFIG.PAYMENT_RAIL_NOISE) {
-    normalized = normalized.replace(new RegExp(`\\b${noise}\\b`, 'gi'), '');
-  }
-  
-  // Canonicalize brand variants
-  for (const [variant, canonical] of Object.entries(CONFIG.BRAND_CANONICALIZATION)) {
-    if (normalized.includes(variant)) {
-      normalized = normalized.replace(new RegExp(`\\b${variant}\\b`, 'gi'), canonical);
-    }
-  }
-  
-  // Clean up again after replacements
-  normalized = normalized.replace(/\s+/g, ' ').trim();
-  
-  return { raw, normalized };
-}
 
 /**
  * Extract tokens and n-grams from normalized merchant string
@@ -810,29 +770,8 @@ export function resolveRuleConflicts(rules, transactions) {
     for (const tx of transactions) {
       if (coveredTransactions.has(tx.hash)) continue; // Already covered by higher priority rule
       
-      const { normalized } = normalizeMerchant(tx.name);
-      let matches = false;
-      
-      switch (rule.type) {
-        case 'contains':
-          matches = normalized.includes(rule.pattern.toLowerCase());
-          break;
-        case 'regex':
-          try {
-            matches = new RegExp(rule.pattern, 'i').test(normalized);
-          } catch (e) {
-            matches = false;
-          }
-          break;
-        case 'exact':
-          matches = normalized === rule.pattern.toLowerCase();
-          break;
-        case 'mcc':
-          matches = tx.mcc === rule.pattern;
-          break;
-      }
-      
-      if (matches) {
+      // Use the shared matchesRule function for consistency
+      if (matchesRule(rule, tx)) {
         matchingTransactions.push(tx);
       }
     }
@@ -874,11 +813,25 @@ export function generateAutoRules(transactions) {
   const analysis = analyzeTransactionPatterns(transactions);
   
   // Generate different types of rules
+  console.log('Generating frequency rules...');
   const frequencyRules = generateFrequencyBasedRules(analysis);
+  console.log('Frequency rules generated:', frequencyRules.length);
+  
+  console.log('Generating MCC rules...');
   const mccRules = generateMCCRules(analysis);
+  console.log('MCC rules generated:', mccRules.length);
+  
+  console.log('Generating merchant ID rules...');
   const merchantIdRules = generateMerchantIdRules(analysis);
+  console.log('Merchant ID rules generated:', merchantIdRules.length);
+  
+  console.log('Detecting recurring transactions...');
   const recurringRules = detectRecurringTransactions(transactions);
+  console.log('Recurring rules generated:', recurringRules.length);
+  
+  console.log('Generating marketplace rules...');
   const marketplaceRules = generateMarketplaceRules(transactions);
+  console.log('Marketplace rules generated:', marketplaceRules.length);
   
   // Combine all rules
   let allRules = [

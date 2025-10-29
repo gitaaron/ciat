@@ -259,14 +259,18 @@ export function getRulesUsedInImport(transactions) {
 }
 
 export async function generateAutoRules(transactions) {
+  console.log('generateAutoRules called with', transactions.length, 'transactions');
   const { generateAutoRules: generateRules, previewRuleImpact } = await import('./autoRuleGenerator.js');
   
   if (!transactions || transactions.length === 0) {
+    console.log('No transactions provided, returning empty rules');
     return { rules: [], analysis: null, previews: [] };
   }
   
   // Generate auto rules
+  console.log('Calling generateRules with', transactions.length, 'transactions');
   const result = generateRules(transactions);
+  console.log('generateRules returned:', result.rules?.length || 0, 'rules');
   
   // Filter out rules that don't actually match any transactions
   const filteredRules = [];
@@ -287,7 +291,8 @@ export async function generateAutoRules(transactions) {
   console.log(`Filtered auto rules: ${result.rules.length} generated, ${filteredRules.length} with matches`);
   
   // Preview rule impact using filtered rules
-  const previews = previewRuleImpact(filteredRules, transactions);
+  // const previews = previewRuleImpact(filteredRules, transactions);
+  const previews = [];
   
   return {
     rules: filteredRules,
