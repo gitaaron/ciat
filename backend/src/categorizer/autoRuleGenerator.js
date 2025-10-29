@@ -735,6 +735,14 @@ export function calculateRulePriorities(rules) {
       priority += lengthBonus;
     }
     
+    // Specificity bonus for contains rules - more specific patterns get higher priority
+    if (ruleType === 'contains' && rule.pattern) {
+      // Count words in pattern - more words = more specific
+      const wordCount = rule.pattern.split(/\s+/).length;
+      const specificityBonus = Math.min(wordCount * 5, 25); // Max 25 points for very specific patterns
+      priority += specificityBonus;
+    }
+    
     // Source bonus (some sources are more reliable)
     switch (rule.source) {
       case 'mcc_analysis':
