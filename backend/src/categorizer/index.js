@@ -1,8 +1,8 @@
 
 import { Rules } from '../models.js';
 
-// Import the same normalization function used by auto rule generator
-import { normalizeMerchant } from './autoRuleGenerator.js';
+// Import shared rule matching logic from common folder
+import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions } from '../../../common/src/ruleMatcher.js';
 
 function normalize(s='') {
   // Use the same normalization as auto rule generator for consistency
@@ -268,11 +268,35 @@ export async function generateAutoRules(transactions) {
   // Generate auto rules
   const result = generateRules(transactions);
   
-  // Preview rule impact
-  const previews = previewRuleImpact(result.rules, transactions);
+  // Filter out rules that don't actually match any transactions
+  const filteredRules = [];
+  for (const rule of result.rules) {
+    // Test the rule against all transactions
+    const matchingTransactions = transactions.filter(tx => matchesRule(rule, tx));
+    if (matchingTransactions.length > 0) {
+      // Add the matching transaction count to the rule for reference
+      const ruleWithMatches = {
+        ...rule,
+        actualMatches: matchingTransactions.length,
+        matchingTransactions: matchingTransactions.map(tx => tx.hash) // Store hashes for reference
+      };
+      filteredRules.push(ruleWithMatches);
+    }
+  }
+  
+  console.log(`Filtered auto rules: ${result.rules.length} generated, ${filteredRules.length} with matches`);
+  
+  // Preview rule impact using filtered rules
+  const previews = previewRuleImpact(filteredRules, transactions);
   
   return {
-    ...result,
+    rules: filteredRules,
+    analysis: result.analysis,
+    stats: {
+      ...result.stats,
+      rulesWithMatches: filteredRules.length,
+      rulesFilteredOut: result.rules.length - filteredRules.length
+    },
     previews
   };
 }
@@ -301,3 +325,5 @@ export async function applyAutoRules(rulesToApply, transactions) {
 
   return { applied: appliedCount, total: rulesToApply.length };
 }
+
+// Rule matching functions are now imported from common folder

@@ -1,0 +1,17 @@
+{
+  "name": "@ciat/common",
+  "version": "1.0.0",
+  "description": "Shared utilities for CIAT application",
+  "type": "module",
+  "main": "src/ruleMatcher.js",
+  "exports": {
+    ".": "./src/ruleMatcher.js",
+    "./ruleMatcher": "./src/ruleMatcher.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": ["ciat", "shared", "utilities"],
+  "author": "",
+  "license": "ISC"
+}

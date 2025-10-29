@@ -34,6 +34,7 @@ export default function ManageRulesJS(props, { emit }) {
 
   const effectiveAutoRules = computed(() => {
     if (!props.autoRules || !props.autoRules.rules) return []
+    
     const rules = props.autoRules.rules
       .filter(rule => !rule.applied)
       .map(rule => {

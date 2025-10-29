@@ -226,11 +226,11 @@ export default {
             const unmatchedTransactions = getUnmatchedTransactions(rawTransactions, existingRules)
             
             // Generate auto rules for unmatched transactions
-            // Send categorized transactions so auto rule generator can learn from existing patterns
+            // Send raw transactions so auto rule generator can learn from actual transaction patterns
             let autoRulesResult = null
             if (unmatchedTransactions.length >= 0) {
               try {
-                autoRulesResult = await api.generateAutoRules(categorizedTransactions)
+                autoRulesResult = await api.generateAutoRules(rawTransactions)
               } catch (error) {
                 console.warn('Auto rule generation failed:', error)
               }
@@ -257,12 +257,7 @@ export default {
               return matches.length > 0
             })
             
-            if (autoRules.value?.rules) {
-              autoRules.value.rules = autoRules.value.rules.filter(rule => {
-                const matches = autoRuleMatches.value.get(rule.id) || []
-                return matches.length > 0
-              })
-            }
+            // Auto rules are now filtered in the backend - no frontend filtering needed
             
             // Note: newRules.value starts empty, so no filtering needed here
           } catch (error) {
