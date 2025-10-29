@@ -11,7 +11,6 @@ const options = {
   output: null,
   format: 'json', // json, csv, table
   minFrequency: 2,
-  maxRules: 50,
   help: false
 };
 
@@ -33,9 +32,6 @@ for (let i = 0; i < args.length; i++) {
     case '--min-frequency':
       options.minFrequency = parseInt(args[++i]) || 2;
       break;
-    case '--max-rules':
-      options.maxRules = parseInt(args[++i]) || 50;
-      break;
     case '--help':
     case '-h':
       options.help = true;
@@ -54,7 +50,6 @@ Arguments:
   -o, --output <path>            Output file path (optional, prints to console if not specified)
   --format <format>              Output format: json, csv, table (default: json)
   --min-frequency <number>       Minimum frequency threshold (default: 2)
-  --max-rules <number>           Maximum number of rules to generate (default: 50)
   -h, --help                     Show this help message
 
 Examples:
@@ -166,7 +161,6 @@ async function main() {
     
     console.log(\`🤖 Generating auto rules...\`);
     console.log(\`   Min frequency: \${minFrequency}\`);
-    console.log(\`   Max rules: \${maxRules}\`);
     
     // Generate auto rules
     const result = generateAutoRules(processedTransactions);

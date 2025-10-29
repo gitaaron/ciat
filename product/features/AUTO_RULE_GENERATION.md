@@ -58,7 +58,7 @@ If available (MCC, merchant_id, bank category hints):
 - Low amount merchant IDs → `guilt_free`
 
 #### 6. Recurring Transaction Detection
-Identify recurring, similar-amount charges on fixed monthly dates (±2 days):
+Identify recurring, similar-amount charges on fixed monthly dates (±10 days):
 - Apply business logic category assignment based on merchant name patterns
 - Recurring charges are typically utilities, subscriptions, or services
 - Use merchant name keywords to determine appropriate category
@@ -78,9 +78,19 @@ Reduce collisions (e.g., "subway" restaurant vs. "subway transit"):
 #### 9. Configuration
 - `MIN_FREQUENCY`: 2 (minimum occurrences to consider a pattern)
 - `SHORT_TERM_AMOUNT_THRESHOLD`: $500 (amount threshold for short_term_savings)
-- `MAX_RULES_PER_IMPORT`: 50 (maximum rules generated per import)
+- No maximum limit on rules generated per import
 
-#### 10. Same logic as pre-existing rules
+#### 10. Priority Calculation
+Rules are prioritized based on:
+- **Specificity**: exact > regex > contains > MCC
+- **Pattern Length**: Longer patterns get higher priority
+- **Support**: More frequent patterns get higher priority
+- **Source**: MCC and merchant ID rules get source bonuses
+
+#### 11. Rule Explanations
+All auto-generated rules have simplified explanations set to "auto" for consistency.
+
+#### 12. Same logic as pre-existing rules
 The matching algorithm that checks to see if a transaction matches an auto generated rule should be the exact same as the matching algorithm used to check if a pre-existing rule matches a transaction.
 
 ---

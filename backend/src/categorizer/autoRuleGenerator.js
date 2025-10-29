@@ -9,7 +9,6 @@ const __dirname = path.dirname(__filename);
 const CONFIG = {
   MIN_FREQUENCY: 2, // Lowered for testing
   MIN_CLUSTER_SIMILARITY: 0.85,
-  MAX_RULES_PER_IMPORT: 50,
   SHORT_TERM_AMOUNT_THRESHOLD: 500, // Amount threshold for short_term_savings category
   STORE_NUMBER_PATTERN: /#?\d{2,5}/g,
   PHONE_PATTERN: /\(\d{3}\)\s*\d{3}-\d{4}|\d{3}-\d{3}-\d{4}/g,
@@ -476,7 +475,7 @@ export function generateFrequencyBasedRules(analysis) {
         frequency: totalCount,
         applied: false,
         enabled: true,
-        explain: `Auto-generated: "${token}" appears ${totalCount} times, categorized as ${category}`,
+        explain: 'auto',
         source: 'frequency_analysis'
       });
     }
@@ -494,7 +493,7 @@ export function generateFrequencyBasedRules(analysis) {
         pattern: data.pattern,
         category,
         frequency: totalCount,
-        explain: `Auto-generated: ${brand} store pattern appears ${totalCount} times, categorized as ${category}`,
+        explain: 'auto',
         source: 'store_pattern',
         applied: false
       });
@@ -523,7 +522,7 @@ export function generateMCCRules(analysis) {
         pattern: mcc,
         category,
         frequency: totalCount,
-        explain: `Auto-generated: MCC ${mcc} appears ${totalCount} times, categorized as ${category}`,
+        explain: 'auto',
         source: 'mcc_analysis',
         applied: false
       });
@@ -552,7 +551,7 @@ export function generateMerchantIdRules(analysis) {
         pattern: merchantId,
         category,
         frequency: totalCount,
-        explain: `Auto-generated: Merchant ID ${merchantId} appears ${totalCount} times, categorized as ${category}`,
+        explain: 'auto',
         source: 'merchant_id_analysis',
         applied: false
       });
@@ -594,10 +593,10 @@ export function detectRecurringTransactions(transactions) {
         intervals.push(interval);
       }
       
-      // Check if intervals are consistent (within ±2 days of monthly)
+      // Check if intervals are consistent (within ±10 days of monthly)
       const monthlyMs = 30 * 24 * 60 * 60 * 1000;
       const consistentIntervals = intervals.filter(interval => 
-        Math.abs(interval - monthlyMs) <= 2 * 24 * 60 * 60 * 1000
+        Math.abs(interval - monthlyMs) <= 10 * 24 * 60 * 60 * 1000
       );
       
       if (consistentIntervals.length >= intervals.length * 0.8) { // 80% consistency
@@ -612,7 +611,7 @@ export function detectRecurringTransactions(transactions) {
           amount: Number(amount),
           frequency: txs.length,
           category,
-          explain: `Auto-detected: Recurring monthly charge of $${amount} from ${merchant}`,
+          explain: 'auto',
           source: 'recurring_analysis'
         });
       }
@@ -660,7 +659,7 @@ export function generateMarketplaceRules(transactions) {
                 pattern: keyword,
                 category,
                 frequency: 1,
-                explain: `Auto-generated: ${marketplace} marketplace keyword "${keyword}" → ${category}`,
+                explain: 'auto',
                 source: 'marketplace_analysis',
                 applied: false
               });
@@ -749,6 +748,13 @@ export function calculateRulePriorities(rules) {
     // Support bonus (more transactions = higher priority, but with diminishing returns)
     const supportBonus = Math.min(rule.frequency * 2, 20);
     priority += supportBonus;
+    
+    // Pattern length bonus (longer patterns get higher priority)
+    if (rule.pattern) {
+      const patternLength = rule.pattern.length;
+      const lengthBonus = Math.min(patternLength * 2, 30); // Max 30 points for very long patterns
+      priority += lengthBonus;
+    }
     
     // Source bonus (some sources are more reliable)
     switch (rule.source) {
@@ -890,9 +896,6 @@ export function generateAutoRules(transactions) {
   
   // Resolve conflicts to ensure each transaction only matches one rule
   allRules = resolveRuleConflicts(allRules, transactions);
-  
-  // Limit number of rules
-  allRules = allRules.slice(0, CONFIG.MAX_RULES_PER_IMPORT);
   
   console.log(`Generated ${allRules.length} auto rules`);
   console.log('Rule breakdown:', {

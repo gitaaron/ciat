@@ -185,7 +185,6 @@ node generate-auto-rules.js --help
 - `-o, --output <path>` - Output file path (optional, prints to console if not specified)
 - `--format <format>` - Output format: json, csv, table (default: json)
 - `--min-frequency <number>` - Minimum frequency threshold (default: 2)
-- `--max-rules <number>` - Maximum number of rules to generate (default: 50)
 
 **Features:**
 - Supports CSV and QFX file formats

@@ -169,9 +169,6 @@ export async function addUserRule({ category, match_type, pattern, explain, labe
   rules.push(newRule);
   saveJSON('rules.json', rules);
   
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
   return newRule;
 }
 
@@ -196,9 +193,6 @@ export async function updateUserRule(ruleId, { category, match_type, pattern, ex
   
   saveJSON('rules.json', rules);
   
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
   return { updated: true, ruleId, rule: rules[ruleIndex] };
 }
 
@@ -216,9 +210,6 @@ export async function deleteUserRule(ruleId) {
   
   saveJSON('rules.json', updatedRules);
   
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
-  
   return { deleted: true, ruleId };
 }
 
@@ -235,9 +226,6 @@ export async function toggleUserRule(ruleId, enabled) {
   rules[ruleIndex].enabled = enabled;
   rules[ruleIndex].updated_at = new Date().toISOString();
   saveJSON('rules.json', rules);
-  
-  // Automatically reapply categorization to all non-manually-overridden transactions
-  await reapplyCategories();
   
   return { toggled: true, ruleId, enabled, rule: rules[ruleIndex] };
 }
