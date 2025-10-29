@@ -178,10 +178,6 @@ export default {
   methods: {
     updateShowSnack(value) {
       this.$emit('update:showSnack', value)
-    },
-    
-    handleCreateRuleSave(ruleData) {
-      this.$emit('create-rule-save', ruleData)
     }
   }
 }
