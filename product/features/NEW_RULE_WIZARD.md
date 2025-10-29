@@ -12,6 +12,8 @@ A guided flow to create/edit rules based on user overrides, preview affected tra
 - Allow updating the rule or creating **multiple rules**; **most recent takes highest precedence**.【19†REQUIREMENTS.md】
 - After saving, **reapply categorization across all transactions** to align with the latest rules.【19†REQUIREMENTS.md】
 - **Bug behavior**: If preview is requested with **no transactions imported**, do not error; indicate that the rule currently affects **0 transactions**.
+- **Rules must be persisted to the SQLite database** in the `rules` table, not flat files.
+- Rule creation and updates must be atomic database operations to ensure data consistency.
 
 ### UI Considerations
 - Provide “Expand” to view transactions affected by a rule.

@@ -41,10 +41,29 @@ CREATE TABLE IF NOT EXISTS transactions (
   FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
+CREATE TABLE IF NOT EXISTS rules (
+  id TEXT PRIMARY KEY,             -- UUID string
+  match_type TEXT NOT NULL,        -- 'exact', 'contains', 'regex'
+  pattern TEXT NOT NULL,           -- Pattern to match
+  category TEXT NOT NULL,          -- Category to assign
+  priority INTEGER DEFAULT 1000,   -- Execution order (higher = first)
+  support INTEGER DEFAULT 0,       -- Number of matched transactions
+  exceptions TEXT,                 -- JSON array of exclusion tokens
+  enabled INTEGER DEFAULT 1,       -- 1 if enabled, 0 if disabled
+  explain TEXT,                    -- User explanation of rule
+  labels TEXT,                     -- JSON array of labels for grouping rules
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_tx_account ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_tx_cat ON transactions(category);
 CREATE INDEX IF NOT EXISTS idx_tx_labels ON transactions(labels);
+CREATE INDEX IF NOT EXISTS idx_rules_category ON rules(category);
+CREATE INDEX IF NOT EXISTS idx_rules_match_type ON rules(match_type);
+CREATE INDEX IF NOT EXISTS idx_rules_enabled ON rules(enabled);
+CREATE INDEX IF NOT EXISTS idx_rules_priority ON rules(priority);
 `);
 
 // Migration: Add labels column if it doesn't exist

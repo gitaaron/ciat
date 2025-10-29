@@ -1,21 +1,5 @@
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export function loadJSON(name) {
-  const p = path.join(__dirname, name);
-  if (!fs.existsSync(p)) return [];
-  return JSON.parse(fs.readFileSync(p, 'utf-8'));
-}
-
-function saveJSON(name, data) {
-  const p = path.join(__dirname, name);
-  fs.writeFileSync(p, JSON.stringify(data, null, 2));
-}
+import { Rules } from '../models.js';
 
 // Import the same normalization function used by auto rule generator
 import { normalizeMerchant } from './autoRuleGenerator.js';
@@ -26,14 +10,7 @@ function normalize(s='') {
 }
 
 export function guessCategory(tx) {
-  const rules = loadJSON('rules.json').filter(r => r.enabled !== false).sort((a,b) => {
-    // First sort by priority (highest first)
-    if (b.priority !== a.priority) return b.priority - a.priority;
-    // If same priority, most recent wins (by created_at or updated_at)
-    const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
-    const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
-    return bTime - aTime;
-  });
+  const rules = Rules.findEnabled();
 
   const merchant = normalize(tx.name || '');
   const description = normalize(tx.description || '');
@@ -150,84 +127,80 @@ function mlGuess(tx) {
   return null;
 }
 
-export async function addUserRule({ category, match_type, pattern, explain, labels }) {
-  const rules = loadJSON('rules.json');
-  const priority = Math.max(1000, ...rules.map(r => r.priority || 0)) + 1; // always win
+export async function addUserRule({ category, match_type, pattern, explain, labels, priority }) {
+  const rulePriority = priority || Rules.getNextPriority();
   const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const newRule = { 
     id: ruleId,
     category, 
     match_type, 
     pattern, 
-    priority, 
+    priority: rulePriority, 
     enabled: true, 
     explain: explain || 'User override',
     labels: labels || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString() 
   };
-  rules.push(newRule);
-  saveJSON('rules.json', rules);
   
+  Rules.create(newRule);
   return newRule;
 }
 
 export async function updateUserRule(ruleId, { category, match_type, pattern, explain, labels }) {
-  const rules = loadJSON('rules.json');
-  const ruleIndex = rules.findIndex(rule => rule.id === ruleId);
+  const existingRule = Rules.findById(ruleId);
   
-  if (ruleIndex === -1) {
+  if (!existingRule) {
     throw new Error(`Rule with ID ${ruleId} not found`);
   }
   
   // Update the rule
-  rules[ruleIndex] = {
-    ...rules[ruleIndex],
+  const updatedRule = {
+    ...existingRule,
     category,
     match_type,
     pattern,
-    explain: explain || rules[ruleIndex].explain,
-    labels: labels !== undefined ? labels : rules[ruleIndex].labels,
+    explain: explain || existingRule.explain,
+    labels: labels !== undefined ? labels : existingRule.labels,
     updated_at: new Date().toISOString()
   };
   
-  saveJSON('rules.json', rules);
+  Rules.update(ruleId, updatedRule);
   
-  return { updated: true, ruleId, rule: rules[ruleIndex] };
+  return { updated: true, ruleId, rule: updatedRule };
 }
 
 
 export async function deleteUserRule(ruleId) {
-  const rules = loadJSON('rules.json');
-  const initialLength = rules.length;
+  const existingRule = Rules.findById(ruleId);
   
-  // Filter out the rule with the matching ID
-  const updatedRules = rules.filter(rule => rule.id !== ruleId);
-  
-  if (updatedRules.length === initialLength) {
+  if (!existingRule) {
     throw new Error(`Rule with ID ${ruleId} not found`);
   }
   
-  saveJSON('rules.json', updatedRules);
+  Rules.delete(ruleId);
   
   return { deleted: true, ruleId };
 }
 
 
 export async function toggleUserRule(ruleId, enabled) {
-  const rules = loadJSON('rules.json');
-  const ruleIndex = rules.findIndex(rule => rule.id === ruleId);
+  const existingRule = Rules.findById(ruleId);
   
-  if (ruleIndex === -1) {
+  if (!existingRule) {
     throw new Error(`Rule with ID ${ruleId} not found`);
   }
   
   // Update the enabled status
-  rules[ruleIndex].enabled = enabled;
-  rules[ruleIndex].updated_at = new Date().toISOString();
-  saveJSON('rules.json', rules);
+  const updatedRule = {
+    ...existingRule,
+    enabled,
+    updated_at: new Date().toISOString()
+  };
   
-  return { toggled: true, ruleId, enabled, rule: rules[ruleIndex] };
+  Rules.update(ruleId, updatedRule);
+  
+  return { toggled: true, ruleId, enabled, rule: updatedRule };
 }
 
 
@@ -252,12 +225,11 @@ export async function reapplyCategories() {
 }
 
 export function getAllRules() {
-  const rules = loadJSON('rules.json');
-  return rules;
+  return Rules.all();
 }
 
 export function getRulesUsedInImport(transactions) {
-  const rules = loadJSON('rules.json');
+  const rules = Rules.all();
   const usedRules = new Map();
   
   for (const tx of transactions) {
@@ -313,9 +285,11 @@ export async function applyAutoRules(rulesToApply, transactions) {
       // Convert auto rule to user rule format
       const userRule = {
         category: rule.category,
-        match_type: rule.type === 'mcc' ? 'exact' : rule.type,
+        match_type: rule.match_type || (rule.type === 'mcc' ? 'exact' : rule.type),
         pattern: rule.pattern,
-        explain: rule.explain || `Auto-generated: "${rule.pattern}" ${rule.type} rule`
+        explain: rule.explain || `Auto-generated: "${rule.pattern}" ${rule.match_type || rule.type} rule`,
+        labels: rule.labels || [],
+        priority: rule.priority || 500
       };
 
       await addUserRule(userRule);

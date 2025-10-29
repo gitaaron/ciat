@@ -10,7 +10,6 @@ import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
-import { loadJSON } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
 
@@ -158,10 +157,10 @@ app.post('/api/rules', async (req, res) => {
   }
 });
 
-// List all rules (consolidated from rules.json only)
+// List all rules (from database)
 app.get('/api/rules', (req, res) => {
   try {
-    const rules = loadJSON('rules.json');
+    const rules = getAllRules();
     res.json(rules);
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -171,7 +170,7 @@ app.get('/api/rules', (req, res) => {
 // List only user rules
 app.get('/api/rules/user', (req, res) => {
   try {
-    const rules = loadJSON('rules.json');
+    const rules = getAllRules();
     res.json(rules);
   } catch (e) {
     res.status(400).json({ error: String(e) });

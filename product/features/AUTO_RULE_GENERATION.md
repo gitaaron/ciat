@@ -93,6 +93,13 @@ All auto-generated rules have simplified explanations set to "auto" for consiste
 #### 12. Same logic as pre-existing rules
 The matching algorithm that checks to see if a transaction matches an auto generated rule should be the exact same as the matching algorithm used to check if a pre-existing rule matches a transaction.
 
+#### 13. Database Persistence
+Auto-generated rules must be persisted to the SQLite database:
+- Rules are stored in the `rules` table with the same schema as user-created rules
+- Auto-generated rules are marked with appropriate metadata (e.g., `explain: "auto"`)
+- Rules are immediately available for transaction categorization after generation
+- Database transactions ensure atomic rule creation and updates
+
 ---
 
 ### Non-Goals

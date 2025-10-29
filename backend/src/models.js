@@ -125,3 +125,75 @@ export const Transactions = {
     return affected;
   }
 };
+
+export const Rules = {
+  all() {
+    return db.prepare('SELECT * FROM rules ORDER BY priority DESC, created_at DESC').all();
+  },
+  findById(id) {
+    return db.prepare('SELECT * FROM rules WHERE id = ?').get(id);
+  },
+  findByCategory(category) {
+    return db.prepare('SELECT * FROM rules WHERE category = ? ORDER BY priority DESC').all(category);
+  },
+  findEnabled() {
+    return db.prepare('SELECT * FROM rules WHERE enabled = 1 ORDER BY priority DESC, created_at DESC').all();
+  },
+  create(rule) {
+    const stmt = db.prepare(`
+      INSERT INTO rules (
+        id, match_type, pattern, category, priority, support, exceptions, 
+        enabled, explain, labels, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      rule.id,
+      rule.match_type,
+      rule.pattern,
+      rule.category,
+      rule.priority || 1000,
+      rule.support || 0,
+      rule.exceptions ? JSON.stringify(rule.exceptions) : null,
+      rule.enabled ? 1 : 0,
+      rule.explain || '',
+      rule.labels ? JSON.stringify(rule.labels) : null,
+      rule.created_at || new Date().toISOString(),
+      rule.updated_at || new Date().toISOString()
+    );
+  },
+  update(id, rule) {
+    const stmt = db.prepare(`
+      UPDATE rules SET 
+        match_type = ?, pattern = ?, category = ?, priority = ?, support = ?, 
+        exceptions = ?, enabled = ?, explain = ?, labels = ?, updated_at = ?
+      WHERE id = ?
+    `);
+    return stmt.run(
+      rule.match_type,
+      rule.pattern,
+      rule.category,
+      rule.priority || 1000,
+      rule.support || 0,
+      rule.exceptions ? JSON.stringify(rule.exceptions) : null,
+      rule.enabled ? 1 : 0,
+      rule.explain || '',
+      rule.labels ? JSON.stringify(rule.labels) : null,
+      new Date().toISOString(),
+      id
+    );
+  },
+  delete(id) {
+    return db.prepare('DELETE FROM rules WHERE id = ?').run(id);
+  },
+  updateSupport(id, support) {
+    return db.prepare('UPDATE rules SET support = ?, updated_at = ? WHERE id = ?').run(
+      support, 
+      new Date().toISOString(), 
+      id
+    );
+  },
+  getNextPriority() {
+    const result = db.prepare('SELECT MAX(priority) as max_priority FROM rules').get();
+    return (result.max_priority || 0) + 1;
+  }
+};

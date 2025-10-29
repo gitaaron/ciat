@@ -469,14 +469,16 @@ export function generateFrequencyBasedRules(analysis) {
       console.log(`Generated frequency rule: "${token}" -> ${category} (${totalCount} occurrences)`);
       rules.push({
         id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'contains',
+        match_type: 'contains',
         pattern: token,
         category,
-        frequency: totalCount,
+        support: totalCount,
         applied: false,
         enabled: true,
         explain: 'auto',
-        source: 'frequency_analysis'
+        source: 'frequency_analysis',
+        priority: 500, // Lower priority than user rules
+        labels: []
       });
     }
   }
@@ -489,13 +491,16 @@ export function generateFrequencyBasedRules(analysis) {
       
       rules.push({
         id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'regex',
+        match_type: 'regex',
         pattern: data.pattern,
         category,
-        frequency: totalCount,
+        support: totalCount,
         explain: 'auto',
         source: 'store_pattern',
-        applied: false
+        applied: false,
+        enabled: true,
+        priority: 500, // Lower priority than user rules
+        labels: []
       });
     }
   }
@@ -547,7 +552,7 @@ export function generateMerchantIdRules(analysis) {
       
       rules.push({
         id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'exact',
+        match_type: 'exact',
         pattern: merchantId,
         category,
         frequency: totalCount,
@@ -605,7 +610,7 @@ export function detectRecurringTransactions(transactions) {
         
         recurring.push({
           id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          type: 'contains',
+          match_type: 'contains',
           pattern: merchant,
           merchant,
           amount: Number(amount),
@@ -655,7 +660,7 @@ export function generateMarketplaceRules(transactions) {
             if (normalized.includes(keyword)) {
               rules.push({
                 id: `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                type: 'contains',
+                match_type: 'contains',
                 pattern: keyword,
                 category,
                 frequency: 1,

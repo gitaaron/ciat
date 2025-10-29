@@ -32,11 +32,13 @@ Store and display for each rule:
 
 #### Rule Data Model
 
+Rules are stored in the SQLite database in a `rules` table with the following schema:
+
 ```
 | Field | Type | Description |
 |---|---|---|
 | id | string | UUID |
-| type | enum(`exact`,`contains`,`regex`) | Rule type |
+| match_type | enum(`exact`,`contains`,`regex`) | Rule type |
 | pattern | string | Normalized pattern |
 | category | string | Assigned category |
 | priority | int | Execution order |
@@ -44,9 +46,15 @@ Store and display for each rule:
 | exceptions | array<string> | Exclusion tokens |
 | enabled | bool | Default true |
 | explain | string | User defined explanation of rule |
+| labels | array<string> | JSON array of labels for grouping rules |
 | created_at | datetime | When the entry was first created |
 | updated_at | datetime | When the entry was last updated |
 ```
+
+**Storage Requirements:**
+- Rules must be persisted to the SQLite database, not flat files
+- Database queries must support efficient rule retrieval by category, match type, and enabled status
+- Rule updates must be atomic and maintain data consistency
 
 ### UI Considerations
 - Show the **guessed category** and allow inline correction per transaction.
