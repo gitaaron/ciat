@@ -77,7 +77,8 @@
               :loading="processing"
               :disabled="processing || totalTransactions === 0"
             >
-              <v-icon left>mdi-content-save</v-icon>
+              <span v-if="processing" class="loading-spinner">⏳</span>
+              <v-icon v-else left>mdi-content-save</v-icon>
               {{ processing ? 'Saving...' : 'Save' }}
             </v-btn>
           </div>

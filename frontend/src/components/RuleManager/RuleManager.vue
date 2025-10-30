@@ -203,10 +203,12 @@
         <v-btn
           color="primary"
           :loading="saving"
+          :disabled="saving"
           @click="saveRule"
         >
-          <v-icon left>mdi-content-save</v-icon>
-          Save Rule
+          <span v-if="saving" class="loading-spinner">⏳</span>
+          <v-icon v-else left>mdi-content-save</v-icon>
+          {{ saving ? 'Saving...' : 'Save Rule' }}
         </v-btn>
       </v-card-actions>
     </v-card>

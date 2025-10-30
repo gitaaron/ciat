@@ -92,7 +92,8 @@
                 color="primary"
                 block
               >
-                <v-icon left>mdi-magnify</v-icon>
+                <span v-if="processing" class="loading-spinner">⏳</span>
+                <v-icon v-else left>mdi-magnify</v-icon>
                 {{ processing ? 'Analyzing...' : 'Analyze Files' }}
               </v-btn>
             </v-col>
@@ -190,7 +191,8 @@
             color="primary"
             block
           >
-            <v-icon left>mdi-cog</v-icon>
+            <span v-if="processing" class="loading-spinner">⏳</span>
+            <v-icon v-else left>mdi-cog</v-icon>
             {{ processing ? 'Processing...' : 'Process File' }}
           </v-btn>
         </v-col>
@@ -243,7 +245,8 @@
               :loading="processing"
               :disabled="processing"
             >
-              Review Transactions
+              <span v-if="processing" class="loading-spinner">⏳</span>
+              {{ processing ? 'Processing...' : 'Review Transactions' }}
             </v-btn>
           </div>
         </v-card-text>

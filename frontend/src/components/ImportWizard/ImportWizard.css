@@ -5,3 +5,15 @@
 .v-list-item:last-child {
   border-bottom: none;
 }
+
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

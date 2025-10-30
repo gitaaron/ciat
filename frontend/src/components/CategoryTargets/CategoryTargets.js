@@ -14,6 +14,7 @@ export default {
     
     const transactions = ref([])
     const loading = ref(true)
+    const saving = ref(false)
     const editing = ref(false)
     const tempTargets = ref({})
     
@@ -144,12 +145,20 @@ export default {
     }
     
     // Save changes
-    const saveChanges = () => {
+    const saveChanges = async () => {
       if (targetsValid.value) {
-        targets.value = { ...tempTargets.value }
-        saveTargets()
-        editing.value = false
-        tempTargets.value = {}
+        try {
+          saving.value = true
+          // Simulate a small delay for better UX
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          targets.value = { ...tempTargets.value }
+          saveTargets()
+          editing.value = false
+          tempTargets.value = {}
+        } finally {
+          saving.value = false
+        }
       }
     }
     
@@ -187,6 +196,7 @@ export default {
       tempTargets,
       transactions,
       loading,
+      saving,
       editing,
       netIncome,
       actualSpending,

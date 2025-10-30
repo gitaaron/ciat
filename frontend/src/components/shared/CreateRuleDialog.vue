@@ -71,8 +71,12 @@
       </div>
       
       <div class="dialog-actions">
-        <button class="btn btn-secondary" @click="handleCancel">Cancel</button>
-        <button class="btn btn-primary" @click="handleSave">Create Rule</button>
+        <button class="btn btn-secondary" @click="handleCancel" :disabled="loading">Cancel</button>
+        <button class="btn btn-primary" @click="handleSave" :disabled="loading">
+          <span v-if="loading" class="loading-spinner">⏳</span>
+          <span v-if="loading">Creating...</span>
+          <span v-else>Create Rule</span>
+        </button>
       </div>
     </div>
   </div>
@@ -104,6 +108,10 @@ export default {
         category: '',
         labels: []
       })
+    },
+    loading: {
+      type: Boolean,
+      default: false
     }
   },
   emits: ['save', 'cancel'],
@@ -359,5 +367,16 @@ export default {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.loading-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

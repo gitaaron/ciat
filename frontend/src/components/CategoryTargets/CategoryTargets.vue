@@ -47,11 +47,12 @@
             </v-btn>
             <v-btn
               @click="saveChanges"
-              :disabled="!targetsValid"
+              :disabled="!targetsValid || saving"
+              :loading="saving"
               color="primary"
               prepend-icon="mdi-check"
             >
-              Save
+              {{ saving ? 'Saving...' : 'Save' }}
             </v-btn>
           </div>
         </div>

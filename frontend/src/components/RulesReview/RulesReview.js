@@ -39,6 +39,7 @@ export default function useRulesReviewLogic(props, { emit }) {
     category: '',
     labels: []
   })
+  const createRuleLoading = ref(false)
 
 
   // Create rule from transaction
@@ -53,9 +54,13 @@ export default function useRulesReviewLogic(props, { emit }) {
     showCreateRuleDialog.value = true
   }
 
-  function handleCreateRuleSave(ruleData) {
+  async function handleCreateRuleSave(ruleData) {
     try {
+      createRuleLoading.value = true
       console.log('handleCreateRuleSave: Creating rule in memory:', ruleData)
+      
+      // Simulate a small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Create a rule object in memory (don't send to backend yet)
       const newRule = {
@@ -77,6 +82,8 @@ export default function useRulesReviewLogic(props, { emit }) {
     } catch (error) {
       console.error('Error creating rule:', error)
       showSnackMessage('Error creating rule: ' + error.message)
+    } finally {
+      createRuleLoading.value = false
     }
   }
 
@@ -98,6 +105,7 @@ export default function useRulesReviewLogic(props, { emit }) {
     showCreateRuleDialog,
     createRuleTransaction,
     createRuleData,
+    createRuleLoading,
     showSnack,
     snackMessage,
     

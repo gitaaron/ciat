@@ -41,6 +41,7 @@
       :show="showCreateRuleDialog"
       :transaction="createRuleTransaction"
       :initial-data="createRuleData"
+      :loading="createRuleLoading"
       @save="handleCreateRuleSave"
       @cancel="cancelCreateRule"
     />

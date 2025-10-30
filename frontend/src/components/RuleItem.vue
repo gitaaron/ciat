@@ -81,6 +81,7 @@
                 @click="saveEdit"
                 :disabled="isSaving"
               >
+                <span v-if="isSaving" class="loading-spinner">⏳</span>
                 <span v-if="isSaving">Saving...</span>
                 <span v-else>Save</span>
               </button>
