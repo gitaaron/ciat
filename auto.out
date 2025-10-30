@@ -1,0 +1,751 @@
+🔍 Analyzing transaction file: /Users/asurty/PProject/ciat/transactions/shortened_visa_aventura.csv
+📄 File format detected: CSV
+📊 Parsed 100 transactions
+🤖 Generating auto rules...
+   Min frequency: 2
+Generating auto rules from 100 transactions...
+Sample transactions: [
+  { name: 'YUMBA MEALS WEST TORONTO, ON', category: null },
+  { name: 'SCHOLASTIC BOOK FAIRS TOR BRAMPTON, ON', category: null },
+  { name: 'Uber Holdings Canada Inc. Toronto, ON', category: null }
+]
+Generating frequency rules...
+Analyzing 516 tokens for frequency-based rules...
+Generated frequency rule: "yumba" -> fixed_costs (5 occurrences)
+Generated frequency rule: "meals" -> fixed_costs (5 occurrences)
+Generated frequency rule: "west" -> fixed_costs (5 occurrences)
+Generated frequency rule: "toronto" -> fixed_costs (35 occurrences)
+Generated frequency rule: "on" -> fixed_costs (92 occurrences)
+Generated frequency rule: "yumba meals" -> fixed_costs (5 occurrences)
+Generated frequency rule: "meals west" -> fixed_costs (5 occurrences)
+Generated frequency rule: "west toronto" -> fixed_costs (5 occurrences)
+Generated frequency rule: "toronto on" -> fixed_costs (35 occurrences)
+Generated frequency rule: "yumba meals west" -> fixed_costs (5 occurrences)
+Generated frequency rule: "meals west toronto" -> fixed_costs (5 occurrences)
+Generated frequency rule: "west toronto on" -> fixed_costs (5 occurrences)
+Generated frequency rule: "scholastic" -> fixed_costs (2 occurrences)
+Generated frequency rule: "book" -> fixed_costs (2 occurrences)
+Generated frequency rule: "fairs" -> fixed_costs (2 occurrences)
+Generated frequency rule: "tor" -> fixed_costs (2 occurrences)
+Generated frequency rule: "brampton" -> fixed_costs (2 occurrences)
+Generated frequency rule: "scholastic book" -> fixed_costs (2 occurrences)
+Generated frequency rule: "book fairs" -> fixed_costs (2 occurrences)
+Generated frequency rule: "fairs tor" -> fixed_costs (2 occurrences)
+Generated frequency rule: "tor brampton" -> fixed_costs (2 occurrences)
+Generated frequency rule: "brampton on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "scholastic book fairs" -> fixed_costs (2 occurrences)
+Generated frequency rule: "book fairs tor" -> fixed_costs (2 occurrences)
+Generated frequency rule: "fairs tor brampton" -> fixed_costs (2 occurrences)
+Generated frequency rule: "tor brampton on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "uber" -> fixed_costs (4 occurrences)
+Generated frequency rule: "holdings" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada" -> fixed_costs (6 occurrences)
+Generated frequency rule: "inc" -> fixed_costs (2 occurrences)
+Generated frequency rule: "uber holdings" -> fixed_costs (2 occurrences)
+Generated frequency rule: "holdings canada" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada inc" -> fixed_costs (2 occurrences)
+Generated frequency rule: "inc toronto" -> fixed_costs (2 occurrences)
+Generated frequency rule: "uber holdings canada" -> fixed_costs (2 occurrences)
+Generated frequency rule: "holdings canada inc" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada inc toronto" -> fixed_costs (2 occurrences)
+Generated frequency rule: "inc toronto on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "amazon" -> fixed_costs (2 occurrences)
+Generated frequency rule: "ca" -> fixed_costs (8 occurrences)
+Generated frequency rule: "amazon ca" -> fixed_costs (2 occurrences)
+Generated frequency rule: "great" -> fixed_costs (2 occurrences)
+Generated frequency rule: "lakes" -> fixed_costs (2 occurrences)
+Generated frequency rule: "farms" -> fixed_costs (2 occurrences)
+Generated frequency rule: "port" -> fixed_costs (2 occurrences)
+Generated frequency rule: "stanley" -> fixed_costs (2 occurrences)
+Generated frequency rule: "great lakes" -> fixed_costs (2 occurrences)
+Generated frequency rule: "lakes farms" -> fixed_costs (2 occurrences)
+Generated frequency rule: "farms port" -> fixed_costs (2 occurrences)
+Generated frequency rule: "port stanley" -> fixed_costs (2 occurrences)
+Generated frequency rule: "stanley on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "great lakes farms" -> fixed_costs (2 occurrences)
+Generated frequency rule: "lakes farms port" -> fixed_costs (2 occurrences)
+Generated frequency rule: "farms port stanley" -> fixed_costs (2 occurrences)
+Generated frequency rule: "port stanley on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "galleria" -> fixed_costs (3 occurrences)
+Generated frequency rule: "supermarket" -> fixed_costs (4 occurrences)
+Generated frequency rule: "north" -> short_term_savings (14 occurrences)
+Generated frequency rule: "york" -> fixed_costs (14 occurrences)
+Generated frequency rule: "galleria supermarket" -> fixed_costs (3 occurrences)
+Generated frequency rule: "supermarket north" -> fixed_costs (3 occurrences)
+Generated frequency rule: "north york" -> fixed_costs (12 occurrences)
+Generated frequency rule: "york on" -> fixed_costs (13 occurrences)
+Generated frequency rule: "galleria supermarket north" -> fixed_costs (3 occurrences)
+Generated frequency rule: "supermarket north york" -> fixed_costs (3 occurrences)
+Generated frequency rule: "north york on" -> fixed_costs (11 occurrences)
+Generated frequency rule: "canadian" -> fixed_costs (3 occurrences)
+Generated frequency rule: "tire" -> fixed_costs (3 occurrences)
+Generated frequency rule: "willowdale" -> fixed_costs (4 occurrences)
+Generated frequency rule: "canadian tire" -> fixed_costs (3 occurrences)
+Generated frequency rule: "tire willowdale" -> fixed_costs (2 occurrences)
+Generated frequency rule: "willowdale on" -> fixed_costs (4 occurrences)
+Generated frequency rule: "canadian tire willowdale" -> fixed_costs (2 occurrences)
+Generated frequency rule: "tire willowdale on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "mecp" -> fixed_costs (4 occurrences)
+Generated frequency rule: "rondeau" -> fixed_costs (3 occurrences)
+Generated frequency rule: "ppark" -> fixed_costs (3 occurrences)
+Generated frequency rule: "morpeth" -> fixed_costs (3 occurrences)
+Generated frequency rule: "mecp rondeau" -> fixed_costs (3 occurrences)
+Generated frequency rule: "rondeau ppark" -> fixed_costs (3 occurrences)
+Generated frequency rule: "ppark morpeth" -> fixed_costs (3 occurrences)
+Generated frequency rule: "morpeth on" -> fixed_costs (3 occurrences)
+Generated frequency rule: "mecp rondeau ppark" -> fixed_costs (3 occurrences)
+Generated frequency rule: "rondeau ppark morpeth" -> fixed_costs (3 occurrences)
+Generated frequency rule: "ppark morpeth on" -> fixed_costs (3 occurrences)
+Generated frequency rule: "blenheim" -> fixed_costs (4 occurrences)
+Generated frequency rule: "blenheim on" -> fixed_costs (3 occurrences)
+Generated frequency rule: "store" -> fixed_costs (2 occurrences)
+Generated frequency rule: "google" -> fixed_costs (3 occurrences)
+Generated frequency rule: "co" -> fixed_costs (2 occurrences)
+Generated frequency rule: "helppay" -> fixed_costs (2 occurrences)
+Generated frequency rule: "ns" -> fixed_costs (2 occurrences)
+Generated frequency rule: "co helppay" -> fixed_costs (2 occurrences)
+Generated frequency rule: "helppay ns" -> fixed_costs (2 occurrences)
+Generated frequency rule: "co helppay ns" -> fixed_costs (2 occurrences)
+Generated frequency rule: "timhortons" -> fixed_costs (2 occurrences)
+Generated frequency rule: "timhortons toronto" -> fixed_costs (2 occurrences)
+Generated frequency rule: "timhortons toronto on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "ubereats" -> fixed_costs (2 occurrences)
+Generated frequency rule: "uber canada" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada ubereats" -> fixed_costs (2 occurrences)
+Generated frequency rule: "ubereats toronto" -> fixed_costs (2 occurrences)
+Generated frequency rule: "uber canada ubereats" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada ubereats toronto" -> fixed_costs (2 occurrences)
+Generated frequency rule: "ubereats toronto on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "concessions" -> fixed_costs (3 occurrences)
+Generated frequency rule: "longo" -> fixed_costs (9 occurrences)
+Generated frequency rule: "longo toronto" -> fixed_costs (9 occurrences)
+Generated frequency rule: "longo toronto on" -> fixed_costs (9 occurrences)
+Generated frequency rule: "amzn" -> fixed_costs (4 occurrences)
+Generated frequency rule: "mktp" -> fixed_costs (4 occurrences)
+Generated frequency rule: "amzn mktp" -> fixed_costs (4 occurrences)
+Generated frequency rule: "mktp ca" -> fixed_costs (4 occurrences)
+Generated frequency rule: "amzn mktp ca" -> fixed_costs (4 occurrences)
+Generated frequency rule: "pre" -> short_term_savings (2 occurrences)
+Generated frequency rule: "two" -> fixed_costs (2 occurrences)
+Generated frequency rule: "boys" -> fixed_costs (2 occurrences)
+Generated frequency rule: "nanticoke" -> fixed_costs (2 occurrences)
+Generated frequency rule: "two boys" -> fixed_costs (2 occurrences)
+Generated frequency rule: "boys concessions" -> fixed_costs (2 occurrences)
+Generated frequency rule: "concessions nanticoke" -> fixed_costs (2 occurrences)
+Generated frequency rule: "nanticoke on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "two boys concessions" -> fixed_costs (2 occurrences)
+Generated frequency rule: "boys concessions nanticoke" -> fixed_costs (2 occurrences)
+Generated frequency rule: "concessions nanticoke on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "sq" -> fixed_costs (5 occurrences)
+Generated frequency rule: "world" -> fixed_costs (2 occurrences)
+Generated frequency rule: "finest" -> fixed_costs (2 occurrences)
+Generated frequency rule: "shows" -> fixed_costs (2 occurrences)
+Generated frequency rule: "st" -> fixed_costs (2 occurrences)
+Generated frequency rule: "williams" -> fixed_costs (2 occurrences)
+Generated frequency rule: "world finest" -> fixed_costs (2 occurrences)
+Generated frequency rule: "finest shows" -> fixed_costs (2 occurrences)
+Generated frequency rule: "shows st" -> fixed_costs (2 occurrences)
+Generated frequency rule: "st williams" -> fixed_costs (2 occurrences)
+Generated frequency rule: "williams on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "world finest shows" -> fixed_costs (2 occurrences)
+Generated frequency rule: "finest shows st" -> fixed_costs (2 occurrences)
+Generated frequency rule: "shows st williams" -> fixed_costs (2 occurrences)
+Generated frequency rule: "st williams on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "petro" -> fixed_costs (2 occurrences)
+Generated frequency rule: "don" -> fixed_costs (2 occurrences)
+Generated frequency rule: "mills" -> fixed_costs (2 occurrences)
+Generated frequency rule: "petro canada" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada don" -> fixed_costs (2 occurrences)
+Generated frequency rule: "don mills" -> fixed_costs (2 occurrences)
+Generated frequency rule: "mills on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "petro canada don" -> fixed_costs (2 occurrences)
+Generated frequency rule: "canada don mills" -> fixed_costs (2 occurrences)
+Generated frequency rule: "don mills on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "chudleighs" -> fixed_costs (4 occurrences)
+Generated frequency rule: "apple" -> fixed_costs (4 occurrences)
+Generated frequency rule: "farm" -> fixed_costs (4 occurrences)
+Generated frequency rule: "milton" -> fixed_costs (4 occurrences)
+Generated frequency rule: "chudleighs apple" -> fixed_costs (3 occurrences)
+Generated frequency rule: "apple farm" -> fixed_costs (3 occurrences)
+Generated frequency rule: "farm milton" -> fixed_costs (3 occurrences)
+Generated frequency rule: "milton on" -> fixed_costs (4 occurrences)
+Generated frequency rule: "chudleighs apple farm" -> fixed_costs (3 occurrences)
+Generated frequency rule: "apple farm milton" -> fixed_costs (3 occurrences)
+Generated frequency rule: "farm milton on" -> fixed_costs (3 occurrences)
+Generated frequency rule: "staples" -> fixed_costs (2 occurrences)
+Generated frequency rule: "mississauga" -> fixed_costs (3 occurrences)
+Generated frequency rule: "mississauga on" -> fixed_costs (3 occurrences)
+Generated frequency rule: "imparka" -> fixed_costs (2 occurrences)
+Generated frequency rule: "imparka willowdale" -> fixed_costs (2 occurrences)
+Generated frequency rule: "imparka willowdale on" -> fixed_costs (2 occurrences)
+Generated frequency rule: "hiroko" -> fixed_costs (2 occurrences)
+Generated frequency rule: "hirano" -> fixed_costs (2 occurrences)
+Generated frequency rule: "rmt" -> fixed_costs (2 occurrences)
+Generated frequency rule: "sq hiroko" -> fixed_costs (2 occurrences)
+Generated frequency rule: "hiroko hirano" -> fixed_costs (2 occurrences)
+Generated frequency rule: "hirano rmt" -> fixed_costs (2 occurrences)
+Generated frequency rule: "sq hiroko hirano" -> fixed_costs (2 occurrences)
+Generated frequency rule: "hiroko hirano rmt" -> fixed_costs (2 occurrences)
+Generated frequency rule: "com" -> fixed_costs (2 occurrences)
+Generated frequency rule: "springboard" -> short_term_savings (2 occurrences)
+Generated frequency rule: "clinic" -> short_term_savings (2 occurrences)
+Generated frequency rule: "vancouv" -> short_term_savings (2 occurrences)
+Generated frequency rule: "bc" -> short_term_savings (2 occurrences)
+Generated frequency rule: "springboard clinic" -> short_term_savings (2 occurrences)
+Generated frequency rule: "clinic north" -> short_term_savings (2 occurrences)
+Generated frequency rule: "north vancouv" -> short_term_savings (2 occurrences)
+Generated frequency rule: "vancouv bc" -> short_term_savings (2 occurrences)
+Generated frequency rule: "springboard clinic north" -> short_term_savings (2 occurrences)
+Generated frequency rule: "clinic north vancouv" -> short_term_savings (2 occurrences)
+Generated frequency rule: "north vancouv bc" -> short_term_savings (2 occurrences)
+Generated frequency rule: "sp" -> fixed_costs (2 occurrences)
+Generated frequency rule: "cherrypick" -> fixed_costs (2 occurrences)
+Generated frequency rule: "sp cherrypick" -> fixed_costs (2 occurrences)
+Generated frequency rule: "cherrypick mississauga" -> fixed_costs (2 occurrences)
+Generated frequency rule: "sp cherrypick mississauga" -> fixed_costs (2 occurrences)
+Generated frequency rule: "cherrypick mississauga on" -> fixed_costs (2 occurrences)
+Frequency rules generated: 193
+Generating MCC rules...
+MCC rules generated: 0
+Generating merchant ID rules...
+Merchant ID rules generated: 0
+Detecting recurring transactions...
+Recurring rules generated: 0
+Generating marketplace rules...
+Marketplace rules generated: 0
+Generated 27 auto rules
+Rule breakdown: {
+  frequencyRules: 193,
+  mccRules: 0,
+  merchantIdRules: 0,
+  recurringRules: 0,
+  marketplaceRules: 0,
+  exceptionRules: 0
+}
+Sample generated rules (with priorities): [
+  {
+    type: undefined,
+    pattern: 'north york on',
+    category: 'fixed_costs',
+    priority: 121,
+    actualMatches: 11,
+    coverage: '11%'
+  },
+  {
+    type: undefined,
+    pattern: 'yumba meals west',
+    category: 'fixed_costs',
+    priority: 115,
+    actualMatches: 5,
+    coverage: '5%'
+  },
+  {
+    type: undefined,
+    pattern: 'mecp rondeau ppark',
+    category: 'fixed_costs',
+    priority: 111,
+    actualMatches: 3,
+    coverage: '3%'
+  },
+  {
+    type: undefined,
+    pattern: 'chudleighs apple farm',
+    category: 'fixed_costs',
+    priority: 111,
+    actualMatches: 3,
+    coverage: '3%'
+  },
+  {
+    type: undefined,
+    pattern: 'toronto on',
+    category: 'fixed_costs',
+    priority: 110,
+    actualMatches: 30,
+    coverage: '30%'
+  }
+]
+✅ Generated 27 auto rules
+
+📈 Rule Statistics:
+   Total rules: 27
+   Frequency rules: 193
+   MCC rules: 0
+   Merchant ID rules: 0
+   Recurring rules: 0
+   Marketplace rules: 0
+   Exception rules: 0
+
+================================================================================
+GENERATED AUTO RULES
+================================================================================
+{
+  "metadata": {
+    "sourceFile": "/Users/asurty/PProject/ciat/transactions/shortened_visa_aventura.csv",
+    "totalTransactions": 100,
+    "generatedAt": "2025-10-30T16:28:42.796Z",
+    "config": {
+      "minConfidence": null,
+      "minFrequency": 2,
+      "maxRules": null
+    }
+  },
+  "statistics": {
+    "totalTransactions": 100,
+    "rulesGenerated": 27,
+    "frequencyRules": 193,
+    "mccRules": 0,
+    "merchantIdRules": 0,
+    "recurringRules": 0,
+    "marketplaceRules": 0,
+    "exceptionRules": 0
+  },
+  "rules": [
+    {
+      "id": "auto_1761841722765_g8dzm7in9",
+      "match_type": "contains",
+      "pattern": "north york on",
+      "category": "fixed_costs",
+      "support": 11,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 121,
+      "labels": [],
+      "actualMatches": 11,
+      "coverage": 0.11
+    },
+    {
+      "id": "auto_1761841722764_cxluo7jsp",
+      "match_type": "contains",
+      "pattern": "yumba meals west",
+      "category": "fixed_costs",
+      "support": 5,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 115,
+      "labels": [],
+      "actualMatches": 5,
+      "coverage": 0.05
+    },
+    {
+      "id": "auto_1761841722765_ua0ezovt4",
+      "match_type": "contains",
+      "pattern": "mecp rondeau ppark",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 111,
+      "labels": [],
+      "actualMatches": 3,
+      "coverage": 0.03
+    },
+    {
+      "id": "auto_1761841722766_thug4n5yy",
+      "match_type": "contains",
+      "pattern": "chudleighs apple farm",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 111,
+      "labels": [],
+      "actualMatches": 3,
+      "coverage": 0.03
+    },
+    {
+      "id": "auto_1761841722764_zrq7mezu1",
+      "match_type": "contains",
+      "pattern": "toronto on",
+      "category": "fixed_costs",
+      "support": 35,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 110,
+      "labels": [],
+      "actualMatches": 30,
+      "coverage": 0.3
+    },
+    {
+      "id": "auto_1761841722764_rsivsif94",
+      "match_type": "contains",
+      "pattern": "scholastic book fairs",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_x5qlfn7vf",
+      "match_type": "contains",
+      "pattern": "great lakes farms",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_nniijarld",
+      "match_type": "contains",
+      "pattern": "canadian tire willowdale",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_mgfadvc68",
+      "match_type": "contains",
+      "pattern": "two boys concessions",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_rhqmgxsgb",
+      "match_type": "contains",
+      "pattern": "finest shows st",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_lei7ucbbj",
+      "match_type": "contains",
+      "pattern": "petro canada don",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_afzsgzqb6",
+      "match_type": "contains",
+      "pattern": "imparka willowdale on",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_gmdj8mg4q",
+      "match_type": "contains",
+      "pattern": "springboard clinic north",
+      "category": "short_term_savings",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_w7utzn5lk",
+      "match_type": "contains",
+      "pattern": "sp cherrypick mississauga",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 109,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_61nzocsh3",
+      "match_type": "contains",
+      "pattern": "amzn mktp ca",
+      "category": "fixed_costs",
+      "support": 4,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 107,
+      "labels": [],
+      "actualMatches": 4,
+      "coverage": 0.04
+    },
+    {
+      "id": "auto_1761841722765_iz5n1ffqh",
+      "match_type": "contains",
+      "pattern": "co helppay ns",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 105,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722765_o8g84er04",
+      "match_type": "contains",
+      "pattern": "york on",
+      "category": "fixed_costs",
+      "support": 13,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 104,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_fr7r2g2eo",
+      "match_type": "contains",
+      "pattern": "mississauga on",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 104,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722765_vmecbdaqv",
+      "match_type": "contains",
+      "pattern": "canadian tire",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 102,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722765_vo8h9xcyf",
+      "match_type": "contains",
+      "pattern": "blenheim on",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 98,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722766_gv5n3qpl4",
+      "match_type": "contains",
+      "pattern": "milton on",
+      "category": "fixed_costs",
+      "support": 4,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 96,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722765_k4zmbdmsf",
+      "match_type": "contains",
+      "pattern": "concessions",
+      "category": "fixed_costs",
+      "support": 3,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 93,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722764_nwxw9mgi1",
+      "match_type": "contains",
+      "pattern": "amazon ca",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 92,
+      "labels": [],
+      "actualMatches": 2,
+      "coverage": 0.02
+    },
+    {
+      "id": "auto_1761841722763_leqa1yf45",
+      "match_type": "contains",
+      "pattern": "on",
+      "category": "fixed_costs",
+      "support": 92,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 89,
+      "labels": [],
+      "actualMatches": 10,
+      "coverage": 0.1
+    },
+    {
+      "id": "auto_1761841722764_22q8q6aae",
+      "match_type": "contains",
+      "pattern": "ca",
+      "category": "fixed_costs",
+      "support": 8,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 85,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722765_t2mgvm94p",
+      "match_type": "contains",
+      "pattern": "pre",
+      "category": "short_term_savings",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 75,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    },
+    {
+      "id": "auto_1761841722765_sp6a00j0z",
+      "match_type": "contains",
+      "pattern": "st",
+      "category": "fixed_costs",
+      "support": 2,
+      "applied": false,
+      "enabled": true,
+      "explain": "auto",
+      "source": "frequency_analysis",
+      "priority": 73,
+      "labels": [],
+      "actualMatches": 1,
+      "coverage": 0.01
+    }
+  ]
+}
+
+🔍 Sample Rules (Top 5 by Priority):
+
+1. CONTAINS Rule
+   Pattern: "north york on"
+   Category: fixed_costs
+   Frequency: 11
+   Priority: 121
+   Source: frequency_analysis
+   Explanation: auto
+
+2. CONTAINS Rule
+   Pattern: "yumba meals west"
+   Category: fixed_costs
+   Frequency: 5
+   Priority: 115
+   Source: frequency_analysis
+   Explanation: auto
+
+3. CONTAINS Rule
+   Pattern: "mecp rondeau ppark"
+   Category: fixed_costs
+   Frequency: 3
+   Priority: 111
+   Source: frequency_analysis
+   Explanation: auto
+
+4. CONTAINS Rule
+   Pattern: "chudleighs apple farm"
+   Category: fixed_costs
+   Frequency: 3
+   Priority: 111
+   Source: frequency_analysis
+   Explanation: auto
+
+5. CONTAINS Rule
+   Pattern: "toronto on"
+   Category: fixed_costs
+   Frequency: 35
+   Priority: 110
+   Source: frequency_analysis
+   Explanation: auto

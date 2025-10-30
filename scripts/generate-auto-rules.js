@@ -205,15 +205,23 @@ async function main() {
         
       case 'csv':
         const csvHeader = 'Type,Pattern,Category,Frequency,Priority,Source,Explanation';
-        const csvRows = result.rules.map(rule => [
-          rule.type,
-          \`"\${rule.pattern}"\`,
-          rule.category || 'null',
-          rule.frequency,
-          rule.priority,
-          rule.source,
-          \`"\${rule.explain}"\`
-        ].join(','));
+        const csvRows = result.rules.map(rule => {
+          const ruleType = rule.type || rule.match_type || '';
+          const ruleFreq = (rule.frequency ?? rule.support ?? 0);
+          const pattern = rule.pattern ?? '';
+          const explain = rule.explain ?? '';
+          const source = rule.source ?? '';
+          const priority = rule.priority ?? '';
+          return [
+            ruleType,
+            \`"\${pattern}"\`,
+            rule.category || 'null',
+            ruleFreq,
+            priority,
+            source,
+            \`"\${explain}"\`
+          ].join(',');
+        });
         output = [csvHeader, ...csvRows].join('\\n');
         break;
         
@@ -236,13 +244,15 @@ async function main() {
     // Show sample rules
     console.log('\\n🔍 Sample Rules (Top 5 by Priority):');
     result.rules.slice(0, 5).forEach((rule, index) => {
-      console.log(\`\\n\${index + 1}. \${rule.type.toUpperCase()} Rule\`);
-      console.log(\`   Pattern: "\${rule.pattern}"\`);
+      const ruleType = (rule.type || rule.match_type || 'rule').toString().toUpperCase();
+      const ruleFreq = (rule.frequency ?? rule.support ?? 0);
+      console.log(\`\\n\${index + 1}. \${ruleType} Rule\`);
+      console.log(\`   Pattern: "\${rule.pattern || ''}"\`);
       console.log(\`   Category: \${rule.category || 'null'}\`);
-      console.log(\`   Frequency: \${rule.frequency}\`);
-      console.log(\`   Priority: \${rule.priority}\`);
-      console.log(\`   Source: \${rule.source}\`);
-      console.log(\`   Explanation: \${rule.explain}\`);
+      console.log(\`   Frequency: \${ruleFreq}\`);
+      console.log(\`   Priority: \${rule.priority ?? ''}\`);
+      console.log(\`   Source: \${rule.source ?? ''}\`);
+      console.log(\`   Explanation: \${rule.explain ?? ''}\`);
     });
     
   } catch (error) {
@@ -253,9 +263,9 @@ async function main() {
 }
 
 function formatRulesAsTable(rules) {
-  const maxPatternLength = Math.max(20, ...rules.map(r => r.pattern.length));
+  const maxPatternLength = Math.max(20, ...rules.map(r => (r.pattern || '').length));
   const maxCategoryLength = Math.max(10, ...rules.map(r => (r.category || 'null').length));
-  const maxSourceLength = Math.max(10, ...rules.map(r => r.source.length));
+  const maxSourceLength = Math.max(10, ...rules.map(r => (r.source || '').length));
   
   const header = [
     'Type'.padEnd(8),
@@ -268,14 +278,15 @@ function formatRulesAsTable(rules) {
   
   const separator = '-'.repeat(header.length);
   
-  const rows = rules.map(rule => [
-    rule.type.padEnd(8),
-    rule.pattern.padEnd(maxPatternLength),
-    (rule.category || 'null').padEnd(maxCategoryLength),
-    rule.frequency.toString().padEnd(5),
-    rule.priority.toString().padEnd(8),
-    rule.source.padEnd(maxSourceLength)
-  ].join(' | '));
+  const rows = rules.map(rule => {
+    const ruleType = (rule.type || rule.match_type || '').toString().padEnd(8);
+    const pattern = (rule.pattern || '').toString().padEnd(maxPatternLength);
+    const category = (rule.category || 'null').toString().padEnd(maxCategoryLength);
+    const freq = ((rule.frequency ?? rule.support ?? 0).toString()).padEnd(5);
+    const priority = ((rule.priority ?? '').toString()).padEnd(8);
+    const source = ((rule.source || '').toString()).padEnd(maxSourceLength);
+    return [ruleType, pattern, category, freq, priority, source].join(' | ');
+  });
   
   return [header, separator, ...rows].join('\\n');
 }

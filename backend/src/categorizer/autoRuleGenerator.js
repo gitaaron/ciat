@@ -194,7 +194,7 @@ export function determineRuleCategory(pattern, ruleType, matchingTransactions = 
     const automotiveKeywords = [
       'gas', 'gasoline', 'fuel', 'petro', 'esso', 'shell', 'chevron',
       'parking', 'impark', 'park', 'garage', 'auto', 'car', 'vehicle',
-      'maintenance', 'repair', 'service', 'oil change', 'tire', 'brake',
+      'maintenance', 'repair', 'service', 'oil change', 'brake',
       'insurance', 'geico', 'state farm', 'progressive', 'allstate',
       'dmv', 'registration', 'license', 'inspection'
     ];
@@ -218,8 +218,8 @@ export function determineRuleCategory(pattern, ruleType, matchingTransactions = 
       }
     }
     
-    // Default for frequency-based rules is fixed_costs
-    return 'fixed_costs';
+    // Default for frequency-based rules is guilt_free
+    return 'guilt_free';
   }
   
   // 2. MCC-based rules use predefined mappings or default logic
@@ -617,7 +617,8 @@ export function generateMarketplaceRules(transactions) {
       'kindle': 'fixed_costs',
       'fresh': 'fixed_costs',
       'prime': 'fixed_costs',
-      'aws': 'fixed_costs'
+      'aws': 'fixed_costs',
+      'channels': 'short_term_savings'
     }
   };
   

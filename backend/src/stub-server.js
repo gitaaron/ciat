@@ -43,7 +43,7 @@ const stubAutoRules = {
       id: 'auto_stub_3',
       match_type: 'contains',
       pattern: 'amazon channels',
-      category: 'fixed_costs',
+      category: 'short_term_savings',
       support: 1,
       applied: false,
       enabled: true,
