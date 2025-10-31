@@ -6,6 +6,45 @@ import { normalizeMerchant, matchesRule } from '../../../common/src/ruleMatcher.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Normalize a rule object to ensure it has required properties
+ * Future-proofs rule objects by ensuring 'enabled' is always a boolean (defaults to true)
+ * @param {Object} rule - Rule object
+ * @returns {Object} - Normalized rule object with enabled: true if missing
+ */
+function normalizeRule(rule) {
+  if (!rule) return null;
+  
+  // Always ensure enabled is a boolean, defaulting to true if missing or invalid
+  let enabled = true; // Default to true
+  if (rule.enabled !== undefined && rule.enabled !== null) {
+    if (typeof rule.enabled === 'boolean') {
+      enabled = rule.enabled;
+    } else if (typeof rule.enabled === 'number') {
+      enabled = rule.enabled !== 0; // Convert 0/1 to boolean
+    } else if (typeof rule.enabled === 'string') {
+      // Handle string representations
+      enabled = rule.enabled.toLowerCase() === 'true' || rule.enabled === '1';
+    }
+    // For any other type, keep default (true)
+  }
+  
+  return {
+    ...rule,
+    enabled // Always explicitly set
+  };
+}
+
+/**
+ * Normalize an array of rules
+ * @param {Array} rules - Array of rule objects
+ * @returns {Array} - Array of normalized rule objects
+ */
+function normalizeRules(rules) {
+  if (!Array.isArray(rules)) return [];
+  return rules.map(normalizeRule).filter(r => r !== null);
+}
+
 // Configuration for auto rule generation
 const CONFIG = {
   MIN_FREQUENCY: 2, // Lowered for testing
@@ -501,7 +540,8 @@ export function generateMCCRules(analysis) {
         frequency: totalCount,
         explain: 'auto',
         source: 'mcc_analysis',
-        applied: false
+        applied: false,
+        enabled: true
       });
     }
   }
@@ -530,7 +570,8 @@ export function generateMerchantIdRules(analysis) {
         frequency: totalCount,
         explain: 'auto',
         source: 'merchant_id_analysis',
-        applied: false
+        applied: false,
+        enabled: true
       });
     }
   }
@@ -589,7 +630,8 @@ export function detectRecurringTransactions(transactions) {
           frequency: txs.length,
           category,
           explain: 'auto',
-          source: 'recurring_analysis'
+          source: 'recurring_analysis',
+          enabled: true
         });
       }
     }
@@ -639,7 +681,8 @@ export function generateMarketplaceRules(transactions) {
                 frequency: 1,
                 explain: 'auto',
                 source: 'marketplace_analysis',
-                applied: false
+                applied: false,
+                enabled: true
               });
             }
           }
@@ -685,7 +728,8 @@ export function generateExceptionRules(rules) {
             type: 'exception',
             priority: 2000, // Higher than normal rules
             explain: `Auto-generated exception: ${rule.explain} (conflict resolution)`,
-            source: 'exception_analysis'
+            source: 'exception_analysis',
+            enabled: true
           });
         }
       }
@@ -701,7 +745,7 @@ export function generateExceptionRules(rules) {
  * @returns {Array} - Rules with priority scores
  */
 export function calculateRulePriorities(rules) {
-  return rules.map(rule => {
+  return normalizeRules(rules).map(rule => {
     let priority = 0;
     
     // Base priority (all rules start with same base)
@@ -768,11 +812,11 @@ export function calculateRulePriorities(rules) {
       priority += 100; // User-created rules always win
     }
     
-    return {
+    return normalizeRule({
       ...rule,
       priority: Math.round(priority),
       support: rule.frequency || rule.support
-    };
+    });
   });
 }
 
@@ -804,12 +848,12 @@ export function resolveRuleConflicts(rules, transactions) {
       // Mark these transactions as covered
       matchingTransactions.forEach(tx => coveredTransactions.add(tx.hash));
       
-      // Update rule with actual coverage
-      const updatedRule = {
+      // Update rule with actual coverage and normalize it
+      const updatedRule = normalizeRule({
         ...rule,
         actualMatches: matchingTransactions.length,
         coverage: matchingTransactions.length / transactions.length
-      };
+      });
       
       resolvedRules.push(updatedRule);
     }
@@ -877,6 +921,9 @@ export function generateAutoRules(transactions) {
   
   // Resolve conflicts to ensure each transaction only matches one rule
   allRules = resolveRuleConflicts(allRules, transactions);
+  
+  // Normalize all rules to ensure they have required properties (future-proofing)
+  allRules = normalizeRules(allRules);
   
   console.log(`Generated ${allRules.length} auto rules`);
   console.log('Rule breakdown:', {

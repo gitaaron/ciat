@@ -126,18 +126,58 @@ export const Transactions = {
   }
 };
 
+/**
+ * Normalize a rule object to ensure it has required properties with correct types
+ * Future-proofs rule objects by ensuring 'enabled' is always a boolean (defaults to true)
+ * Also handles database INTEGER to boolean conversion
+ * @param {Object} rule - Rule object from database or elsewhere
+ * @returns {Object} - Normalized rule object
+ */
+function normalizeRule(rule) {
+  if (!rule) return null;
+  
+  // Convert database INTEGER (0/1) to boolean, defaulting to true if missing
+  let enabled = rule.enabled;
+  if (enabled === undefined || enabled === null) {
+    enabled = true; // Default to enabled
+  } else if (typeof enabled === 'number') {
+    enabled = enabled !== 0; // Convert 0/1 to boolean
+  } else if (typeof enabled !== 'boolean') {
+    enabled = true; // Fallback: treat any non-boolean as enabled
+  }
+  
+  return {
+    ...rule,
+    enabled
+  };
+}
+
+/**
+ * Normalize an array of rules
+ * @param {Array} rules - Array of rule objects
+ * @returns {Array} - Array of normalized rule objects
+ */
+function normalizeRules(rules) {
+  if (!Array.isArray(rules)) return [];
+  return rules.map(normalizeRule).filter(r => r !== null);
+}
+
 export const Rules = {
   all() {
-    return db.prepare('SELECT * FROM rules ORDER BY priority DESC, created_at DESC').all();
+    const rules = db.prepare('SELECT * FROM rules ORDER BY priority DESC, created_at DESC').all();
+    return normalizeRules(rules);
   },
   findById(id) {
-    return db.prepare('SELECT * FROM rules WHERE id = ?').get(id);
+    const rule = db.prepare('SELECT * FROM rules WHERE id = ?').get(id);
+    return normalizeRule(rule);
   },
   findByCategory(category) {
-    return db.prepare('SELECT * FROM rules WHERE category = ? ORDER BY priority DESC').all(category);
+    const rules = db.prepare('SELECT * FROM rules WHERE category = ? ORDER BY priority DESC').all(category);
+    return normalizeRules(rules);
   },
   findEnabled() {
-    return db.prepare('SELECT * FROM rules WHERE enabled = 1 ORDER BY priority DESC, created_at DESC').all();
+    const rules = db.prepare('SELECT * FROM rules WHERE enabled = 1 ORDER BY priority DESC, created_at DESC').all();
+    return normalizeRules(rules);
   },
   create(rule) {
     const stmt = db.prepare(`
