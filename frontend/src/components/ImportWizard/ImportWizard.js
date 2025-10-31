@@ -91,6 +91,38 @@ export default {
       // Use centralized rule matching logic
       const result = applyRulesWithDetails(allTransactions.value, allRules)
       
+      // Update previewsByAccount with fully categorized transactions
+      // Group categorized transactions by account_id
+      // Transactions from API should have account_id, but we'll use hash lookup as fallback
+      const hashToAccount = new Map()
+      for (const [accountId, transactions] of previewsByAccount.value) {
+        for (const transaction of transactions) {
+          if (transaction.hash) {
+            hashToAccount.set(transaction.hash, accountId)
+          }
+        }
+      }
+      
+      const transactionsByAccount = new Map()
+      for (const transaction of result.categorizedTransactions) {
+        // Use account_id from transaction (should be present from API), or fallback to hash lookup
+        const accountId = transaction.account_id || hashToAccount.get(transaction.hash)
+        if (accountId) {
+          if (!transactionsByAccount.has(accountId)) {
+            transactionsByAccount.set(accountId, [])
+          }
+          transactionsByAccount.get(accountId).push(transaction)
+        } else {
+          console.warn('Transaction missing account_id and not found in hash map:', transaction.hash)
+        }
+      }
+      
+      // Update previewsByAccount with fully categorized transactions
+      previewsByAccount.value.clear()
+      for (const [accountId, transactions] of transactionsByAccount) {
+        previewsByAccount.value.set(accountId, transactions)
+      }
+      
       // Separate matches by rule source
       existingRuleMatches.value.clear()
       newRuleMatches.value.clear()
@@ -829,6 +861,8 @@ export default {
     }
 
     function goToTransactionReview() {
+      // Ensure previewsByAccount is up to date (should already be from computeAllRuleMatches)
+      // No need to recompute - previewsByAccount is already maintained by computeAllRuleMatches
       // Navigate to Transaction Review step
       step.value = 4
     }

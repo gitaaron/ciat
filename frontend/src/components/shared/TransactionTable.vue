@@ -95,7 +95,7 @@
     </v-data-table>
 
     <!-- Grouped Table View -->
-    <div v-else-if="grouped && categoryGroups.length > 0" class="category-groups">
+    <div v-else-if="grouped && (categoryGroups.length > 0 || uncategorizedTransactions.length > 0)" class="category-groups">
       <!-- Categorized Transactions by Category -->
       <div
         v-for="category in categoryGroups"
