@@ -1,0 +1,18 @@
+{
+	"preview": [{
+		"date": "2025-10-08",
+		"name": "Amazon.ca*NF0NK0G50 866-216-1072, ON",
+		"description": "",
+		"amount": 16.94,
+		"inflow": 0,
+		"external_id": "4500********5394",
+		"account_id": 4,
+		"hash": "6feb1d35d1c40de8df45ed4a24b4ca93",
+		"ignore": false
+	}],
+	"format": "csv",
+	"formatDisplayName": "CSV (Comma/Tab Delimited)",
+	"totalTransactions": 3652,
+	"newTransactions": 3652,
+	"duplicatesSkipped": 0
+}

@@ -1,0 +1,38 @@
+{
+	"rules": [{
+		"id": "auto_1761924095803_4twyngzqr",
+		"match_type": "contains",
+		"pattern": "amazon",
+		"category": "guilt_free",
+		"support": 5,
+		"applied": false,
+		"enabled": true,
+		"explain": "auto",
+		"source": "frequency_analysis",
+		"priority": 79,
+		"labels": [],
+		"actualMatches": 213,
+		"coverage": 0.0002738225629791895,
+		"matchingTransactions": []
+	}],
+	"analysis": {
+		"tokenFrequency": {},
+		"merchantFrequency": {},
+		"storePatterns": {},
+		"mccMappings": {},
+		"merchantIdMappings": {}
+	},
+	"stats": {
+		"totalTransactions": 1,
+		"rulesGenerated": 1,
+		"frequencyRules": 1,
+		"mccRules": 0,
+		"merchantIdRules": 0,
+		"recurringRules": 0,
+		"marketplaceRules": 0,
+		"exceptionRules": 0,
+		"rulesWithMatches": 1,
+		"rulesFilteredOut": 0
+	},
+	"previews": []
+}

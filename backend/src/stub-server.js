@@ -1,96 +1,87 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Path to the rules JSON file
+const RULES_JSON_PATH = path.join(__dirname, '../fixtures/rules.json');
+
+// Path to the transactions JSON file
+const TRANSACTIONS_JSON_PATH = path.join(__dirname, '../fixtures/transactions.json');
+
+// Helper function to load stub auto rules from JSON file
+function loadStubAutoRules() {
+  try {
+    const rulesJson = fs.readFileSync(RULES_JSON_PATH, 'utf8');
+    return JSON.parse(rulesJson);
+  } catch (error) {
+    console.error('Error loading stub auto rules from JSON file:', error);
+    // Return empty structure as fallback
+    return {
+      rules: [],
+      analysis: {},
+      stats: {
+        totalTransactions: 0,
+        rulesGenerated: 0,
+        frequencyRules: 0,
+        mccRules: 0,
+        merchantIdRules: 0,
+        recurringRules: 0,
+        marketplaceRules: 0,
+        exceptionRules: 0,
+        rulesWithMatches: 0,
+        rulesFilteredOut: 0
+      },
+      previews: []
+    };
+  }
+}
+
+// Helper function to load stub transactions from JSON file
+function loadStubTransactions(account_id = 1) {
+  try {
+    const transactionsJson = fs.readFileSync(TRANSACTIONS_JSON_PATH, 'utf8');
+    const data = JSON.parse(transactionsJson);
+    
+    // Update account_id in all transactions to match the requested account_id
+    const updatedTransactions = (data.preview || []).map(tx => ({
+      ...tx,
+      account_id
+    }));
+    
+    return {
+      ...data,
+      preview: updatedTransactions,
+      totalTransactions: updatedTransactions.length,
+      newTransactions: updatedTransactions.length
+    };
+  } catch (error) {
+    console.error('Error loading stub transactions from JSON file:', error);
+    // Return empty structure as fallback
+    return {
+      preview: [],
+      format: 'csv',
+      formatDisplayName: 'CSV',
+      totalTransactions: 0,
+      newTransactions: 0,
+      duplicatesSkipped: 0
+    };
+  }
+}
+
+
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Stub data for testing
-const stubAutoRules = {
-  rules: [
-    {
-      id: 'auto_stub_1',
-      match_type: 'contains',
-      pattern: 'york square',
-      category: 'fixed_costs',
-      support: 2,
-      applied: false,
-      enabled: true,
-      explain: 'auto',
-      source: 'frequency_analysis',
-      priority: 500,
-      labels: [],
-      actualMatches: 2,
-      matchingTransactions: ['test1', 'test5']
-    },
-    {
-      id: 'auto_stub_2',
-      match_type: 'contains',
-      pattern: 'smoque bones',
-      category: 'guilt_free',
-      support: 1,
-      applied: false,
-      enabled: true,
-      explain: 'auto',
-      source: 'frequency_analysis',
-      priority: 500,
-      labels: [],
-      actualMatches: 1,
-      matchingTransactions: ['test2']
-    },
-    {
-      id: 'auto_stub_3',
-      match_type: 'contains',
-      pattern: 'amazon channels',
-      category: 'short_term_savings',
-      support: 1,
-      applied: false,
-      enabled: true,
-      explain: 'auto',
-      source: 'frequency_analysis',
-      priority: 500,
-      labels: [],
-      actualMatches: 1,
-      matchingTransactions: ['test4']
-    },
-    {
-      id: 'auto_stub_4',
-      match_type: 'contains',
-      pattern: 'jian hing',
-      category: 'fixed_costs',
-      support: 1,
-      applied: false,
-      enabled: true,
-      explain: 'auto',
-      source: 'frequency_analysis',
-      priority: 500,
-      labels: [],
-      actualMatches: 1,
-      matchingTransactions: ['test3']
-    }
-  ],
-  analysis: {
-    tokenFrequency: new Map(),
-    merchantFrequency: new Map(),
-    storePatterns: new Map(),
-    mccMappings: new Map(),
-    merchantIdMappings: new Map()
-  },
-  stats: {
-    totalTransactions: 5,
-    rulesGenerated: 4,
-    frequencyRules: 4,
-    mccRules: 0,
-    merchantIdRules: 0,
-    recurringRules: 0,
-    marketplaceRules: 0,
-    exceptionRules: 0,
-    rulesWithMatches: 4,
-    rulesFilteredOut: 0
-  },
-  previews: []
-};
+// Stub data for testing - load from JSON file
+const stubAutoRules = loadStubAutoRules();
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
@@ -134,52 +125,20 @@ app.post('/api/import/analyze', (req, res) => {
 
 app.post('/api/import/transactions', (req, res) => {
   console.log('Stub: Transaction import requested');
-  const mockTransactions = [
-    {
-      name: 'YORK SQUARE PARKING TORONTO',
-      amount: -15.00,
-      date: '2024-01-01',
-      hash: 'test1',
-      account_id: 1
-    },
-    {
-      name: 'SMOQUE BONES TORONTO',
-      amount: -25.00,
-      date: '2024-01-02',
-      hash: 'test2',
-      account_id: 1
-    },
-    {
-      name: 'JIAN HING SUPERMARKET NORTH',
-      amount: -45.00,
-      date: '2024-01-03',
-      hash: 'test3',
-      account_id: 1
-    },
-    {
-      name: 'AMAZON CHANNELS AMAZON CA',
-      amount: -8.99,
-      date: '2024-01-04',
-      hash: 'test4',
-      account_id: 1
-    },
-    {
-      name: 'YORK SQUARE PARKING TORONTO',
-      amount: -15.00,
-      date: '2024-01-08',
-      hash: 'test5',
-      account_id: 1
-    }
-  ];
   
-  res.json({
-    preview: mockTransactions,
-    format: 'csv',
-    formatDisplayName: 'CSV',
-    totalTransactions: 5,
-    newTransactions: 5,
-    duplicatesSkipped: 0
-  });
+  try {
+    const account_id = Number(req.body.account_id) || 1;
+    
+    // Load transactions from JSON file
+    const response = loadStubTransactions(account_id);
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error loading transactions:', error);
+    res.status(500).json({ 
+      error: `Failed to load transactions: ${error.message}` 
+    });
+  }
 });
 
 app.post('/api/import/commit', (req, res) => {

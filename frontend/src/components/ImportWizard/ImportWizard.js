@@ -143,47 +143,28 @@ export default {
       // Set up mock account assignment
       filesByAccount.value.set(1, files.value)
       
-      // Set up mock transactions
-      const mockTransactions = [
-        {
-          name: 'YORK SQUARE PARKING TORONTO',
-          amount: -15.00,
-          date: '2024-01-01',
-          hash: 'test1',
-          account_id: 1
-        },
-        {
-          name: 'SMOQUE BONES TORONTO',
-          amount: -25.00,
-          date: '2024-01-02',
-          hash: 'test2',
-          account_id: 1
-        },
-        {
-          name: 'JIAN HING SUPERMARKET NORTH',
-          amount: -45.00,
-          date: '2024-01-03',
-          hash: 'test3',
-          account_id: 1
-        },
-        {
-          name: 'AMAZON CHANNELS AMAZON CA',
-          amount: -8.99,
-          date: '2024-01-04',
-          hash: 'test4',
-          account_id: 1
-        },
-        {
-          name: 'YORK SQUARE PARKING TORONTO',
-          amount: -15.00,
-          date: '2024-01-08',
-          hash: 'test5',
-          account_id: 1
+      // Set up mock transactions from shared_visa_aventura.csv
+      // In debug mode, fetch transactions from the stub server which returns
+      // the actual transactions from shared_visa_aventura.csv
+      ;(async () => {
+        try {
+          // Create a mock FormData with test.csv to trigger the stub server
+          const formData = new FormData()
+          formData.append('file', new File(['test'], 'test.csv', { type: 'text/csv' }))
+          formData.append('account_id', '1')
+          
+          const response = await api.importTransactions(formData)
+          const mockTransactions = response.preview || []
+          
+          previewsByAccount.value.set(1, mockTransactions)
+          allTransactions.value = mockTransactions
+        } catch (error) {
+          console.error('Error loading debug transactions from stub server:', error)
+          // Fallback to empty array if API call fails
+          previewsByAccount.value.set(1, [])
+          allTransactions.value = []
         }
-      ]
-      
-      previewsByAccount.value.set(1, mockTransactions)
-      allTransactions.value = mockTransactions
+      })()
       
       // Set up mock auto rules
       autoRules.value = {

@@ -24,3 +24,4 @@ backend/data
 # Ignore transactions dir (my personal transactions)
 transactions
 
+backend/fixtures/personal
