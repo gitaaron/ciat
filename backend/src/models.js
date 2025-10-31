@@ -84,35 +84,19 @@ export const Transactions = {
       ORDER BY t.date DESC
     `).all();
     
-    const affected = [];
-    // Import the same normalization function used by the categorizer
-    const { normalizeMerchant } = await import('../../common/src/ruleMatcher.js');
-    const normalizedPattern = normalizeMerchant(pattern).normalized;
+    // Import the shared matching function used by the categorizer
+    const { matchesRule } = await import('../../common/src/ruleMatcher.js');
     
+    // Create a rule object for matching
+    const rule = {
+      pattern,
+      match_type,
+      category
+    };
+    
+    const affected = [];
     for (const tx of allTransactions) {
-      const merchant = normalizeMerchant(tx.name || '').normalized;
-      const description = normalizeMerchant(tx.description || '').normalized;
-      let matches = false;
-      
-      switch (match_type) {
-        case 'exact':
-          matches = merchant === normalizedPattern || description === normalizedPattern;
-          break;
-        case 'contains':
-          matches = merchant.includes(normalizedPattern) || description.includes(normalizedPattern);
-          break;
-        case 'regex':
-          try {
-            const regex = new RegExp(pattern, 'i');
-            matches = regex.test(merchant) || regex.test(description);
-          } catch (e) {
-            // Invalid regex
-            matches = false;
-          }
-          break;
-      }
-      
-      if (matches) {
+      if (matchesRule(rule, tx)) {
         affected.push({
           ...tx,
           currentCategory: tx.category,

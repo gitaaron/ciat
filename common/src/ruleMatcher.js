@@ -110,6 +110,15 @@ export function matchesRule(rule, transaction) {
       result = false;
   }
   
+  // For recurring_analysis rules, also check the amount matches
+  // This ensures rules created from specific merchant:amount combinations only match transactions with that exact amount
+  if (result && rule.source === 'recurring_analysis' && rule.amount !== undefined) {
+    const txAmount = Math.abs(Number(transaction.amount));
+    const ruleAmount = Math.abs(Number(rule.amount));
+    // Allow small floating point differences (0.01 tolerance)
+    result = Math.abs(txAmount - ruleAmount) < 0.01;
+  }
+  
   return result;
 }
 

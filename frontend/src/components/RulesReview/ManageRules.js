@@ -41,7 +41,10 @@ export default function ManageRulesJS(props, { emit }) {
         const transactions = props.autoRuleMatches.get(rule.id) || []
         return {
           ...rule,
-          transactions
+          transactions,
+          // Update actualMatches to match the priority-resolved transaction count
+          // This ensures consistency between the count and the displayed transactions
+          actualMatches: transactions.length
         }
       })
     

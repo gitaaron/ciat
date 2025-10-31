@@ -537,7 +537,7 @@ export function generateMCCRules(analysis) {
         type: 'mcc',
         pattern: mcc,
         category,
-        frequency: totalCount,
+        support: totalCount,
         explain: 'auto',
         source: 'mcc_analysis',
         applied: false,
@@ -567,7 +567,7 @@ export function generateMerchantIdRules(analysis) {
         match_type: 'exact',
         pattern: merchantId,
         category,
-        frequency: totalCount,
+        support: totalCount,
         explain: 'auto',
         source: 'merchant_id_analysis',
         applied: false,
@@ -627,7 +627,7 @@ export function detectRecurringTransactions(transactions) {
           pattern: merchant,
           merchant,
           amount: Number(amount),
-          frequency: txs.length,
+          support: txs.length,
           category,
           explain: 'auto',
           source: 'recurring_analysis',
@@ -678,7 +678,7 @@ export function generateMarketplaceRules(transactions) {
                 match_type: 'contains',
                 pattern: keyword,
                 category,
-                frequency: 1,
+                support: 1,
                 explain: 'auto',
                 source: 'marketplace_analysis',
                 applied: false,
@@ -769,8 +769,8 @@ export function calculateRulePriorities(rules) {
     }
     
     // Support bonus (more transactions = higher priority, but with diminishing returns)
-    const frequency = rule.frequency || rule.support || 0;
-    const supportBonus = Math.min(frequency * 2, 20);
+    const support = rule.support || 0;
+    const supportBonus = Math.min(support * 2, 20);
     priority += supportBonus;
     
     // Pattern length bonus (longer patterns get higher priority)
@@ -814,8 +814,7 @@ export function calculateRulePriorities(rules) {
     
     return normalizeRule({
       ...rule,
-      priority: Math.round(priority),
-      support: rule.frequency || rule.support
+      priority: Math.round(priority)
     });
   });
 }
@@ -837,7 +836,7 @@ export function resolveRuleConflicts(rules, transactions) {
     for (const tx of transactions) {
       if (coveredTransactions.has(tx.hash)) continue; // Already covered by higher priority rule
       
-      // Use the shared matchesRule function for consistency
+      // Use the shared matchesRule function (which handles recurring_analysis amount checks)
       if (matchesRule(rule, tx)) {
         matchingTransactions.push(tx);
       }
@@ -941,7 +940,7 @@ export function generateAutoRules(transactions) {
       pattern: r.pattern, 
       category: r.category, 
       priority: r.priority,
-      actualMatches: r.actualMatches || r.frequency,
+      actualMatches: r.actualMatches,
       coverage: r.coverage ? Math.round(r.coverage * 100) + '%' : 'N/A'
     })));
   }
@@ -981,29 +980,8 @@ export function previewRuleImpact(rules, transactions) {
       // Skip if already covered by higher priority rule
       if (coveredTransactions.has(tx.hash)) continue;
       
-      const { normalized } = normalizeMerchant(tx.name);
-      let matchesRule = false;
-      
-      switch (rule.type) {
-        case 'contains':
-          matchesRule = normalized.includes(rule.pattern.toLowerCase());
-          break;
-        case 'regex':
-          try {
-            matchesRule = new RegExp(rule.pattern, 'i').test(normalized);
-          } catch (e) {
-            matchesRule = false;
-          }
-          break;
-        case 'exact':
-          matchesRule = normalized === rule.pattern.toLowerCase();
-          break;
-        case 'mcc':
-          matchesRule = tx.mcc === rule.pattern;
-          break;
-      }
-      
-      if (matchesRule) {
+      // Use the shared matchesRule function (which handles recurring_analysis amount checks)
+      if (matchesRule(rule, tx)) {
         totalMatches++;
         coveredTransactions.add(tx.hash); // Mark as covered
         if (tx.category === rule.category) {

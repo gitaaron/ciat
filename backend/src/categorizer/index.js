@@ -12,14 +12,9 @@ function normalize(s='') {
 export function guessCategory(tx) {
   const rules = Rules.findEnabled();
 
-  const merchant = normalize(tx.name || '');
-  const description = normalize(tx.description || '');
-  const merchant_normalized = merchant;
-  const description_normalized = description;
-
-  // Check rules in priority order
+  // Check rules in priority order using shared matching logic
   for (const r of rules) {
-    if (matches(r, { merchant_normalized, description_normalized })) {
+    if (matchesRule(r, tx)) {
       return { 
         category: r.category, 
         labels: r.labels || [],
@@ -35,24 +30,6 @@ export function guessCategory(tx) {
   const ml = mlGuess(tx);
   if (ml) return { ...ml, labels: [], rule_type: 'ml' };
   return { category: null, labels: [], source: 'none', explain: 'No match', rule_type: 'none' };
-}
-
-function matches(rule, ctx) {
-  const p = rule.pattern || '';
-  // Normalize the pattern to match the same normalization used for transactions
-  const normalizedPattern = normalizeMerchant(p).normalized;
-  
-  switch (rule.match_type) {
-    case 'exact':
-      return ctx.merchant_normalized === normalizedPattern || ctx.description_normalized === normalizedPattern;
-    case 'contains':
-      return ctx.merchant_normalized.includes(normalizedPattern) || ctx.description_normalized.includes(normalizedPattern);
-    case 'regex':
-      try { return new RegExp(p, 'i').test(ctx.merchant_normalized) || new RegExp(p, 'i').test(ctx.description_normalized); }
-      catch { return false; }
-    default:
-      return false;
-  }
 }
 
 function mlGuess(tx) {
@@ -273,15 +250,19 @@ export async function generateAutoRules(transactions) {
   console.log('generateRules returned:', result.rules?.length || 0, 'rules');
   
   // Filter out rules that don't actually match any transactions
+  // Note: actualMatches from resolveRuleConflicts already reflects priority-resolved count
+  // We preserve it rather than recalculating, to ensure consistency with frontend display
   const filteredRules = [];
   for (const rule of result.rules) {
     // Test the rule against all transactions
     const matchingTransactions = transactions.filter(tx => matchesRule(rule, tx));
     if (matchingTransactions.length > 0) {
-      // Add the matching transaction count to the rule for reference
+      // Preserve actualMatches if it exists (from resolveRuleConflicts with priority resolution)
+      // Otherwise fall back to total matches (for rules that weren't in conflict resolution)
       const ruleWithMatches = {
         ...rule,
-        actualMatches: matchingTransactions.length,
+        // Keep the priority-resolved actualMatches if it exists, otherwise use total matches
+        actualMatches: rule.actualMatches !== undefined ? rule.actualMatches : matchingTransactions.length,
         matchingTransactions: matchingTransactions.map(tx => tx.hash) // Store hashes for reference
       };
       filteredRules.push(ruleWithMatches);

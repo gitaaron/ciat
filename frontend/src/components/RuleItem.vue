@@ -275,12 +275,8 @@ export default {
     },
 
     getTransactionCount() {
-      // For auto-generated rules, use the actual frequency from backend analysis
-      if (this.ruleType === 'auto-rule' && this.rule.frequency) {
-        return this.rule.frequency
-      }
-      // For existing rules, use the transaction list length
-      return this.rule.transactions?.length || 0
+      // Use actualMatches if available (most accurate), otherwise use transaction list length
+      return this.rule.actualMatches ?? this.rule.transactions?.length ?? 0
     },
 
     getTransactionHeaderText() {
