@@ -367,24 +367,17 @@ export function clusterMerchants(merchants) {
  * @returns {Object|null} - { brand, hasStoreNumber, pattern } or null
  */
 export function detectStoreNumberPattern(merchant) {
-  // Check raw merchant name FIRST before normalization removes store numbers
-  // Match brand name (one or more words) followed by optional # and store number
-  const storeMatch = merchant.match(/(\w+(?:\s+\w+)*)\s*(?:#?\d{2,5})/i);
+  const normalized = normalizeMerchant(merchant).normalized;
+  const storeMatch = normalized.match(/(\w+)\s*(?:#?\d{2,5})/);
   
   if (storeMatch) {
-    const rawBrand = storeMatch[1].trim();
-    // Normalize the brand name for consistency (remove punctuation, etc.)
-    const normalized = normalizeMerchant(rawBrand).normalized;
-    
-    // Escape special regex characters in the normalized brand for the pattern
-    const escapedBrand = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Replace spaces with \s+ to handle variable spacing
-    const patternBrand = escapedBrand.replace(/\s+/g, '\\s+');
+    const brand = storeMatch[1];
+    const hasStoreNumber = normalized.includes('#') || /\d{2,5}/.test(normalized);
     
     return {
-      brand: normalized,
-      hasStoreNumber: true,
-      pattern: `^${patternBrand}(?:\\s*#?\\d{2,5})?$`
+      brand,
+      hasStoreNumber,
+      pattern: hasStoreNumber ? `^${brand}(?:\\s*#?\\d{2,5})?$` : `^${brand}$`
     };
   }
   
