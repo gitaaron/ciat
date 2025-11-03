@@ -826,27 +826,32 @@ export function calculateRulePriorities(rules) {
  * @returns {Array} - Rules with conflict resolution applied
  */
 export function resolveRuleConflicts(rules, transactions) {
-  const resolvedRules = [];
-  const coveredTransactions = new Set();
+  // Create a map to track transactions matched to each rule
+  const ruleMatches = new Map();
   
-  for (const rule of rules) {
-    // Find transactions that would match this rule
-    const matchingTransactions = [];
-    
-    for (const tx of transactions) {
-      if (coveredTransactions.has(tx.hash)) continue; // Already covered by higher priority rule
-      
+  // Initialize map with all rules (sorted by priority, highest first)
+  rules.forEach(rule => {
+    ruleMatches.set(rule, []);
+  });
+  
+  // Iterate through each transaction and attach it to the first matching rule
+  for (const tx of transactions) {
+    // Find the first (highest priority) rule that matches this transaction
+    for (const rule of rules) {
       // Use the shared matchesRule function (which handles recurring_analysis amount checks)
       if (matchesRule(rule, tx)) {
-        matchingTransactions.push(tx);
+        // Attach transaction to this rule
+        ruleMatches.get(rule).push(tx);
+        break; // Transaction is matched, move to next transaction
       }
     }
-    
-    // Only keep rules that have at least one uncovered transaction
+  }
+  
+  // Filter out rules that have no transactions and build resolved rules array
+  const resolvedRules = [];
+  for (const [rule, matchingTransactions] of ruleMatches) {
+    // Only keep rules that have at least one transaction
     if (matchingTransactions.length > 0) {
-      // Mark these transactions as covered
-      matchingTransactions.forEach(tx => coveredTransactions.add(tx.hash));
-      
       // Update rule with actual coverage and normalize it
       const updatedRule = normalizeRule({
         ...rule,
