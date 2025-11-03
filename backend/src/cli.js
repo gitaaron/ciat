@@ -212,12 +212,12 @@ program
 // Clear command
 program
   .command('clear')
-  .description('Clear all data from the database (transactions and accounts)')
+  .description('Clear all data from the database (transactions, accounts, and rules)')
   .option('-f, --force', 'Skip confirmation prompt')
   .action(async (options) => {
     try {
       if (!options.force) {
-        console.log('⚠️  This will permanently delete ALL transactions and accounts from the database');
+        console.log('⚠️  This will permanently delete ALL transactions, accounts, and rules from the database');
         console.log('This action cannot be undone!');
         
         const confirmed = await askConfirmation('Are you sure you want to continue? (y/N): ');
