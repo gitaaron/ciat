@@ -71,12 +71,79 @@ export function normalizeMerchant(merchant) {
 }
 
 /**
+ * Optimized matching function that uses pre-normalized data
+ * Use this when you know both rule and transaction are already normalized
+ * @param {Object} rule - Rule object with _normalizedPattern, _regexPattern, _matchType
+ * @param {Object} transaction - Transaction object with _merchantNormalized, _descriptionNormalized
+ * @returns {boolean} - Whether the transaction matches the rule
+ */
+export function matchesRuleOptimized(rule, transaction) {
+  // Use pre-normalized values if available
+  const normalizedPattern = rule._normalizedPattern;
+  const merchantNormalized = transaction._merchantNormalized || '';
+  const descriptionNormalized = transaction._descriptionNormalized || '';
+  const matchType = rule._matchType || rule.match_type || rule.type || 'contains';
+  
+  let result = false;
+  switch (matchType) {
+    case 'exact':
+      // Use pre-normalized pattern and transaction text for exact matching
+      if (normalizedPattern !== undefined) {
+        result = merchantNormalized === normalizedPattern || descriptionNormalized === normalizedPattern;
+      }
+      break;
+    case 'contains':
+      // Use pre-normalized pattern and transaction text for contains matching
+      if (normalizedPattern !== undefined) {
+        result = merchantNormalized.includes(normalizedPattern) || descriptionNormalized.includes(normalizedPattern);
+      }
+      break;
+    case 'regex':
+      // Prefer pre-compiled regex for best performance
+      if (rule._regexPattern) {
+        result = rule._regexPattern.test(merchantNormalized) || rule._regexPattern.test(descriptionNormalized);
+      } else if (rule.pattern) {
+        // Fallback: compile regex on-the-fly if not pre-compiled (shouldn't happen in optimized path)
+        try {
+          const regex = new RegExp(rule.pattern, 'i');
+          result = regex.test(merchantNormalized) || regex.test(descriptionNormalized);
+        } catch (e) {
+          result = false;
+        }
+      }
+      break;
+    case 'mcc':
+      // MCC matching doesn't need normalization
+      result = transaction.mcc === rule.pattern;
+      break;
+    default:
+      result = false;
+  }
+  
+  // For recurring_analysis rules, also check the amount matches
+  if (result && rule.source === 'recurring_analysis' && rule.amount !== undefined) {
+    const txAmount = Math.abs(Number(transaction.amount));
+    const ruleAmount = Math.abs(Number(rule.amount));
+    result = Math.abs(txAmount - ruleAmount) < 0.01;
+  }
+  
+  return result;
+}
+
+/**
  * Check if a transaction matches a rule
  * @param {Object} rule - Rule object with pattern, match_type, etc.
  * @param {Object} transaction - Transaction object with name, description, etc.
  * @returns {boolean} - Whether the transaction matches the rule
  */
 export function matchesRule(rule, transaction) {
+  // If pre-normalized data is available, use optimized path
+  if (rule._normalizedPattern !== undefined && 
+      (transaction._merchantNormalized !== undefined || transaction._descriptionNormalized !== undefined)) {
+    return matchesRuleOptimized(rule, transaction);
+  }
+  
+  // Fallback to original implementation for backward compatibility
   const pattern = rule.pattern || '';
   const matchType = rule.match_type || rule.type || 'contains';
   
@@ -132,6 +199,13 @@ export function applyRulesToTransactions(transactions, rules) {
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   
+  // Pre-normalize transactions (ONCE) - major performance optimization
+  const normalizedTransactions = transactions.map(tx => ({
+    ...tx,
+    _merchantNormalized: normalizeMerchant(tx.name || '').normalized,
+    _descriptionNormalized: normalizeMerchant(tx.description || '').normalized
+  }));
+  
   // Sort rules by priority (highest first)
   const sortedRules = [...rules].sort((a, b) => {
     if (b.priority !== a.priority) return b.priority - a.priority;
@@ -141,16 +215,31 @@ export function applyRulesToTransactions(transactions, rules) {
     return bTime - aTime;
   });
   
-  // Process each transaction
-  for (const transaction of transactions) {
+  // Pre-normalize rules (ONCE) - major performance optimization
+  const normalizedRules = sortedRules.map(rule => ({
+    ...rule,
+    _normalizedPattern: normalizeMerchant(rule.pattern || '').normalized,
+    _regexPattern: rule.match_type === 'regex' ? (() => {
+      try {
+        return new RegExp(rule.pattern, 'i');
+      } catch (e) {
+        return null;
+      }
+    })() : null,
+    _matchType: rule.match_type || rule.type || 'contains'
+  }));
+  
+  // Process each transaction with pre-normalized data
+  for (const transaction of normalizedTransactions) {
     let matched = false;
     
     // Check each rule in priority order
-    for (const rule of sortedRules) {
+    for (const rule of normalizedRules) {
       if (!rule.enabled) continue;
       if (coveredTransactions.has(transaction.hash)) continue;
       
-      if (matchesRule(rule, transaction)) {
+      // Use optimized matching with pre-normalized data
+      if (matchesRuleOptimized(rule, transaction)) {
         categorizedTransactions.push({
           ...transaction,
           category: rule.category,
@@ -187,15 +276,24 @@ export function applyRulesToTransactions(transactions, rules) {
  * This is used for preview purposes
  * @param {Array} transactions - Array of transactions
  * @param {Array} rules - Array of rules (sorted by priority, highest first)
+ * @param {Object} options - Options including { skipSort: boolean }
  * @returns {Object} - Object with categorized transactions and rule matches
  */
-export function applyRulesWithDetails(transactions, rules) {
+export function applyRulesWithDetails(transactions, rules, options = {}) {
+  const { skipSort = false } = options;
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   const ruleMatches = new Map(); // Map of ruleId -> matching transactions
   
-  // Sort rules by priority (highest first)
-  const sortedRules = [...rules].sort((a, b) => {
+  // Pre-normalize transactions (ONCE) - major performance optimization
+  const normalizedTransactions = transactions.map(tx => ({
+    ...tx,
+    _merchantNormalized: normalizeMerchant(tx.name || '').normalized,
+    _descriptionNormalized: normalizeMerchant(tx.description || '').normalized
+  }));
+  
+  // Sort rules by priority (highest first) - skip if already sorted
+  const sortedRules = skipSort ? rules : [...rules].sort((a, b) => {
     if (b.priority !== a.priority) return b.priority - a.priority;
     // If same priority, most recent wins
     const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
@@ -203,21 +301,36 @@ export function applyRulesWithDetails(transactions, rules) {
     return bTime - aTime;
   });
   
+  // Pre-normalize rules (ONCE) - major performance optimization
+  const normalizedRules = sortedRules.map(rule => ({
+    ...rule,
+    _normalizedPattern: normalizeMerchant(rule.pattern || '').normalized,
+    _regexPattern: rule.match_type === 'regex' ? (() => {
+      try {
+        return new RegExp(rule.pattern, 'i');
+      } catch (e) {
+        return null;
+      }
+    })() : null,
+    _matchType: rule.match_type || rule.type || 'contains'
+  }));
+  
   // Initialize rule matches map
-  for (const rule of sortedRules) {
+  for (const rule of normalizedRules) {
     ruleMatches.set(rule.id, []);
   }
   
-  // Process each transaction
-  for (const transaction of transactions) {
+  // Process each transaction with pre-normalized data
+  for (const transaction of normalizedTransactions) {
     let matched = false;
     
     // Check each rule in priority order
-    for (const rule of sortedRules) {
+    for (const rule of normalizedRules) {
       if (!rule.enabled) continue;
       if (coveredTransactions.has(transaction.hash)) continue;
       
-      if (matchesRule(rule, transaction)) {
+      // Use optimized matching with pre-normalized data
+      if (matchesRuleOptimized(rule, transaction)) {
         const categorizedTransaction = {
           ...transaction,
           category: rule.category,
@@ -273,6 +386,13 @@ export function getTransactionsForRule(rule, transactions) {
  * @returns {Array} - Array of unmatched transactions
  */
 export function getUnmatchedTransactions(transactions, rules) {
+  // Pre-normalize transactions (ONCE) - major performance optimization
+  const normalizedTransactions = transactions.map(tx => ({
+    ...tx,
+    _merchantNormalized: normalizeMerchant(tx.name || '').normalized,
+    _descriptionNormalized: normalizeMerchant(tx.description || '').normalized
+  }));
+  
   const sortedRules = [...rules].sort((a, b) => {
     if (b.priority !== a.priority) return b.priority - a.priority;
     const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
@@ -280,21 +400,36 @@ export function getUnmatchedTransactions(transactions, rules) {
     return bTime - aTime;
   });
   
+  // Pre-normalize rules (ONCE) - major performance optimization
+  const normalizedRules = sortedRules.map(rule => ({
+    ...rule,
+    _normalizedPattern: normalizeMerchant(rule.pattern || '').normalized,
+    _regexPattern: rule.match_type === 'regex' ? (() => {
+      try {
+        return new RegExp(rule.pattern, 'i');
+      } catch (e) {
+        return null;
+      }
+    })() : null,
+    _matchType: rule.match_type || rule.type || 'contains'
+  }));
+  
   const coveredTransactions = new Set();
   
   // Mark transactions covered by rules
-  for (const rule of sortedRules) {
+  for (const rule of normalizedRules) {
     if (!rule.enabled) continue;
     
-    for (const transaction of transactions) {
+    for (const transaction of normalizedTransactions) {
       if (coveredTransactions.has(transaction.hash)) continue;
       
-      if (matchesRule(rule, transaction)) {
+      // Use optimized matching with pre-normalized data
+      if (matchesRuleOptimized(rule, transaction)) {
         coveredTransactions.add(transaction.hash);
       }
     }
   }
   
-  // Return transactions not covered by any rule
+  // Return original transactions (not normalized versions) that weren't covered
   return transactions.filter(tx => !coveredTransactions.has(tx.hash));
 }

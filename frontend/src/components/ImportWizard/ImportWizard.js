@@ -89,7 +89,8 @@ export default {
       console.log('computeAllRuleMatches: Combined and sorted rules', allRules.length)
 
       // Use centralized rule matching logic
-      const result = applyRulesWithDetails(allTransactions.value, allRules)
+      // Pass skipSort=true since rules are already sorted above
+      const result = applyRulesWithDetails(allTransactions.value, allRules, { skipSort: true })
       
       // Update previewsByAccount with fully categorized transactions
       // Group categorized transactions by account_id

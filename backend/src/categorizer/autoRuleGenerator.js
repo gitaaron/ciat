@@ -1,10 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { normalizeMerchant, matchesRule } from '../../../common/src/ruleMatcher.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { normalizeMerchant, matchesRule, matchesRuleOptimized } from '../../../common/src/ruleMatcher.js';
 
 /**
  * Normalize a rule object to ensure it has required properties
@@ -386,10 +380,12 @@ export function detectStoreNumberPattern(merchant) {
 
 /**
  * Analyze transaction frequency patterns (without category tracking)
- * @param {Array} transactions - Array of transactions with normalized merchant names
+ * @param {Array} transactions - Array of transactions (will be normalized if not already)
+ * @param {Object} options - Options including preNormalized flag
  * @returns {Object} - Analysis results
  */
-export function analyzeTransactionPatterns(transactions) {
+export function analyzeTransactionPatterns(transactions, options = {}) {
+  const { preNormalized = false } = options;
   const tokenFrequency = new Map();
   const merchantFrequency = new Map();
   const storePatterns = new Map();
@@ -398,7 +394,16 @@ export function analyzeTransactionPatterns(transactions) {
   
   // Process each transaction
   for (const tx of transactions) {
-    const { raw, normalized } = normalizeMerchant(tx.name);
+    // Use pre-normalized data if available, otherwise normalize
+    let raw, normalized;
+    if (preNormalized && tx._merchantNormalized !== undefined) {
+      raw = tx.name || '';
+      normalized = tx._merchantNormalized;
+    } else {
+      const normResult = normalizeMerchant(tx.name);
+      raw = normResult.raw;
+      normalized = normResult.normalized;
+    }
     const tokens = extractTokens(normalized);
     
     // Track merchant frequency
@@ -826,35 +831,88 @@ export function calculateRulePriorities(rules) {
  * @returns {Array} - Rules with conflict resolution applied
  */
 export function resolveRuleConflicts(rules, transactions) {
-  // Create a map to track transactions matched to each rule
-  const ruleMatches = new Map();
+  const resolvedRules = [];
+  const coveredTransactions = new Set();
   
-  // Initialize map with all rules (sorted by priority, highest first)
-  rules.forEach(rule => {
-    ruleMatches.set(rule, []);
+  // Pre-normalize all transactions once to avoid repeated normalization
+  // Check if transactions are already normalized (to avoid duplicate work)
+  const normalizedTransactions = transactions.map(tx => {
+    if (tx._merchantNormalized !== undefined && tx._descriptionNormalized !== undefined) {
+      // Already normalized, reuse
+      return tx;
+    }
+    // Not normalized yet, normalize now
+    const merchantNorm = normalizeMerchant(tx.name || '').normalized;
+    const descNorm = normalizeMerchant(tx.description || '').normalized;
+    return {
+      ...tx,
+      _merchantNormalized: merchantNorm,
+      _descriptionNormalized: descNorm
+    };
   });
   
-  // Iterate through each transaction and attach it to the first matching rule
-  for (const tx of transactions) {
-    // Find the first (highest priority) rule that matches this transaction
-    for (const rule of rules) {
-      // Use the shared matchesRule function (which handles recurring_analysis amount checks)
-      if (matchesRule(rule, tx)) {
-        // Attach transaction to this rule
-        ruleMatches.get(rule).push(tx);
-        break; // Transaction is matched, move to next transaction
+  // Pre-normalize and pre-compile patterns for all rules
+  const optimizedRules = rules.map(rule => {
+    const pattern = rule.pattern || '';
+    const matchType = rule.match_type || rule.type || 'contains';
+    const normalizedPattern = normalizeMerchant(pattern).normalized;
+    
+    let regexPattern = null;
+    if (matchType === 'regex') {
+      try {
+        regexPattern = new RegExp(pattern, 'i');
+      } catch (e) {
+        regexPattern = null;
       }
     }
-  }
+    
+    return {
+      ...rule,
+      _normalizedPattern: normalizedPattern,
+      _regexPattern: regexPattern,
+      _matchType: matchType
+    };
+  });
   
-  // Filter out rules that have no transactions and build resolved rules array
-  const resolvedRules = [];
-  for (const [rule, matchingTransactions] of ruleMatches) {
-    // Only keep rules that have at least one transaction
+  // Performance optimization: maintain array of uncovered transactions
+  // This reduces iterations from O(rules × all_transactions) to O(rules × uncovered_transactions)
+  let uncoveredTransactions = normalizedTransactions;
+  
+  for (const rule of optimizedRules) {
+    // Early exit if all transactions are covered
+    if (uncoveredTransactions.length === 0) {
+      break;
+    }
+    
+    // Find transactions that would match this rule
+    const matchingTransactions = [];
+    
+    // Only iterate through uncovered transactions (major performance improvement)
+    const newUncoveredTransactions = [];
+    for (const tx of uncoveredTransactions) {
+      // Use shared matching logic from common module (DRY principle)
+      // matchesRuleOptimized uses pre-normalized data (rule already has _normalizedPattern, _regexPattern, _matchType)
+      const matches = matchesRuleOptimized(rule, tx);
+      
+      if (matches) {
+        matchingTransactions.push(tx);
+        coveredTransactions.add(tx.hash);
+      } else {
+        // Keep transaction in uncovered list for next rule
+        newUncoveredTransactions.push(tx);
+      }
+    }
+    
+    // Update uncovered transactions list for next iteration
+    uncoveredTransactions = newUncoveredTransactions;
+    
+    // Only keep rules that have at least one uncovered transaction
     if (matchingTransactions.length > 0) {
       // Update rule with actual coverage and normalize it
+      // Remove internal optimization properties before returning
+      const { _normalizedPattern, _regexPattern, _matchType, ...ruleWithoutInternal } = rule;
       const updatedRule = normalizeRule({
-        ...rule,
+        ...ruleWithoutInternal,
         actualMatches: matchingTransactions.length,
         coverage: matchingTransactions.length / transactions.length
       });
@@ -880,8 +938,15 @@ export function generateAutoRules(transactions) {
   console.log(`Generating auto rules from ${transactions.length} transactions...`);
   console.log('Sample transactions:', transactions.slice(0, 3).map(t => ({ name: t.name, category: t.category })));
   
-  // Analyze transaction patterns
-  const analysis = analyzeTransactionPatterns(transactions);
+  // Pre-normalize all transactions once (reused by analyzeTransactionPatterns and resolveRuleConflicts)
+  const normalizedTransactions = transactions.map(tx => ({
+    ...tx,
+    _merchantNormalized: normalizeMerchant(tx.name || '').normalized,
+    _descriptionNormalized: normalizeMerchant(tx.description || '').normalized
+  }));
+  
+  // Analyze transaction patterns (reuse pre-normalized data)
+  const analysis = analyzeTransactionPatterns(normalizedTransactions, { preNormalized: true });
   
   // Generate different types of rules
   console.log('Generating frequency rules...');
@@ -924,7 +989,8 @@ export function generateAutoRules(transactions) {
   allRules.sort((a, b) => b.priority - a.priority);
   
   // Resolve conflicts to ensure each transaction only matches one rule
-  allRules = resolveRuleConflicts(allRules, transactions);
+  // Use pre-normalized transactions for better performance
+  allRules = resolveRuleConflicts(allRules, normalizedTransactions);
   
   // Normalize all rules to ensure they have required properties (future-proofing)
   allRules = normalizeRules(allRules);
@@ -938,6 +1004,17 @@ export function generateAutoRules(transactions) {
     marketplaceRules: marketplaceRules.length,
     exceptionRules: exceptionRules.length
   });
+  
+  const stats = {
+    totalTransactions: transactions.length,
+    rulesGenerated: allRules.length,
+    frequencyRules: frequencyRules.length,
+    mccRules: mccRules.length,
+    merchantIdRules: merchantIdRules.length,
+    recurringRules: recurringRules.length,
+    marketplaceRules: marketplaceRules.length,
+    exceptionRules: exceptionRules.length
+  };
   
   if (allRules.length > 0) {
     console.log('Sample generated rules (with priorities):', allRules.slice(0, 5).map(r => ({ 
@@ -953,16 +1030,7 @@ export function generateAutoRules(transactions) {
   return {
     rules: allRules,
     analysis,
-    stats: {
-      totalTransactions: transactions.length,
-      rulesGenerated: allRules.length,
-      frequencyRules: frequencyRules.length,
-      mccRules: mccRules.length,
-      merchantIdRules: merchantIdRules.length,
-      recurringRules: recurringRules.length,
-      marketplaceRules: marketplaceRules.length,
-      exceptionRules: exceptionRules.length
-    }
+    stats
   };
 }
 

@@ -75,7 +75,9 @@ export default {
   },
   // Auto rule generation APIs
   async generateAutoRules(transactions) {
-    const { data } = await axios.post(apiBase + '/rules/auto-generate', { transactions })
+    const { data } = await axios.post(apiBase + '/rules/auto-generate', { 
+      transactions
+    })
     return data
   },
   async applyAutoRules(rulesToApply, transactions) {

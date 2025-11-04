@@ -251,23 +251,16 @@ export async function generateAutoRules(transactions) {
   
   // Filter out rules that don't actually match any transactions
   // Note: actualMatches from resolveRuleConflicts already reflects priority-resolved count
-  // We preserve it rather than recalculating, to ensure consistency with frontend display
-  const filteredRules = [];
-  for (const rule of result.rules) {
-    // Test the rule against all transactions
-    const matchingTransactions = transactions.filter(tx => matchesRule(rule, tx));
-    if (matchingTransactions.length > 0) {
-      // Preserve actualMatches if it exists (from resolveRuleConflicts with priority resolution)
-      // Otherwise fall back to total matches (for rules that weren't in conflict resolution)
-      const ruleWithMatches = {
-        ...rule,
-        // Keep the priority-resolved actualMatches if it exists, otherwise use total matches
-        actualMatches: rule.actualMatches !== undefined ? rule.actualMatches : matchingTransactions.length,
-        matchingTransactions: matchingTransactions.map(tx => tx.hash) // Store hashes for reference
-      };
-      filteredRules.push(ruleWithMatches);
-    }
-  }
+  // We use that value instead of re-matching to avoid duplicate work
+  const filteredRules = result.rules.filter(rule => {
+    // actualMatches is already set by resolveRuleConflicts with priority resolution
+    // Use it directly instead of re-matching all transactions
+    return (rule.actualMatches !== undefined && rule.actualMatches > 0);
+  }).map(rule => ({
+    ...rule,
+    // Store matching transaction hashes if available (from resolveRuleConflicts)
+    matchingTransactions: rule.matchingTransactions || []
+  }));
   
   console.log(`Filtered auto rules: ${result.rules.length} generated, ${filteredRules.length} with matches`);
   

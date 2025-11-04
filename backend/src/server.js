@@ -2,6 +2,8 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import { Accounts, Transactions } from './models.js';
 import { txHash } from './utils/hash.js';
@@ -12,6 +14,9 @@ import { detectTransfers } from './utils/transferDetector.js';
 import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
