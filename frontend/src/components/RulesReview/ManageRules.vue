@@ -3,8 +3,8 @@
     <!-- New Rules Review -->
     <RulesReview
       title="✨ New Rules Created"
-      :subtitle="`${newRules.length} new rules that you created during this import process.`"
-      :rules="newRules"
+      :subtitle="`${newRulesWithTransactions.length} new rules that you created during this import process.`"
+      :rules="newRulesWithTransactions"
       rule-type="new-rule"
       rules-section-class="new-rules"
       :accounts="accounts"

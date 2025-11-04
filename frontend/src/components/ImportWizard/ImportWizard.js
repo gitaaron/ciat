@@ -54,23 +54,13 @@ export default {
      */
     function computeAllRuleMatches() {
       if (!allTransactions.value || allTransactions.value.length === 0) {
-        console.log('computeAllRuleMatches: No transactions to match')
         return
       }
 
-      console.log('computeAllRuleMatches: Computing matches for all rule types')
-      
       // Get all rules from different sources
       const existingRules = usedRules.value || []
       const newRulesList = newRules.value || []
       const autoRulesList = autoRules.value?.rules?.filter(r => !r.applied) || []
-      
-      console.log('computeAllRuleMatches: Rule counts', {
-        existing: existingRules.length,
-        new: newRulesList.length,
-        auto: autoRulesList.length,
-        totalTransactions: allTransactions.value.length
-      })
 
       // Combine all rules and sort by priority
       const allRules = [
@@ -86,11 +76,9 @@ export default {
         return bTime - aTime
       })
 
-      console.log('computeAllRuleMatches: Combined and sorted rules', allRules.length)
-
       // Use centralized rule matching logic
       // Pass skipSort=true since rules are already sorted above
-      const result = applyRulesWithDetails(allTransactions.value, allRules, { skipSort: true })
+      const result = applyRulesWithDetails(allTransactions.value, allRules, { skipSort: true });
       
       // Update previewsByAccount with fully categorized transactions
       // Group categorized transactions by account_id
@@ -125,32 +113,35 @@ export default {
       }
       
       // Separate matches by rule source
-      existingRuleMatches.value.clear()
-      newRuleMatches.value.clear()
-      autoRuleMatches.value.clear()
+      // Create new Maps to ensure Vue reactivity detects the changes
+      const newExistingMatches = new Map()
+      const newNewMatches = new Map()
+      const newAutoMatches = new Map()
       
       for (const [ruleId, matchingTransactions] of result.ruleMatches) {
         const rule = allRules.find(r => r.id === ruleId)
-        if (!rule) continue
+        if (!rule) {
+          console.warn('computeAllRuleMatches: Rule not found in allRules:', ruleId)
+          continue
+        }
         
         switch (rule.source) {
           case 'existing':
-            existingRuleMatches.value.set(ruleId, matchingTransactions)
+            newExistingMatches.set(ruleId, matchingTransactions)
             break
           case 'new':
-            newRuleMatches.value.set(ruleId, matchingTransactions)
+            newNewMatches.set(ruleId, matchingTransactions)
             break
           case 'auto':
-            autoRuleMatches.value.set(ruleId, matchingTransactions)
+            newAutoMatches.set(ruleId, matchingTransactions)
             break
         }
       }
       
-      console.log('computeAllRuleMatches: Match results', {
-        existingMatches: existingRuleMatches.value.size,
-        newMatches: newRuleMatches.value.size,
-        autoMatches: autoRuleMatches.value.size
-      })
+      // Replace the entire Map refs to ensure Vue detects the changes
+      existingRuleMatches.value = newExistingMatches
+      newRuleMatches.value = newNewMatches
+      autoRuleMatches.value = newAutoMatches
     }
 
     // Debug mode: override step if debugStep prop is provided
@@ -760,8 +751,6 @@ export default {
     }
 
     function addNewRule(rule) {
-      console.log('addNewRule: Received rule (temporary):', rule)
-      
       // Validate that the rule matches at least one transaction
       const testMatches = applyRulesWithDetails(allTransactions.value, [rule])
       const matchingTransactions = testMatches.ruleMatches.get(rule.id) || []
@@ -778,15 +767,14 @@ export default {
         isNew: true // Mark as new rule
       }
       
-      console.log('addNewRule: Adding rule to newRules array:', newRuleData)
       newRules.value.push(newRuleData)
       
       // Recompute all rule matches with proper priority handling
       computeAllRuleMatches()
       
       // Filter new rules to only keep those with matches
-      newRules.value = newRules.value.filter(rule => {
-        const matches = newRuleMatches.value.get(rule.id) || []
+      newRules.value = newRules.value.filter(r => {
+        const matches = newRuleMatches.value.get(r.id) || []
         return matches.length > 0
       })
     }

@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { getCategoryName } from '../../config/categories.js'
 import { createRuleUtils } from './ruleUtils.js'
 
@@ -13,8 +13,36 @@ export default function ManageRulesJS(props, { emit }) {
     deleteRule
   } = createRuleUtils()
 
-
   // Computed properties for each section
+  const newRules = computed(() => {
+    const rulesArray = props.newRules || []
+    const newRuleMatches = props.newRuleMatches
+    
+    if (rulesArray.length === 0) {
+      return []
+    }
+    
+    const result = rulesArray
+      .map(rule => {
+        const transactions = newRuleMatches?.get(rule.id) || []
+        return {
+          ...rule,
+          transactions: Array.isArray(transactions) ? transactions : [],
+          actualMatches: transactions.length
+        }
+      })
+      .sort((a, b) => {
+        if (a.priority !== b.priority) return b.priority - a.priority
+        return 0
+      })
+
+    // Create new object references to ensure Vue reactivity detects changes
+    return result.map(rule => ({
+      ...rule,
+      transactions: rule.transactions ? [...rule.transactions] : []
+    }))
+  })
+
   const existingRules = computed(() => {
     if (!props.usedRules) return []
     
@@ -62,7 +90,7 @@ export default function ManageRulesJS(props, { emit }) {
 
   const uniqueCategories = computed(() => {
     const categories = new Set()
-    props.newRules.forEach(rule => {
+    newRules.value.forEach(rule => {
       if (rule.category) {
         categories.add(rule.category)
       }
@@ -77,7 +105,7 @@ export default function ManageRulesJS(props, { emit }) {
       exact: 0
     }
     
-    props.newRules.forEach(rule => {
+    newRules.value.forEach(rule => {
       const matchType = rule.match_type || rule.type || 'contains'
       if (counts.hasOwnProperty(matchType)) {
         counts[matchType]++
@@ -106,6 +134,7 @@ export default function ManageRulesJS(props, { emit }) {
   return {
     
     // Computed properties
+    newRulesWithTransactions: newRules,
     existingRules,
     effectiveAutoRules,
     totalMatches,
