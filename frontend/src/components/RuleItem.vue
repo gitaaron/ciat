@@ -75,6 +75,17 @@
                 </option>
               </select>
             </div>
+            <div class="edit-row">
+              <label>Labels:</label>
+              <div class="label-selector-container">
+                <MultiLabelSelector
+                  v-model="editData.labels"
+                  label=""
+                  placeholder="e.g., Coffee, Travel, Work"
+                  hint=""
+                />
+              </div>
+            </div>
             <div class="edit-actions">
               <button 
                 class="btn btn-sm btn-primary" 
@@ -193,9 +204,13 @@
 
 <script>
 import { CATEGORY_SELECT_OPTIONS, getCategoryName } from '../config/categories.js'
+import MultiLabelSelector from './MultiLabelSelector.vue'
 
 export default {
   name: 'RuleItem',
+  components: {
+    MultiLabelSelector
+  },
   props: {
     rule: {
       type: Object,
