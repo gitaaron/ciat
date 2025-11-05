@@ -251,9 +251,17 @@ async function draw() {
     .text(d => d.label)
 }
 
-onMounted(async () => {
+async function refresh() {
   await loadTransactions()
   draw()
+}
+
+onMounted(async () => {
+  await refresh()
+})
+
+defineExpose({
+  refresh
 })
 </script>
 <template>

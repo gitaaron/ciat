@@ -14,6 +14,8 @@ const accounts = ref([])
 const selected = ref('reports')
 const hasTransactions = ref(false)
 const showNewCategoryWizard = ref(false)
+const transactionsTableRef = ref(null)
+const reportsRef = ref(null)
 
 // Debug mode - can be enabled via URL parameter ?debug=true
 const isDebugMode = ref(false)
@@ -41,14 +43,32 @@ async function checkTransactions() {
   }
 }
 
+
+async function handleAccountsUpdated() {
+  await loadAccounts()
+}
+
+async function handleRulesReapplied() {
+  // Reload transactions and reports when rules are reapplied
+  if (transactionsTableRef.value && transactionsTableRef.value.loadTransactions) {
+    await transactionsTableRef.value.loadTransactions()
+  }
+  if (reportsRef.value && reportsRef.value.refresh) {
+    await reportsRef.value.refresh()
+  }
+}
+
 async function handleImportComplete() {
   await checkTransactions()
   // Navigate to reports tab after import completion
   selected.value = 'reports'
-}
-
-async function handleAccountsUpdated() {
-  await loadAccounts()
+  // Reload transactions and reports after import
+  if (transactionsTableRef.value && transactionsTableRef.value.loadTransactions) {
+    await transactionsTableRef.value.loadTransactions()
+  }
+  if (reportsRef.value && reportsRef.value.refresh) {
+    await reportsRef.value.refresh()
+  }
 }
 
 // Initialize debug mode from URL parameters
@@ -164,15 +184,18 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="transactions">
-            <TransactionsTable :accounts="accounts" />
+            <TransactionsTable ref="transactionsTableRef" :accounts="accounts" />
           </v-window-item>
 
           <v-window-item value="reports">
-            <Reports @navigate-to-import="selected = 'import'" />
+            <Reports ref="reportsRef" @navigate-to-import="selected = 'import'" />
           </v-window-item>
 
           <v-window-item value="manage-rules">
-            <RuleManager @create-new="showNewCategoryWizard = true" />
+            <RuleManager 
+              @create-new="showNewCategoryWizard = true" 
+              @rules-reapplied="handleRulesReapplied"
+            />
             <NewCategoryWizard 
               v-if="showNewCategoryWizard" 
               @close="showNewCategoryWizard = false" 

@@ -2,16 +2,16 @@
   <div>
     <!-- Category Targets Section -->
     <div class="mb-6">
-      <CategoryTargets />
+      <CategoryTargets ref="categoryTargetsRef" />
     </div>
     
     <!-- Charts Section -->
     <v-row v-if="!loading && hasTransactions">
       <v-col cols="12" lg="6">
-        <PieChart />
+        <PieChart ref="pieChartRef" />
       </v-col>
       <v-col cols="12" lg="6">
-        <LineChart />
+        <LineChart ref="lineChartRef" />
       </v-col>
     </v-row>
     
@@ -48,6 +48,9 @@ import api from '../api.js'
 
 const loading = ref(true)
 const hasTransactions = ref(false)
+const pieChartRef = ref(null)
+const lineChartRef = ref(null)
+const categoryTargetsRef = ref(null)
 
 async function checkTransactions() {
   try {
@@ -62,8 +65,27 @@ async function checkTransactions() {
   }
 }
 
+async function refresh() {
+  await checkTransactions()
+  // Refresh child chart components if they exist
+  if (pieChartRef.value && pieChartRef.value.refresh) {
+    await pieChartRef.value.refresh()
+  }
+  if (lineChartRef.value && lineChartRef.value.refresh) {
+    await lineChartRef.value.refresh()
+  }
+  // Refresh CategoryTargets if it exists
+  if (categoryTargetsRef.value && categoryTargetsRef.value.loadTransactions) {
+    await categoryTargetsRef.value.loadTransactions()
+  }
+}
+
 onMounted(() => {
   checkTransactions()
+})
+
+defineExpose({
+  refresh
 })
 
 defineEmits(['navigate-to-import'])

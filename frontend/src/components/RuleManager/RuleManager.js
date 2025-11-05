@@ -9,7 +9,7 @@ export default {
   components: {
     MultiLabelSelector
   },
-  emits: ['create-new'],
+  emits: ['create-new', 'rules-reapplied'],
   setup(props, { emit }) {
     const rules = ref([])
     const loading = ref(false)
@@ -151,6 +151,8 @@ export default {
           ` out of ${result.total || 0} total.`
         )
         await loadRules()
+        // Emit event to notify parent that rules were reapplied
+        emit('rules-reapplied', result)
       } catch (err) {
         const errorMsg = err.response?.data?.error || 'Failed to reapply rules'
         error.value = errorMsg
