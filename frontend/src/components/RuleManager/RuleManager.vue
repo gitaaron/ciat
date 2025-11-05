@@ -38,57 +38,27 @@
             No rules created yet. Use the "New Category Rule" wizard to create your first rule.
           </v-alert>
           
-          <!-- Data table with simple configuration -->
-          <v-data-table
-            v-else
-            :headers="[
-              { title: 'Priority', key: 'priority' },
-              { title: 'Category', key: 'category' },
-              { title: 'Match Type', key: 'match_type' },
-              { title: 'Pattern', key: 'pattern' },
-              { title: 'Explanation', key: 'explain' },
-              { title: 'Status', key: 'enabled' },
-              { title: 'Actions', key: 'actions' }
-            ]"
-            :items="filteredRules"
-            class="elevation-1"
-          >
-            <template v-slot:item.enabled="{ item }">
-              <v-btn
-                @click="toggleRule(item)"
-                :color="item.enabled ? 'success' : 'error'"
-                size="small"
-                variant="outlined"
-              >
-                {{ item.enabled ? 'Enabled' : 'Disabled' }}
-              </v-btn>
-            </template>
-            
-            <template v-slot:item.actions="{ item }">
-              <div class="d-flex flex-column ga-2 py-4">
-                <v-btn 
-                  @click="editRule(item)" 
-                  color="primary" 
-                  size="small"
-                  variant="outlined"
-                  block
-                >
-                  <v-icon left>mdi-pencil</v-icon>
-                  Edit
-                </v-btn>
-                <v-btn 
-                  @click="deleteRule(item)" 
-                  color="error" 
-                  size="small"
-                  variant="outlined"
-                  block
-                >
-                  <v-icon left>mdi-delete</v-icon>
-                  Delete
-                </v-btn>
-              </div>
-            </template>
-          </v-data-table>
+          <!-- Rules List using RuleItem component -->
+          <div v-else class="rules-list">
+            <RuleItem
+              v-for="rule in filteredRules"
+              :key="rule.id"
+              :rule="rule"
+              rule-type="existing-rule"
+              :accounts="accounts"
+              :is-expanded="isExpanded(rule.id)"
+              :is-editing="isEditing(rule.id)"
+              :applying="false"
+              :is-saving="saving && editingRule?.id === rule.id"
+              :show-create-rule-button="true"
+              @edit="editRule"
+              @save-edit="handleSaveEdit"
+              @cancel-edit="handleCancelEdit"
+              @remove="deleteRule"
+              @toggle-expanded="toggleExpanded"
+              @create-rule="handleCreateRule"
+            />
+          </div>
         </v-card-text>
       </v-card>
       
@@ -237,7 +207,24 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Create Rule Dialog -->
+  <CreateRuleDialog
+    :show="showCreateRuleDialog"
+    :transaction="createRuleTransaction"
+    :initial-data="createRuleData"
+    :loading="createRuleLoading"
+    @save="handleCreateRuleSave"
+    @cancel="cancelCreateRule"
+  />
 </template>
 
 <script src="./RuleManager.js"></script>
 <style scoped src="./RuleManager.css"></style>
+<style scoped>
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+</style>
