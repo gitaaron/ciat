@@ -193,9 +193,9 @@ app.post('/api/rules/preview', async (req, res) => {
 
 // Create new rule with confirmation
 app.post('/api/rules', async (req, res) => {
-  const { category, match_type, pattern, explain, labels } = req.body;
+  const { category, match_type, pattern, explain, labels, priority } = req.body;
   try {
-    const newRule = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels });
+    const newRule = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels, priority });
     res.json(newRule);
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -243,9 +243,9 @@ app.post('/api/rules/auto-generate', async (req, res) => {
 app.put('/api/rules/:id', async (req, res) => {
   try {
     const ruleId = req.params.id;
-    const { category, match_type, pattern, explain, labels } = req.body;
+    const { category, match_type, pattern, explain, labels, priority } = req.body;
     
-    const result = await updateUserRule(ruleId, { category, match_type, pattern, explain, labels });
+    const result = await updateUserRule(ruleId, { category, match_type, pattern, explain, labels, priority });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ error: String(e) });

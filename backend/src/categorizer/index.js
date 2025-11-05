@@ -105,7 +105,8 @@ function mlGuess(tx) {
 }
 
 export async function addUserRule({ category, match_type, pattern, explain, labels, priority }) {
-  const rulePriority = priority || Rules.getNextPriority();
+  // Use priority if explicitly provided (even if 0), otherwise get next priority
+  const rulePriority = (priority !== undefined && priority !== null) ? priority : Rules.getNextPriority();
   const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const newRule = { 
     id: ruleId,
@@ -124,7 +125,7 @@ export async function addUserRule({ category, match_type, pattern, explain, labe
   return newRule;
 }
 
-export async function updateUserRule(ruleId, { category, match_type, pattern, explain, labels }) {
+export async function updateUserRule(ruleId, { category, match_type, pattern, explain, labels, priority }) {
   const existingRule = Rules.findById(ruleId);
   
   if (!existingRule) {
@@ -132,11 +133,14 @@ export async function updateUserRule(ruleId, { category, match_type, pattern, ex
   }
   
   // Update the rule
+  // Preserve priority if not provided, but allow updating it if explicitly provided
+  const updatedPriority = (priority !== undefined && priority !== null) ? priority : existingRule.priority;
   const updatedRule = {
     ...existingRule,
     category,
     match_type,
     pattern,
+    priority: updatedPriority,
     explain: explain || existingRule.explain,
     labels: labels !== undefined ? labels : existingRule.labels,
     updated_at: new Date().toISOString()
