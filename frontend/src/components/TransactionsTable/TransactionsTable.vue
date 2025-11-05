@@ -44,6 +44,7 @@
         :loading="loading"
         :show-category-edit="true"
         @category-change="trackTransactionChange"
+        @transaction-name-click="handleTransactionNameClick"
       />
     </v-card-text>
   </v-card>

@@ -14,6 +14,15 @@
         {{ formatDate(item.date) }}
       </template>
       
+      <template v-slot:item.name="{ item }">
+        <span 
+          :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+          @click="onTransactionNameClick(item)"
+        >
+          {{ item.name }}
+        </span>
+      </template>
+      
       <template v-slot:item.amount="{ item }">
         <span class="font-weight-medium" :class="item.amount >= 0 ? 'text-success' : 'text-error'">
           ${{ Math.abs(item.amount).toFixed(2) }}
@@ -127,6 +136,15 @@
                 >
                   <template v-slot:item.date="{ item }">
                     {{ formatDate(item.date) }}
+                  </template>
+                  
+                  <template v-slot:item.name="{ item }">
+                    <span 
+                      :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+                      @click="onTransactionNameClick(item)"
+                    >
+                      {{ item.name }}
+                    </span>
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
@@ -245,6 +263,15 @@
                 >
                   <template v-slot:item.date="{ item }">
                     {{ formatDate(item.date) }}
+                  </template>
+                  
+                  <template v-slot:item.name="{ item }">
+                    <span 
+                      :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+                      @click="onTransactionNameClick(item)"
+                    >
+                      {{ item.name }}
+                    </span>
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
@@ -368,7 +395,7 @@ export default {
       default: false
     }
   },
-  emits: ['toggle-category', 'save-item', 'row-click', 'category-change'],
+  emits: ['toggle-category', 'save-item', 'row-click', 'category-change', 'transaction-name-click'],
   setup(props, { emit }) {
     function formatDate(dateString) {
       if (!dateString) return 'Unknown'
@@ -411,6 +438,13 @@ export default {
       emit('row-click', item)
     }
 
+    function onTransactionNameClick(item) {
+      // Only emit if not manually overridden
+      if (item.manual_override !== 1 && item.manual_override !== true) {
+        emit('transaction-name-click', item)
+      }
+    }
+
     return {
       getCategoryDisplayName: getCategoryName,
       getCategoryIcon,
@@ -421,7 +455,8 @@ export default {
       toggleCategory,
       onSaveItem,
       onCategoryChange,
-      onRowClick
+      onRowClick,
+      onTransactionNameClick
     }
   }
 }
@@ -463,5 +498,15 @@ export default {
 
 .no-transactions {
   margin-top: 2rem;
+}
+
+.transaction-name-clickable {
+  cursor: pointer;
+  color: rgb(var(--v-theme-primary));
+  text-decoration: underline;
+}
+
+.transaction-name-clickable:hover {
+  color: rgb(var(--v-theme-primary-darken-1));
 }
 </style>

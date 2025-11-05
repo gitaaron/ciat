@@ -1,6 +1,6 @@
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import ImportWizard from './components/ImportWizard/ImportWizard.vue'
 import TransactionsTable from './components/TransactionsTable/TransactionsTable.vue'
 import Reports from './components/Reports/Reports.vue'
@@ -16,6 +16,8 @@ const hasTransactions = ref(false)
 const showNewCategoryWizard = ref(false)
 const transactionsTableRef = ref(null)
 const reportsRef = ref(null)
+const ruleManagerRef = ref(null)
+const ruleToEdit = ref(null)
 
 // Debug mode - can be enabled via URL parameter ?debug=true
 const isDebugMode = ref(false)
@@ -56,6 +58,21 @@ async function handleRulesReapplied() {
   if (reportsRef.value && reportsRef.value.refresh) {
     await reportsRef.value.refresh()
   }
+}
+
+async function handleOpenRule(rule) {
+  // Navigate to rules tab
+  selected.value = 'manage-rules'
+  // Set rule to edit
+  ruleToEdit.value = rule
+  // Wait for next tick to ensure RuleManager is rendered
+  await nextTick()
+  // Use a small delay to ensure the component is fully mounted
+  setTimeout(() => {
+    if (ruleManagerRef.value && typeof ruleManagerRef.value.editRule === 'function') {
+      ruleManagerRef.value.editRule(rule)
+    }
+  }, 150)
 }
 
 async function handleImportComplete() {
@@ -184,7 +201,11 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="transactions">
-            <TransactionsTable ref="transactionsTableRef" :accounts="accounts" />
+            <TransactionsTable 
+              ref="transactionsTableRef" 
+              :accounts="accounts"
+              @open-rule="handleOpenRule"
+            />
           </v-window-item>
 
           <v-window-item value="reports">
@@ -193,6 +214,7 @@ onMounted(async () => {
 
           <v-window-item value="manage-rules">
             <RuleManager 
+              ref="ruleManagerRef"
               @create-new="showNewCategoryWizard = true" 
               @rules-reapplied="handleRulesReapplied"
             />

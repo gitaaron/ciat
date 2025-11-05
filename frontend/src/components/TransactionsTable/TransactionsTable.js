@@ -2,6 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api.js'
 import { CATEGORY_OPTIONS, CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
 import { showError, showSuccess } from '../../utils/notifications.js'
+import { matchesRule } from '../../utils/ruleMatcher.js'
 import TransactionFilters from '../shared/TransactionFilters.vue'
 import TransactionStats from '../shared/TransactionStats.vue'
 import TransactionTable from '../shared/TransactionTable.vue'
@@ -19,7 +20,8 @@ export default {
       default: () => []
     }
   },
-  setup(props) {
+  emits: ['open-rule'],
+  setup(props, { emit }) {
     // Reactive properties for filters and data
     const q = ref('')
     const start = ref('')
@@ -182,6 +184,43 @@ export default {
       account.value = ''
     }
 
+    async function handleTransactionNameClick(transaction) {
+      // Skip if manually overridden
+      if (transaction.manual_override === 1 || transaction.manual_override === true) {
+        return
+      }
+
+      try {
+        // Load all rules
+        const rules = await api.getRules()
+        
+        // Sort rules by priority (highest first), then by most recent
+        const sortedRules = [...rules].sort((a, b) => {
+          if (b.priority !== a.priority) return b.priority - a.priority
+          const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+          const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+          return bTime - aTime
+        })
+
+        // Find the first matching enabled rule
+        for (const rule of sortedRules) {
+          if (!rule.enabled) continue
+          
+          if (matchesRule(rule, transaction)) {
+            // Found matching rule, emit event to open it
+            emit('open-rule', rule)
+            return
+          }
+        }
+
+        // No matching rule found
+        showError('No matching rule found for this transaction')
+      } catch (error) {
+        console.error('Error finding matching rule:', error)
+        showError('Error finding matching rule: ' + error.message)
+      }
+    }
+
     // Computed properties for category and account options
     const categoryFilterOptions = computed(() => CATEGORY_OPTIONS)
     const categorySelectOptions = computed(() => CATEGORY_SELECT_OPTIONS)
@@ -229,7 +268,8 @@ export default {
       getLabels,
       trackTransactionChange,
       saveAllChanges,
-      clearFilters
+      clearFilters,
+      handleTransactionNameClick
     }
   }
 }
