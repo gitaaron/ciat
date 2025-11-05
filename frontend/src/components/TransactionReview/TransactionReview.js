@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { CATEGORY_OPTIONS, getCategoryName, getCategoryIcon, getCategoryColor } from '../../config/categories.js'
+import { CATEGORY_OPTIONS, CATEGORY_SELECT_OPTIONS, getCategoryName, getCategoryIcon, getCategoryColor } from '../../config/categories.js'
 
 export default {
   name: 'TransactionReview',
@@ -17,7 +17,7 @@ export default {
       default: false
     }
   },
-  emits: ['back-to-rules', 'import-transactions', 'save-and-import'],
+  emits: ['back-to-rules', 'import-transactions', 'save-and-import', 'transaction-updated'],
   setup(props, { emit }) {
     // Search and filter state
     const searchQuery = ref('')
@@ -156,6 +156,9 @@ export default {
 
     const hasTransactions = computed(() => totalTransactions.value > 0)
 
+    // Track manual overrides (transactions that user has manually categorized)
+    const manualOverrides = ref(new Map()) // Map of transaction hash -> true
+
     // Methods
     function toggleCategory(categoryName) {
       if (categoryName === 'uncategorized') {
@@ -167,6 +170,34 @@ export default {
           expandedCategories.value.add(categoryName)
         }
       }
+    }
+
+    // Handle category change in transaction review
+    function handleCategoryChange(item) {
+      // Mark this transaction as manually overridden
+      if (item.hash) {
+        manualOverrides.value.set(item.hash, true)
+      }
+      
+      // Update the transaction in previewsByAccount
+      // Find and update the transaction in the previewsByAccount map
+      for (const [accountId, transactions] of props.previewsByAccount) {
+        const index = transactions.findIndex(tx => tx.hash === item.hash)
+        if (index !== -1) {
+          // Update the transaction with new category and mark as manual override
+          transactions[index] = {
+            ...transactions[index],
+            category: item.category,
+            category_source: 'manual',
+            category_explain: 'Manual override during import review',
+            manual_override: true
+          }
+          break
+        }
+      }
+      
+      // Emit event to notify parent component
+      emit('transaction-updated', { transaction: item })
     }
 
     function clearFilters() {
@@ -228,11 +259,14 @@ export default {
       // Methods
       toggleCategory,
       clearFilters,
+      handleCategoryChange,
       getCategoryDisplayName: getCategoryName,
       getCategoryIcon,
       getCategoryColor,
+      getCategorySelectOptions: () => CATEGORY_SELECT_OPTIONS,
       goBackToRules,
-      importTransactions
+      importTransactions,
+      manualOverrides
     }
   }
 }

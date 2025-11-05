@@ -5,7 +5,7 @@
       Transactions
     </v-card-title>
 
-    <v-card-text>
+    <v-card-text style="padding-bottom: 80px;">
       <!-- Filters -->
       <TransactionFilters
         v-model:search-query="q"
@@ -43,10 +43,36 @@
         :grouped="false"
         :loading="loading"
         :show-category-edit="true"
-        @save-item="overrideCategory"
+        @category-change="trackTransactionChange"
       />
     </v-card-text>
   </v-card>
+
+  <!-- Fixed Bottom App Bar -->
+  <v-bottom-navigation
+    fixed
+    color="primary"
+    height="64"
+    style="z-index: 1000;"
+  >
+    <v-spacer />
+    <div class="d-flex align-center ga-3 px-4">
+      <span v-if="hasUnsavedChanges" class="text-body-2">
+        {{ modifiedTransactionsCount }} change{{ modifiedTransactionsCount !== 1 ? 's' : '' }} pending
+      </span>
+      <v-btn
+        color="primary"
+        variant="elevated"
+        size="large"
+        :disabled="!hasUnsavedChanges || saving"
+        :loading="saving"
+        @click="saveAllChanges"
+      >
+        <v-icon left>mdi-content-save</v-icon>
+        {{ saving ? 'Saving...' : 'Save Changes' }}
+      </v-btn>
+    </div>
+  </v-bottom-navigation>
 </template>
 
 <script>

@@ -45,7 +45,9 @@
       :uncategorized-expanded="uncategorizedExpanded"
       :expanded-categories="expandedCategories"
       :show-uncategorized-warning="true"
+      :show-category-edit="true"
       @toggle-category="toggleCategory"
+      @save-item="handleCategoryChange"
     />
 
     <!-- Action Buttons -->

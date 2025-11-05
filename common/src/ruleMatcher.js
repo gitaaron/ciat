@@ -231,6 +231,21 @@ export function applyRulesToTransactions(transactions, rules) {
   
   // Process each transaction with pre-normalized data
   for (const transaction of normalizedTransactions) {
+    // Skip transactions with manual_override (user overrides should not be recategorized)
+    if (transaction.manual_override === 1 || transaction.manual_override === true) {
+      // Preserve the transaction as-is without applying rules
+      categorizedTransactions.push({
+        ...transaction,
+        // Keep existing category and source
+        category: transaction.category || null,
+        labels: transaction.labels || [],
+        category_source: transaction.category_source || 'manual',
+        category_explain: transaction.category_explain || 'Manual override',
+        rule_type: 'manual_override'
+      });
+      continue;
+    }
+    
     let matched = false;
     
     // Check each rule in priority order
@@ -322,6 +337,21 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
   
   // Process each transaction with pre-normalized data
   for (const transaction of normalizedTransactions) {
+    // Skip transactions with manual_override (user overrides should not be recategorized)
+    if (transaction.manual_override === 1 || transaction.manual_override === true) {
+      // Preserve the transaction as-is without applying rules
+      categorizedTransactions.push({
+        ...transaction,
+        // Keep existing category and source
+        category: transaction.category || null,
+        labels: transaction.labels || [],
+        category_source: transaction.category_source || 'manual',
+        category_explain: transaction.category_explain || 'Manual override',
+        rule_type: 'manual_override'
+      });
+      continue;
+    }
+    
     let matched = false;
     
     // Check each rule in priority order
@@ -376,7 +406,11 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
  * @returns {Array} - Array of matching transactions
  */
 export function getTransactionsForRule(rule, transactions) {
-  return transactions.filter(tx => matchesRule(rule, tx));
+  // Skip transactions with manual_override (user overrides should not be matched)
+  return transactions.filter(tx => {
+    if (tx.manual_override === 1 || tx.manual_override === true) return false;
+    return matchesRule(rule, tx);
+  });
 }
 
 /**
@@ -421,6 +455,8 @@ export function getUnmatchedTransactions(transactions, rules) {
     if (!rule.enabled) continue;
     
     for (const transaction of normalizedTransactions) {
+      // Skip transactions with manual_override
+      if (transaction.manual_override === 1 || transaction.manual_override === true) continue;
       if (coveredTransactions.has(transaction.hash)) continue;
       
       // Use optimized matching with pre-normalized data

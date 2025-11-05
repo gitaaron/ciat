@@ -76,11 +76,13 @@ export const Transactions = {
   },
   async previewRuleImpact({ category, match_type, pattern }) {
     // Get all transactions that would be affected by this rule
+    // Skip transactions with manual_override=1 (user overrides should not be affected)
     // Use LEFT JOIN to handle cases where there might be no accounts
     const allTransactions = db.prepare(`
       SELECT t.*, COALESCE(a.name, 'Unknown Account') as account_name 
       FROM transactions t 
       LEFT JOIN accounts a ON a.id=t.account_id 
+      WHERE t.manual_override = 0
       ORDER BY t.date DESC
     `).all();
     

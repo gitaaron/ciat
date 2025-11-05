@@ -136,6 +136,46 @@ app.post('/api/transactions/:id/category', async (req, res) => {
   }
 });
 
+// Update transaction (general update endpoint)
+app.put('/api/transactions/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const { category, category_explain, labels } = req.body;
+  
+  // Validate transaction ID
+  if (!id || isNaN(id)) {
+    return res.status(400).json({ error: 'Invalid transaction ID' });
+  }
+  
+  try {
+    // Check if transaction exists
+    const existing = db.prepare('SELECT id FROM transactions WHERE id = ?').get(id);
+    if (!existing) {
+      return res.status(404).json({ error: `Transaction with ID ${id} not found` });
+    }
+    
+    // When updating category from transactions table, mark as manual override
+    if (category !== undefined) {
+      const result = Transactions.updateCategory(
+        id, 
+        category, 
+        category_explain || 'Manual override', 
+        'manual', 
+        true,  // manual_override = true
+        labels
+      );
+      
+      // Check if update actually affected any rows (shouldn't happen if we checked above, but double-check)
+      if (result.changes === 0) {
+        return res.status(404).json({ error: `Transaction with ID ${id} not found or could not be updated` });
+      }
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Error updating transaction:', e);
+    res.status(400).json({ error: String(e) });
+  }
+});
+
 // Preview rule impact - show which transactions would be affected
 app.post('/api/rules/preview', async (req, res) => {
   const { category, match_type, pattern, explain } = req.body;

@@ -1,7 +1,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api.js'
 import { CATEGORY_OPTIONS, CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
-import { showError } from '../../utils/notifications.js'
+import { showError, showSuccess } from '../../utils/notifications.js'
 import TransactionFilters from '../shared/TransactionFilters.vue'
 import TransactionStats from '../shared/TransactionStats.vue'
 import TransactionTable from '../shared/TransactionTable.vue'
@@ -29,6 +29,11 @@ export default {
     const account = ref('')
     const rows = ref([])
     const loading = ref(false)
+    const saving = ref(false)
+    // Track original transaction states to detect changes
+    const originalTransactions = ref(new Map()) // Map<id, originalTransaction>
+    // Track modified transactions
+    const modifiedTransactions = ref(new Map()) // Map<id, modifiedTransaction>
 
     // Table headers
     const tableHeaders = [
@@ -40,8 +45,7 @@ export default {
       { title: 'Type', key: 'inflow', sortable: true },
       { title: 'Category', key: 'category', sortable: false },
       { title: 'Labels', key: 'labels', sortable: false },
-      { title: 'Explain', key: 'category_explain', sortable: false },
-      { title: 'Actions', key: 'actions', sortable: false }
+      { title: 'Explain', key: 'category_explain', sortable: false }
     ]
 
     // Load transactions on component mount
@@ -67,6 +71,12 @@ export default {
 
         const transactions = await api.listTransactions(params)
         rows.value = transactions
+        // Store original states for change detection
+        originalTransactions.value.clear()
+        modifiedTransactions.value.clear()
+        transactions.forEach(tx => {
+          originalTransactions.value.set(tx.id, { ...tx })
+        })
       } catch (error) {
         console.error('Error loading transactions:', error)
         rows.value = []
@@ -87,18 +97,81 @@ export default {
       return Array.isArray(item.labels) ? item.labels : []
     }
 
-    async function overrideCategory(item) {
-      try {
-        await api.updateTransaction(item.id, {
-          category: item.category
-        })
-        // Reload transactions to reflect changes
-        await loadTransactions()
-      } catch (error) {
-        console.error('Error updating transaction category:', error)
-        showError('Error updating transaction category: ' + error.message)
+    function trackTransactionChange(item) {
+      // Only track transactions with valid IDs
+      if (!item.id) {
+        console.warn('Cannot track change for transaction without ID:', item)
+        return
+      }
+      
+      const original = originalTransactions.value.get(item.id)
+      if (!original) {
+        console.warn('Original transaction not found for ID:', item.id)
+        return
+      }
+      
+      // Check if category changed
+      const categoryChanged = original.category !== item.category
+      
+      if (categoryChanged) {
+        // Store the modified transaction
+        modifiedTransactions.value.set(item.id, { ...item })
+      } else {
+        // If reverted to original, remove from modified
+        modifiedTransactions.value.delete(item.id)
       }
     }
+
+    async function saveAllChanges() {
+      if (modifiedTransactions.value.size === 0) return
+      
+      saving.value = true
+      try {
+        // Save all modified transactions
+        const updates = Array.from(modifiedTransactions.value.values())
+        const results = await Promise.allSettled(
+          updates.map(tx => {
+            if (!tx.id) {
+              console.error('Transaction missing ID:', tx)
+              return Promise.reject(new Error(`Transaction missing ID: ${tx.name || 'Unknown'}`))
+            }
+            return api.updateTransaction(tx.id, {
+              category: tx.category
+            })
+          })
+        )
+        
+        // Count successes and failures
+        const succeeded = results.filter(r => r.status === 'fulfilled').length
+        const failed = results.filter(r => r.status === 'rejected')
+        
+        if (failed.length > 0) {
+          console.error('Some transactions failed to save:', failed)
+          const errorMessages = failed.map((r, i) => {
+            const tx = updates[i]
+            return `${tx.name || 'Unknown'} (ID: ${tx.id}): ${r.reason?.message || 'Unknown error'}`
+          })
+          showError(`Failed to save ${failed.length} transaction${failed.length !== 1 ? 's' : ''}:\n${errorMessages.join('\n')}`)
+        }
+        
+        // Clear modified transactions and reload
+        modifiedTransactions.value.clear()
+        await loadTransactions()
+        
+        if (succeeded > 0) {
+          showSuccess(`Successfully saved ${succeeded} transaction${succeeded !== 1 ? 's' : ''}`)
+        }
+      } catch (error) {
+        console.error('Error saving transactions:', error)
+        showError('Error saving transactions: ' + error.message)
+      } finally {
+        saving.value = false
+      }
+    }
+
+    // Computed property to check if there are unsaved changes
+    const hasUnsavedChanges = computed(() => modifiedTransactions.value.size > 0)
+    const modifiedTransactionsCount = computed(() => modifiedTransactions.value.size)
 
     function clearFilters() {
       q.value = ''
@@ -139,6 +212,9 @@ export default {
       account,
       rows,
       loading,
+      saving,
+      hasUnsavedChanges,
+      modifiedTransactionsCount,
       // Computed properties
       categoryFilterOptions,
       categorySelectOptions,
@@ -151,7 +227,8 @@ export default {
       // Methods
       loadTransactions,
       getLabels,
-      overrideCategory,
+      trackTransactionChange,
+      saveAllChanges,
       clearFilters
     }
   }

@@ -31,34 +31,43 @@
       </template>
       
       <template v-slot:item.category="{ item }">
-        <v-select
-          v-if="showCategoryEdit"
-          v-model="item.category"
-          :items="categorySelectOptions"
-          item-title="title"
-          item-value="value"
-          variant="outlined"
-          density="compact"
-          hide-details
-          style="min-width: 150px;"
-        />
-        <div v-else>
-          <v-chip
-            v-if="item.category"
-            :color="getCategoryColor(item.category)"
-            size="small"
-            variant="tonal"
-          >
-            {{ getCategoryDisplayName(item.category) }}
-          </v-chip>
-          <v-chip
-            v-else
-            color="grey"
-            size="small"
+        <div class="d-flex align-center ga-2">
+          <v-select
+            v-if="showCategoryEdit"
+            v-model="item.category"
+            :items="categorySelectOptions"
+            item-title="title"
+            item-value="value"
             variant="outlined"
-          >
-            No Category
-          </v-chip>
+            density="compact"
+            hide-details
+            style="min-width: 150px;"
+            @update:model-value="onCategoryChange(item)"
+          />
+          <div v-else class="d-flex align-center ga-1">
+            <v-chip
+              v-if="item.category"
+              :color="getCategoryColor(item.category)"
+              size="small"
+              variant="tonal"
+            >
+              {{ getCategoryDisplayName(item.category) }}
+            </v-chip>
+            <v-chip
+              v-else
+              color="grey"
+              size="small"
+              variant="outlined"
+            >
+              No Category
+            </v-chip>
+            <v-tooltip v-if="item.manual_override === 1 || item.manual_override === true" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" color="primary" size="small">mdi-lock</v-icon>
+              </template>
+              <span>Category manually overridden - will not be recategorized by rules</span>
+            </v-tooltip>
+          </div>
         </div>
       </template>
       
@@ -81,17 +90,6 @@
         <span class="text-caption">{{ item.category_explain }}</span>
       </template>
       
-      <template v-slot:item.actions="{ item }">
-        <v-btn
-          @click="onSaveItem(item)"
-          color="primary"
-          variant="outlined"
-          size="small"
-        >
-          <v-icon left>mdi-content-save</v-icon>
-          Save
-        </v-btn>
-      </template>
     </v-data-table>
 
     <!-- Grouped Table View -->
@@ -148,13 +146,44 @@
                   </template>
                   
                   <template v-slot:item.category="{ item }">
-                    <v-chip
-                      :color="getCategoryColor(item.category)"
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ getCategoryDisplayName(item.category) }}
-                    </v-chip>
+                    <div class="d-flex align-center ga-2">
+                      <v-select
+                        v-if="showCategoryEdit"
+                        v-model="item.category"
+                        :items="categorySelectOptions"
+                        item-title="title"
+                        item-value="value"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        style="min-width: 150px;"
+                        @update:model-value="onCategoryChange(item)"
+                      />
+                      <div v-else class="d-flex align-center ga-1">
+                        <v-chip
+                          v-if="item.category"
+                          :color="getCategoryColor(item.category)"
+                          size="small"
+                          variant="tonal"
+                        >
+                          {{ getCategoryDisplayName(item.category) }}
+                        </v-chip>
+                        <v-chip
+                          v-else
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                        >
+                          No Category
+                        </v-chip>
+                        <v-tooltip v-if="item.manual_override === 1 || item.manual_override === true" location="top">
+                          <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" color="primary" size="small">mdi-lock</v-icon>
+                          </template>
+                          <span>Category manually overridden - will not be recategorized by rules</span>
+                        </v-tooltip>
+                      </div>
+                    </div>
                   </template>
                   
                   <template v-slot:item.labels="{ item }">
@@ -235,13 +264,29 @@
                   </template>
                   
                   <template v-slot:item.category="{ item }">
-                    <v-chip
-                      color="grey"
-                      size="small"
-                      variant="outlined"
-                    >
-                      No Category
-                    </v-chip>
+                    <div class="d-flex align-center ga-2">
+                      <v-select
+                        v-if="showCategoryEdit"
+                        v-model="item.category"
+                        :items="categorySelectOptions"
+                        item-title="title"
+                        item-value="value"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        style="min-width: 150px;"
+                        @update:model-value="onCategoryChange(item)"
+                      />
+                      <div v-else class="d-flex align-center ga-1">
+                        <v-chip
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                        >
+                          No Category
+                        </v-chip>
+                      </div>
+                    </div>
                   </template>
                   
                   <template v-slot:item.labels="{ item }">
@@ -323,7 +368,7 @@ export default {
       default: false
     }
   },
-  emits: ['toggle-category', 'save-item', 'row-click'],
+  emits: ['toggle-category', 'save-item', 'row-click', 'category-change'],
   setup(props, { emit }) {
     function formatDate(dateString) {
       if (!dateString) return 'Unknown'
@@ -356,6 +401,12 @@ export default {
       emit('save-item', item)
     }
 
+    function onCategoryChange(item) {
+      emit('category-change', item)
+      // Also emit save-item for backward compatibility
+      emit('save-item', item)
+    }
+
     function onRowClick(event, item) {
       emit('row-click', item)
     }
@@ -369,6 +420,7 @@ export default {
       getLabels,
       toggleCategory,
       onSaveItem,
+      onCategoryChange,
       onRowClick
     }
   }
