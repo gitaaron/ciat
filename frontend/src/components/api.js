@@ -87,5 +87,9 @@ export default {
   async getLabels() {
     const { data } = await axios.get(apiBase + '/labels')
     return data
+  },
+  async reapplyRules() {
+    const { data } = await axios.post(apiBase + '/reapply-categories')
+    return data
   }
 }

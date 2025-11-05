@@ -13,6 +13,7 @@ export default {
   setup(props, { emit }) {
     const rules = ref([])
     const loading = ref(false)
+    const reapplying = ref(false)
     const error = ref(null)
     const editingRule = ref(null)
     const editForm = ref({
@@ -138,6 +139,27 @@ export default {
       loadRules()
     }
 
+    async function reapplyRules() {
+      reapplying.value = true
+      error.value = null
+      
+      try {
+        const result = await api.reapplyRules()
+        showSuccess(
+          `Reapplied rules to ${result.updated || 0} transactions` +
+          (result.changed ? ` (${result.changed} category changes)` : '') +
+          ` out of ${result.total || 0} total.`
+        )
+        await loadRules()
+      } catch (err) {
+        const errorMsg = err.response?.data?.error || 'Failed to reapply rules'
+        error.value = errorMsg
+        showError(errorMsg)
+      } finally {
+        reapplying.value = false
+      }
+    }
+
     function formatDate(dateString) {
       if (!dateString) return 'Unknown'
       const date = new Date(dateString)
@@ -155,6 +177,7 @@ export default {
     return {
       rules,
       loading,
+      reapplying,
       error,
       editingRule,
       editForm,
@@ -171,6 +194,7 @@ export default {
       toggleRule,
       deleteRule,
       refreshRules,
+      reapplyRules,
       formatDate,
       getItemKey
     }

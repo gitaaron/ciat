@@ -81,7 +81,7 @@
       </v-card>
       
       <v-row>
-        <v-col cols="12" sm="6">
+        <v-col cols="12" sm="4">
           <v-btn
             @click="$emit('create-new')"
             color="primary"
@@ -91,7 +91,19 @@
             Create New Rule
           </v-btn>
         </v-col>
-        <v-col cols="12" sm="6">
+        <v-col cols="12" sm="4">
+          <v-btn
+            @click="reapplyRules"
+            :loading="reapplying"
+            color="info"
+            variant="outlined"
+            block
+          >
+            <v-icon left>mdi-refresh</v-icon>
+            Reapply Rules
+          </v-btn>
+        </v-col>
+        <v-col cols="12" sm="4">
           <v-btn
             @click="refreshRules"
             :loading="loading"

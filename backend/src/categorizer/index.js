@@ -185,20 +185,64 @@ export async function reapplyCategories() {
   // Import db here to avoid circular dependency
   const { db } = await import('../db.js');
   
-  const rows = db.prepare(`SELECT id, name, description FROM transactions WHERE manual_override=0`).all();
-  let updated = 0;
+  // Get all transactions that are not manually overridden (with all fields needed for matching)
+  const transactions = db.prepare(`
+    SELECT id, hash, name, description, amount, mcc, category, category_source, category_explain, labels, manual_override
+    FROM transactions 
+    WHERE manual_override = 0
+  `).all();
   
-  for (const r of rows) {
-    const guess = guessCategory(r);
-    if (guess && guess.category) {
-      db.prepare(`UPDATE transactions SET category=?, category_source=?, category_explain=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
-        .run(guess.category, guess.source, guess.explain, r.id);
+  // Parse labels from JSON strings if needed
+  const transactionsWithParsedLabels = transactions.map(tx => ({
+    ...tx,
+    labels: tx.labels ? (typeof tx.labels === 'string' ? JSON.parse(tx.labels) : tx.labels) : []
+  }));
+  
+  // Get all enabled rules
+  const rules = Rules.findEnabled();
+  
+  // Use optimized rule matching from common folder (already imported at top)
+  // This automatically skips manual_override transactions
+  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, rules);
+  
+  // Update transactions where category changed
+  let updated = 0;
+  let changed = 0;
+  
+  const updateStmt = db.prepare(`
+    UPDATE transactions 
+    SET category=?, category_source=?, category_explain=?, labels=?, updated_at=CURRENT_TIMESTAMP 
+    WHERE id=?
+  `);
+  
+  for (const categorizedTx of categorizedTransactions) {
+    const originalTx = transactionsWithParsedLabels.find(tx => tx.id === categorizedTx.id || tx.hash === categorizedTx.hash);
+    if (!originalTx) continue;
+    
+    // Check if category changed
+    const categoryChanged = originalTx.category !== categorizedTx.category;
+    const labelsChanged = JSON.stringify(originalTx.labels || []) !== JSON.stringify(categorizedTx.labels || []);
+    
+    if (categoryChanged || labelsChanged) {
+      const labelsJson = categorizedTx.labels && Array.isArray(categorizedTx.labels) 
+        ? JSON.stringify(categorizedTx.labels) 
+        : (categorizedTx.labels || null);
+      
+      updateStmt.run(
+        categorizedTx.category || null,
+        categorizedTx.category_source || 'none',
+        categorizedTx.category_explain || 'No match',
+        labelsJson,
+        originalTx.id
+      );
+      
       updated++;
+      if (categoryChanged) changed++;
     }
   }
   
-  console.log(`Reapplied categories to ${updated} transactions.`);
-  return { updated, total: rows.length };
+  console.log(`Reapplied categories to ${updated} transactions (${changed} category changes).`);
+  return { updated, changed, total: transactions.length };
 }
 
 export function getAllRules() {
