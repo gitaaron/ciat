@@ -9,13 +9,25 @@
       <v-card variant="outlined" class="mb-4">
         <v-card-title class="text-h6">
           <v-icon left>mdi-format-list-bulleted</v-icon>
-          Existing Rules ({{ rules.length }})
+          Existing Rules ({{ filteredRules.length }}{{ searchPattern ? ' of ' + rules.length : '' }})
         </v-card-title>
         <v-card-text>
           <v-alert type="info" variant="outlined" class="mb-4">
             Rules are applied in order of precedence (highest priority first, then most recent)
           </v-alert>
           
+          <!-- Search Input -->
+          <v-text-field
+            v-model="searchPattern"
+            label="Search rules by pattern"
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            density="compact"
+            clearable
+            class="mb-4"
+            hint="Enter text to filter rules by pattern"
+            persistent-hint
+          />
           
           <v-alert
             v-if="rules.length === 0"
@@ -38,7 +50,7 @@
               { title: 'Status', key: 'enabled' },
               { title: 'Actions', key: 'actions' }
             ]"
-            :items="sortedRules"
+            :items="filteredRules"
             class="elevation-1"
           >
             <template v-slot:item.enabled="{ item }">

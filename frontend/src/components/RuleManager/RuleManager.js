@@ -25,6 +25,7 @@ export default {
     })
     const saving = ref(false)
     const showEditDialog = ref(false)
+    const searchPattern = ref('')
 
     const matchTypes = [
       { value: 'exact', label: 'Exact Match' },
@@ -43,6 +44,17 @@ export default {
         const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
         const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
         return bTime - aTime;
+      });
+    });
+
+    const filteredRules = computed(() => {
+      if (!searchPattern.value || searchPattern.value.trim() === '') {
+        return sortedRules.value;
+      }
+      const searchLower = searchPattern.value.toLowerCase().trim();
+      return sortedRules.value.filter(rule => {
+        const pattern = rule.pattern || '';
+        return pattern.toLowerCase().includes(searchLower);
       });
     });
 
@@ -185,10 +197,12 @@ export default {
       editForm,
       saving,
       showEditDialog,
+      searchPattern,
       matchTypes,
       categorySteps,
       categoryStepNames,
       sortedRules,
+      filteredRules,
       loadRules,
       editRule,
       saveRule,
