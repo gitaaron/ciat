@@ -11,6 +11,7 @@ import { parseTransactionsCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
+import { parseLabels } from '../../common/src/ruleMatcher.js';
 import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
@@ -380,16 +381,28 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
     }));
 
     // Transfer detection (pre-save)
-    const ignore = detectTransfers(processedRows);
+    const transferHashes = detectTransfers(processedRows);
 
-    // Add ignore flag to transactions
-    const processedWithIgnore = processedRows.map(r => ({
-      ...r,
-      ignore: ignore.has(r.hash)
-    }));
+    // Add 'transfer' label to detected transfers instead of ignoring them
+    const processedWithLabels = processedRows.map(r => {
+      const isTransfer = transferHashes.has(r.hash);
+      
+      // Parse existing labels and add 'transfer' label if needed
+      let labels = parseLabels(r.labels);
+      if (isTransfer && !labels.includes('transfer')) {
+        labels = [...labels, 'transfer'];
+      }
+      
+      return {
+        ...r,
+        labels: labels.length > 0 ? labels : [],
+        // Keep ignore flag for backward compatibility with UI, but it won't be used to skip saving
+        ignore: false
+      };
+    });
 
     // Filter out duplicates already saved
-    const deduped = processedWithIgnore.filter(r => {
+    const deduped = processedWithLabels.filter(r => {
       const existing = db.prepare('SELECT 1 FROM transactions WHERE hash=?').get(r.hash);
       if (existing) {
         console.log(`Skipping duplicate transaction: ${r.name} - ${r.amount} on ${r.date}`);
@@ -439,13 +452,14 @@ app.post('/api/import/commit', (req, res) => {
     let saved = 0, skipped = 0;
     
     for (const it of items) {
-      if (it.ignore) continue;
-      
       // Validate required fields
       if (!it.account_id || !it.date || !it.name || !it.amount || !it.hash) {
         console.error('Missing required fields for transaction:', it);
         continue;
       }
+      
+      // Parse labels (preserves 'transfer' label if present)
+      const labels = parseLabels(it.labels);
       
       const tx = {
         external_id: it.external_id || null,
@@ -458,7 +472,7 @@ app.post('/api/import/commit', (req, res) => {
         category: it.category,
         category_source: it.category_source,
         category_explain: it.category_explain,
-        labels: it.labels ? JSON.stringify(it.labels) : null,
+        labels: labels.length > 0 ? JSON.stringify(labels) : null,
         note: it.note || null,
         hash: it.hash,
         manual_override: 0

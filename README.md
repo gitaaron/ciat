@@ -33,7 +33,7 @@ npm run web    # frontend only
 From the UI, go to **Import** and choose an Account (create if needed), upload a CSV. The app will:
 1. Normalize merchants/descriptions.
 2. Dedupe previously imported items.
-3. Detect likely transfers between your accounts and ignore them.
+3. Detect likely transfers between your accounts and automatically label them with a 'transfer' label (transactions are still saved to the database).
 4. Guess a category via: **rules → patterns → (stub ML)**.
 5. Show a review list so you can fix categories/notes before saving.
 

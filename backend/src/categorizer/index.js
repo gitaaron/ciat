@@ -2,7 +2,7 @@
 import { Rules } from '../models.js';
 
 // Import shared rule matching logic from common folder
-import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions } from '../../../common/src/ruleMatcher.js';
+import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions, parseLabels, mergeLabels } from '../../../common/src/ruleMatcher.js';
 
 function normalize(s='') {
   // Use the same normalization as auto rule generator for consistency
@@ -10,14 +10,20 @@ function normalize(s='') {
 }
 
 export function guessCategory(tx) {
+  // Preserve existing labels (e.g., 'transfer' label)
+  const existingLabels = parseLabels(tx.labels);
+  
   const rules = Rules.findEnabled();
 
   // Check rules in priority order using shared matching logic
   for (const r of rules) {
     if (matchesRule(r, tx)) {
+      // Merge existing labels with rule labels, removing duplicates
+      const mergedLabels = mergeLabels(tx.labels, r.labels);
+      
       return { 
         category: r.category, 
-        labels: r.labels || [],
+        labels: mergedLabels,
         source: 'rule', 
         explain: r.explain || 'Rule match',
         rule_id: r.id,
@@ -28,8 +34,8 @@ export function guessCategory(tx) {
   
   // ML fallback
   const ml = mlGuess(tx);
-  if (ml) return { ...ml, labels: [], rule_type: 'ml' };
-  return { category: null, labels: [], source: 'none', explain: 'No match', rule_type: 'none' };
+  if (ml) return { ...ml, labels: existingLabels, rule_type: 'ml' };
+  return { category: null, labels: existingLabels, source: 'none', explain: 'No match', rule_type: 'none' };
 }
 
 function mlGuess(tx) {
@@ -199,7 +205,7 @@ export async function reapplyCategories() {
   // Parse labels from JSON strings if needed
   const transactionsWithParsedLabels = transactions.map(tx => ({
     ...tx,
-    labels: tx.labels ? (typeof tx.labels === 'string' ? JSON.parse(tx.labels) : tx.labels) : []
+    labels: parseLabels(tx.labels)
   }));
   
   // Get all enabled rules

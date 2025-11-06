@@ -71,6 +71,38 @@ export function normalizeMerchant(merchant) {
 }
 
 /**
+ * Parse labels from various formats (array, JSON string, null, undefined)
+ * @param {any} labels - Labels in any format
+ * @returns {Array<string>} - Array of label strings
+ */
+export function parseLabels(labels) {
+  if (!labels) return [];
+  if (Array.isArray(labels)) return labels;
+  if (typeof labels === 'string') {
+    try {
+      const parsed = JSON.parse(labels);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+/**
+ * Merge transaction labels with rule labels, removing duplicates
+ * @param {any} transactionLabels - Labels from transaction (any format)
+ * @param {any} ruleLabels - Labels from rule (any format)
+ * @returns {Array<string>} - Merged array of unique labels
+ */
+export function mergeLabels(transactionLabels, ruleLabels) {
+  const existing = parseLabels(transactionLabels);
+  const rule = parseLabels(ruleLabels);
+  // Combine labels, removing duplicates
+  return [...new Set([...existing, ...rule])];
+}
+
+/**
  * Optimized matching function that uses pre-normalized data
  * Use this when you know both rule and transaction are already normalized
  * @param {Object} rule - Rule object with _normalizedPattern, _regexPattern, _matchType
@@ -255,10 +287,13 @@ export function applyRulesToTransactions(transactions, rules) {
       
       // Use optimized matching with pre-normalized data
       if (matchesRuleOptimized(rule, transaction)) {
+        // Merge existing transaction labels with rule labels
+        const mergedLabels = mergeLabels(transaction.labels, rule.labels);
+        
         categorizedTransactions.push({
           ...transaction,
           category: rule.category,
-          labels: rule.labels || [],
+          labels: mergedLabels,
           category_source: 'rule',
           category_explain: rule.explain || 'Rule match',
           rule_id: rule.id,
@@ -270,12 +305,15 @@ export function applyRulesToTransactions(transactions, rules) {
       }
     }
     
-    // If no rule matched, add without category
+    // If no rule matched, add without category but preserve existing labels
     if (!matched) {
+      // Preserve existing labels (e.g., 'transfer' label)
+      const existingLabels = parseLabels(transaction.labels);
+      
       categorizedTransactions.push({
         ...transaction,
         category: null,
-        labels: [],
+        labels: existingLabels,
         category_source: 'none',
         category_explain: 'No match',
         rule_type: 'none'
@@ -361,10 +399,13 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
       
       // Use optimized matching with pre-normalized data
       if (matchesRuleOptimized(rule, transaction)) {
+        // Merge existing transaction labels with rule labels
+        const mergedLabels = mergeLabels(transaction.labels, rule.labels);
+        
         const categorizedTransaction = {
           ...transaction,
           category: rule.category,
-          labels: rule.labels || [],
+          labels: mergedLabels,
           category_source: 'rule',
           category_explain: rule.explain || 'Rule match',
           rule_id: rule.id,
@@ -379,12 +420,15 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
       }
     }
     
-    // If no rule matched, add without category
+    // If no rule matched, add without category but preserve existing labels
     if (!matched) {
+      // Preserve existing labels (e.g., 'transfer' label)
+      const existingLabels = parseLabels(transaction.labels);
+      
       categorizedTransactions.push({
         ...transaction,
         category: null,
-        labels: [],
+        labels: existingLabels,
         category_source: 'none',
         category_explain: 'No match',
         rule_type: 'none'

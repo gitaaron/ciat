@@ -2,7 +2,7 @@
 /**
  * Enhanced transfer detector: pairs opposite-signed amounts between accounts within a date window.
  * Also detects transfers based on common transfer patterns in transaction names.
- * Returns a Set of hashes to ignore.
+ * Returns a Set of transaction hashes that should be labeled as 'transfer'.
  */
 export function detectTransfers(rows) {
   // rows: [{account_id, amount, date, name, description, ...}]

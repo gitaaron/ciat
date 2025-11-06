@@ -291,7 +291,6 @@ export default {
         allTransactions.push(...preview)
       }
       return allTransactions.filter(tx => 
-        !tx.ignore && 
         tx.category === categorySteps[currentCategoryStep.value]
       )
     })
@@ -531,11 +530,11 @@ export default {
         let totalImported = 0
         
         for (const [accountId, preview] of previewsByAccount.value) {
-          const itemsToImport = preview.filter(x => !x.ignore)
-          if (itemsToImport.length > 0) {
-            console.log('commitAllImports: Committing imports:', itemsToImport.length)
-            await api.commitImport(itemsToImport)
-            totalImported += itemsToImport.length
+          // Import all transactions (transfers are now labeled, not filtered out)
+          if (preview.length > 0) {
+            console.log('commitAllImports: Committing imports:', preview.length)
+            await api.commitImport(preview)
+            totalImported += preview.length
           }
         }
         
