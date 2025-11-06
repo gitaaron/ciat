@@ -50,10 +50,49 @@ export default {
       { title: 'Explain', key: 'category_explain', sortable: false }
     ]
 
+    // Track if dates have been initialized
+    const datesInitialized = ref(false)
+
     // Load transactions on component mount
     onMounted(async () => {
-      await loadTransactions()
+      // First, load all transactions without date filters to get the date range
+      if (!datesInitialized.value) {
+        await initializeDateRange()
+        // After setting dates, the watch will automatically trigger loadTransactions()
+      } else {
+        // If dates are already initialized, load transactions directly
+        await loadTransactions()
+      }
     })
+
+    async function initializeDateRange() {
+      try {
+        // Load all transactions without date filters to find min/max dates
+        const allTransactions = await api.listTransactions({})
+        
+        if (allTransactions.length > 0) {
+          // Find the earliest and latest dates
+          const dates = allTransactions
+            .map(tx => tx.date)
+            .filter(date => date) // Filter out null/undefined dates
+            .sort()
+          
+          if (dates.length > 0) {
+            const earliestDate = dates[0]
+            const latestDate = dates[dates.length - 1]
+            
+            // Set dates - the watch will automatically trigger loadTransactions()
+            // We set datesInitialized first to prevent re-initialization
+            datesInitialized.value = true
+            start.value = earliestDate
+            end.value = latestDate
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing date range:', error)
+        // Continue with empty dates if there's an error
+      }
+    }
 
     // Watch for filter changes and reload data
     watch([q, start, end, category, label, account], async () => {
