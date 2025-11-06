@@ -197,7 +197,7 @@ export async function reapplyCategories() {
   
   // Get all transactions that are not manually overridden (with all fields needed for matching)
   const transactions = db.prepare(`
-    SELECT id, hash, name, description, amount, mcc, category, category_source, category_explain, labels, manual_override
+    SELECT id, hash, name, description, amount, category, category_source, category_explain, labels, manual_override
     FROM transactions 
     WHERE manual_override = 0
   `).all();
