@@ -194,13 +194,14 @@ if (options.inflow !== null) {
   params.inflow = options.inflow ? 1 : 0;
 }
 
-// Labels filter
+// Labels filter (case-insensitive) - use SQLite JSON functions
 if (options.labels) {
-  sql += ' AND (t.labels LIKE @labels OR t.labels LIKE @labelsStart OR t.labels LIKE @labelsEnd OR t.labels LIKE @labelsMiddle)';
-  params.labels = `"${options.labels}"`;
-  params.labelsStart = `"${options.labels}",`;
-  params.labelsEnd = `,"${options.labels}"`;
-  params.labelsMiddle = `,"${options.labels}",`;
+  const labelsLower = options.labels.toLowerCase();
+  sql += ` AND t.labels IS NOT NULL AND EXISTS (
+    SELECT 1 FROM json_each(t.labels) 
+    WHERE LOWER(json_each.value) = @labels
+  )`;
+  params.labels = labelsLower;
 }
 
 // Add sorting and limit

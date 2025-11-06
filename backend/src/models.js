@@ -49,12 +49,17 @@ export const Transactions = {
     }
     if (category) { sql += ` AND t.category=@category`; params.category = category; }
     if (label) { 
-      // Search for label in JSON array
-      sql += ` AND (t.labels LIKE @label OR t.labels LIKE @labelStart OR t.labels LIKE @labelEnd OR t.labels LIKE @labelMiddle)`;
-      params.label = `"${label}"`;
-      params.labelStart = `"${label}",`;
-      params.labelEnd = `,"${label}"`;
-      params.labelMiddle = `,"${label}",`;
+      // Search for label in JSON array (case-insensitive, contains match)
+      // Use SQLite JSON functions (json_each) to properly query JSON arrays
+      const labelLower = label.toLowerCase().trim();
+      
+      // Use json_each to iterate through the JSON array and match the label (contains, not exact)
+      // Similar to how name search works with LIKE and wildcards
+      sql += ` AND t.labels IS NOT NULL AND EXISTS (
+        SELECT 1 FROM json_each(t.labels) 
+        WHERE LOWER(json_each.value) LIKE @labelValue
+      )`;
+      params.labelValue = `%${labelLower}%`;
     }
     if (start) { sql += ` AND date(t.date) >= date(@start)`; params.start = start; }
     if (end) { sql += ` AND date(t.date) <= date(@end)`; params.end = end; }

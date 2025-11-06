@@ -68,7 +68,7 @@ export default {
         if (start.value) params.start = start.value
         if (end.value) params.end = end.value
         if (category.value) params.category = category.value
-        if (label.value) params.label = label.value
+        if (label.value && label.value.trim()) params.label = label.value.trim()
         if (account.value) params.account = account.value
 
         const transactions = await api.listTransactions(params)
