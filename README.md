@@ -1,3 +1,5 @@
+vibe coded with love ❤️
+
 # Can I Afford That? (CIAT)
 
 CIAT is a family budgeting app inspired by Remit Sethi's 'IWT' system.
