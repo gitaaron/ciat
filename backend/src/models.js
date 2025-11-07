@@ -1,5 +1,6 @@
 
 import { db } from './db.js';
+import { parseLabels } from '../../common/src/ruleMatcher.js';
 
 export const Accounts = {
   all() {
@@ -120,7 +121,7 @@ export const Transactions = {
 /**
  * Normalize a rule object to ensure it has required properties with correct types
  * Future-proofs rule objects by ensuring 'enabled' is always a boolean (defaults to true)
- * Also handles database INTEGER to boolean conversion
+ * Also handles database INTEGER to boolean conversion and parses JSON strings for labels/exceptions
  * @param {Object} rule - Rule object from database or elsewhere
  * @returns {Object} - Normalized rule object
  */
@@ -137,9 +138,32 @@ function normalizeRule(rule) {
     enabled = true; // Fallback: treat any non-boolean as enabled
   }
   
+  // Parse labels from JSON string to array (labels are stored as JSON strings in database)
+  let labels = rule.labels;
+  if (labels !== undefined && labels !== null) {
+    labels = parseLabels(labels);
+  } else {
+    labels = [];
+  }
+  
+  // Parse exceptions from JSON string to array (exceptions are stored as JSON strings in database)
+  let exceptions = rule.exceptions;
+  if (exceptions !== undefined && exceptions !== null && typeof exceptions === 'string') {
+    try {
+      const parsed = JSON.parse(exceptions);
+      exceptions = Array.isArray(parsed) ? parsed : null;
+    } catch {
+      exceptions = null;
+    }
+  } else if (!Array.isArray(exceptions)) {
+    exceptions = null;
+  }
+  
   return {
     ...rule,
-    enabled
+    enabled,
+    labels,
+    exceptions
   };
 }
 

@@ -171,6 +171,21 @@ export default {
       return editingRule.value?.id === ruleId
     }
 
+    // Helper function to ensure labels are always an array
+    function ensureLabelsArray(labels) {
+      if (!labels) return []
+      if (Array.isArray(labels)) return labels
+      if (typeof labels === 'string') {
+        try {
+          const parsed = JSON.parse(labels)
+          return Array.isArray(parsed) ? parsed : []
+        } catch {
+          return []
+        }
+      }
+      return []
+    }
+
     // Handler for RuleItem edit event - opens the edit dialog
     function handleEditRule(rule) {
       editingRule.value = rule
@@ -179,7 +194,7 @@ export default {
         match_type: rule.match_type,
         pattern: rule.pattern,
         explain: rule.explain || '',
-        labels: rule.labels || []
+        labels: ensureLabelsArray(rule.labels)
       }
       showEditDialog.value = true
     }

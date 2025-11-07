@@ -90,7 +90,22 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const selectedLabels = ref([...props.modelValue])
+// Helper function to ensure labels are always an array
+function ensureArray(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
+const selectedLabels = ref(ensureArray(props.modelValue))
 const selectedLabel = ref('')
 const search = ref('')
 const loading = ref(false)
@@ -163,7 +178,7 @@ function removeLabel(index) {
 
 // Watch for external changes to modelValue
 watch(() => props.modelValue, (newValue) => {
-  selectedLabels.value = [...newValue]
+  selectedLabels.value = ensureArray(newValue)
 }, { deep: true })
 
 onMounted(() => {
