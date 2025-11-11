@@ -15,12 +15,24 @@
       </template>
       
       <template v-slot:item.name="{ item }">
-        <span 
-          :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-          @click="onTransactionNameClick(item)"
-        >
-          {{ item.name }}
-        </span>
+        <div class="d-flex align-center ga-2">
+          <span 
+            :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+            @click="onTransactionNameClick(item)"
+          >
+            {{ item.name }}
+          </span>
+          <v-chip
+            v-if="getLastFourDigits(item.external_id)"
+            size="small"
+            color="primary"
+            variant="tonal"
+            class="cc-number-chip"
+          >
+            <v-icon size="small" class="mr-1">mdi-credit-card</v-icon>
+            ****{{ getLastFourDigits(item.external_id) }}
+          </v-chip>
+        </div>
       </template>
       
       <template v-slot:item.amount="{ item }">
@@ -138,12 +150,24 @@
                   </template>
                   
                   <template v-slot:item.name="{ item }">
-                    <span 
-                      :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-                      @click="onTransactionNameClick(item)"
-                    >
-                      {{ item.name }}
-                    </span>
+                    <div class="d-flex align-center ga-2">
+                      <span 
+                        :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+                        @click="onTransactionNameClick(item)"
+                      >
+                        {{ item.name }}
+                      </span>
+                      <v-chip
+                        v-if="getLastFourDigits(item.external_id)"
+                        size="small"
+                        color="primary"
+                        variant="tonal"
+                        class="cc-number-chip"
+                      >
+                        <v-icon size="small" class="mr-1">mdi-credit-card</v-icon>
+                        ****{{ getLastFourDigits(item.external_id) }}
+                      </v-chip>
+                    </div>
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
@@ -264,12 +288,24 @@
                   </template>
                   
                   <template v-slot:item.name="{ item }">
-                    <span 
-                      :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-                      @click="onTransactionNameClick(item)"
-                    >
-                      {{ item.name }}
-                    </span>
+                    <div class="d-flex align-center ga-2">
+                      <span 
+                        :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
+                        @click="onTransactionNameClick(item)"
+                      >
+                        {{ item.name }}
+                      </span>
+                      <v-chip
+                        v-if="getLastFourDigits(item.external_id)"
+                        size="small"
+                        color="primary"
+                        variant="tonal"
+                        class="cc-number-chip"
+                      >
+                        <v-icon size="small" class="mr-1">mdi-credit-card</v-icon>
+                        ****{{ getLastFourDigits(item.external_id) }}
+                      </v-chip>
+                    </div>
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
@@ -451,6 +487,15 @@ export default {
       }
     }
 
+    function getLastFourDigits(ccNumber) {
+      if (!ccNumber) return null
+      const cleaned = String(ccNumber).replace(/\D/g, '') // Remove non-digits
+      if (cleaned.length >= 4) {
+        return cleaned.slice(-4) // Get last 4 digits
+      }
+      return null
+    }
+
     return {
       getCategoryDisplayName: getCategoryName,
       getCategoryIcon,
@@ -463,7 +508,8 @@ export default {
       onSaveItem,
       onCategoryChange,
       onRowClick,
-      onTransactionNameClick
+      onTransactionNameClick,
+      getLastFourDigits
     }
   }
 }
@@ -527,5 +573,11 @@ export default {
 
 .amount-expense {
   color: #000000;
+}
+
+.cc-number-chip {
+  min-width: 110px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

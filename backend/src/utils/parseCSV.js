@@ -101,7 +101,7 @@ export function parseTransactionsCSV(buffer, fieldMapping = null) {
     
     if (fieldMapping) {
       // Helper function to get value by column index
-      // Field mapping format: { 0: 'date', 1: 'name', 2: 'outflow', 3: 'inflow' }
+      // Field mapping format: { 0: 'date', 1: 'name', 2: 'outflow', 3: 'inflow', 4: 'external_id' }
       const getMappedValueByIndex = (mappingKey) => {
         // Find the column index for this field
         let columnIndex = null;
@@ -124,8 +124,8 @@ export function parseTransactionsCSV(buffer, fieldMapping = null) {
           return (value === undefined || value === null) ? '' : String(value);
         }
         
-        // Field not found in mapping
-        if (index === 0) {
+        // Field not found in mapping (only warn for required fields, not optional ones)
+        if (index === 0 && mappingKey !== 'external_id') {
           console.warn(`CSV parsing: Field "${mappingKey}" not found in mapping.`, {
             fieldMapping,
             availableColumns: columnKeys,
@@ -150,7 +150,8 @@ export function parseTransactionsCSV(buffer, fieldMapping = null) {
           dateValue,
           nameValue,
           outflowValue,
-          inflowValue
+          inflowValue,
+          externalIdValue
         });
       }
     } else {
@@ -161,6 +162,7 @@ export function parseTransactionsCSV(buffer, fieldMapping = null) {
       inflowValue = r.credit || '';
       externalIdValue = r.card_number || '';
     }
+    
     
     const date = normalizeDate(dateValue);
     const name = (nameValue || '').toString().trim();

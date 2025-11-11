@@ -22,12 +22,21 @@ export default {
     const columnToFieldMapping = ref({})
     
     // Field options for the menu
-    const fieldOptions = [
-      { label: 'Date', value: 'date' },
-      { label: 'Merchant Name', value: 'name' },
-      { label: 'Inflow (Income)', value: 'inflow' },
-      { label: 'Outflow (Expense)', value: 'outflow' }
-    ]
+    const fieldOptions = computed(() => {
+      const baseOptions = [
+        { label: 'Date', value: 'date' },
+        { label: 'Merchant Name', value: 'name' },
+        { label: 'Inflow (Income)', value: 'inflow' },
+        { label: 'Outflow (Expense)', value: 'outflow' }
+      ]
+      
+      // Add External ID option if there are 5 or more columns (can be used for CC numbers)
+      if (props.csvColumns && props.csvColumns.length >= 5) {
+        baseOptions.push({ label: 'External ID (Optional)', value: 'external_id' })
+      }
+      
+      return baseOptions
+    })
     
     // Convert index-based mapping to column->field mapping for internal use
     // Input: { 0: 'date', 1: 'name', ... } (index -> field)
@@ -87,7 +96,7 @@ export default {
     
     // Get field label for display
     function getFieldLabel(field) {
-      const option = fieldOptions.find(opt => opt.value === field)
+      const option = fieldOptions.value.find(opt => opt.value === field)
       return option ? option.label : field
     }
     
@@ -264,6 +273,29 @@ export default {
       
       fieldMapping.inflow = detectedInflow || ''
       fieldMapping.outflow = detectedOutflow || ''
+      
+      // Auto-detect External ID if there's a 5th column (can be used for CC numbers)
+      if (props.csvColumns.length >= 5) {
+        const externalIdColumn = props.csvColumns[4] // 5th column (0-indexed)
+        const lowerColumn = externalIdColumn.toLowerCase()
+        
+        // Check if column name suggests it's a credit card number or external ID
+        const idPatterns = ['card', 'number', 'cc', 'credit card', 'card number', 'external', 'id', 'external_id']
+        const looksLikeId = idPatterns.some(pattern => lowerColumn.includes(pattern))
+        
+        // Also check if the data looks like credit card numbers (long numeric strings)
+        let dataLooksLikeId = false
+        if (props.previewRows && props.previewRows.length > 0) {
+          const sampleValue = getFieldValue(props.previewRows[0], externalIdColumn)
+          // Credit card numbers are typically 13-19 digits, but external IDs can vary
+          const cleaned = String(sampleValue).replace(/\D/g, '')
+          dataLooksLikeId = cleaned.length >= 4 && cleaned.length <= 19
+        }
+        
+        if (looksLikeId || dataLooksLikeId) {
+          fieldMapping.external_id = externalIdColumn
+        }
+      }
       
       // Convert field->column mapping to column->field mapping
       const columnMapping = {}

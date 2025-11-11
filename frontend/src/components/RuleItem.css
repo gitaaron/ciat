@@ -327,6 +327,17 @@
   color: #333;
 }
 
+.transaction-item .cc-number {
+  padding: 2px 6px;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
 .transaction-item .amount {
   font-weight: bold;
   min-width: 80px;
@@ -451,6 +462,17 @@
 .preview-item .merchant {
   flex: 1;
   color: #333;
+}
+
+.preview-item .cc-number {
+  padding: 2px 4px;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-family: monospace;
+  white-space: nowrap;
 }
 
 .preview-item .amount {

@@ -141,6 +141,13 @@
             >
               <span class="merchant">{{ transaction.name }}</span>
               <span 
+                v-if="getLastFourDigits(transaction.external_id)"
+                class="cc-number"
+                title="Credit Card: ****{{ getLastFourDigits(transaction.external_id) }}"
+              >
+                ****{{ getLastFourDigits(transaction.external_id) }}
+              </span>
+              <span 
                 class="amount"
                 :class="isInflow(transaction) ? 'amount-income' : 'amount-expense'"
                 :title="isInflow(transaction) ? 'Income' : 'Expense'"
@@ -190,6 +197,13 @@
               class="preview-item"
             >
               <span class="merchant">{{ transaction.name }}</span>
+              <span 
+                v-if="getLastFourDigits(transaction.external_id)"
+                class="cc-number"
+                title="Credit Card: ****{{ getLastFourDigits(transaction.external_id) }}"
+              >
+                ****{{ getLastFourDigits(transaction.external_id) }}
+              </span>
               <span 
                 class="amount"
                 :class="isInflow(transaction) ? 'amount-income' : 'amount-expense'"
@@ -308,6 +322,15 @@ export default {
         month: 'short',
         day: 'numeric'
       })
+    },
+
+    getLastFourDigits(ccNumber) {
+      if (!ccNumber) return null
+      const cleaned = String(ccNumber).replace(/\D/g, '') // Remove non-digits
+      if (cleaned.length >= 4) {
+        return cleaned.slice(-4) // Get last 4 digits
+      }
+      return null
     },
 
     getTransactionCount() {
