@@ -277,6 +277,54 @@
     </v-card-text>
     </v-card>
 
+    <!-- Field Mapping Dialog (shown after Process Files if account has no mapping) -->
+    <v-dialog v-model="showFieldMappingStep" max-width="900" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          <v-icon left>mdi-table-cog</v-icon>
+          Map CSV Fields
+        </v-card-title>
+        
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4">
+            This account doesn't have field mappings configured. Please map the CSV columns to the correct fields.
+            This mapping will be saved to the account for future imports.
+          </v-alert>
+          
+          <FieldMapping
+            v-if="csvPreview"
+            ref="fieldMappingComponent"
+            :csv-columns="csvPreview.columns"
+            :preview-rows="csvPreview.preview"
+            :initial-mapping="null"
+            @mapping-changed="(mapping) => fieldMapping = mapping"
+          />
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="handleFieldMappingSkip"
+            :disabled="processing"
+            color="secondary"
+            variant="outlined"
+          >
+            <v-icon left>mdi-skip-next</v-icon>
+            Skip (Use Defaults)
+          </v-btn>
+          <v-btn
+            @click="handleFieldMappingConfirmed(fieldMapping)"
+            :disabled="!isFieldMappingComplete || processing"
+            :loading="processing"
+            color="primary"
+          >
+            <v-icon left>mdi-check</v-icon>
+            Confirm & Process
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-card>
 </template>
 

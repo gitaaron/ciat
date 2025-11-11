@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import { Accounts, Transactions } from './models.js';
 import { txHash } from './utils/hash.js';
-import { parseTransactionsCSV } from './utils/parseCSV.js';
+import { parseTransactionsCSV, previewCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { detectTransfers } from './utils/transferDetector.js';
@@ -64,6 +64,21 @@ app.delete('/api/accounts/:id', (req, res) => {
     }
     
     const result = Accounts.delete(id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Field mapping endpoints
+app.put('/api/accounts/:id/field-mapping', (req, res) => {
+  const { id } = req.params;
+  const { field_mapping } = req.body;
+  try {
+    const result = Accounts.updateFieldMapping(id, field_mapping);
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Account not found' });
     }
@@ -351,6 +366,27 @@ app.post('/api/import/analyze', upload.array('files'), (req, res) => {
   res.json({ analysis, accounts });
 });
 
+// Preview CSV for field mapping
+app.post('/api/import/preview-csv', upload.single('file'), (req, res) => {
+  try {
+    const format = detectFileFormat(req.file.originalname, req.file.buffer);
+    
+    if (format !== 'csv') {
+      return res.status(400).json({ 
+        error: `File must be CSV format. Got: ${format}` 
+      });
+    }
+    
+    const preview = previewCSV(req.file.buffer);
+    res.json(preview);
+  } catch (error) {
+    console.error('CSV preview error:', error);
+    res.status(500).json({ 
+      error: `Failed to preview CSV: ${error.message}` 
+    });
+  }
+});
+
 // Import transactions (CSV or QFX)
 app.post('/api/import/transactions', upload.single('file'), async (req, res) => {
   const account_id = Number(req.body.account_id);
@@ -365,10 +401,14 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       });
     }
     
+    // Get account field mapping if it exists
+    const account = Accounts.findById(account_id);
+    const fieldMapping = account?.field_mapping || null;
+    
     let rows;
     
     if (format === 'csv') {
-      rows = parseTransactionsCSV(req.file.buffer);
+      rows = parseTransactionsCSV(req.file.buffer, fieldMapping);
     } else if (format === 'qfx') {
       rows = await parseTransactionsQFX(req.file.buffer);
     }

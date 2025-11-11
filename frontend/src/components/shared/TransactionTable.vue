@@ -24,19 +24,18 @@
       </template>
       
       <template v-slot:item.amount="{ item }">
-        <span class="font-weight-medium" :class="item.amount >= 0 ? 'text-success' : 'text-error'">
-          ${{ Math.abs(item.amount).toFixed(2) }}
-        </span>
-      </template>
-      
-      <template v-slot:item.inflow="{ item }">
-        <v-chip
-          :color="item.inflow ? 'success' : 'error'"
-          size="small"
-          variant="outlined"
-        >
-          {{ item.inflow ? 'Income' : 'Expense' }}
-        </v-chip>
+        <v-tooltip location="top">
+          <template v-slot:activator="{ props }">
+            <span 
+              v-bind="props"
+              class="font-weight-medium transaction-amount"
+              :class="isInflow(item) ? 'amount-income' : 'amount-expense'"
+            >
+              {{ isInflow(item) ? '+' : '' }}${{ Math.abs(item.amount || 0).toFixed(2) }}
+            </span>
+          </template>
+          <span>{{ isInflow(item) ? 'Income' : 'Expense' }}</span>
+        </v-tooltip>
       </template>
       
       <template v-slot:item.category="{ item }">
@@ -148,19 +147,18 @@
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
-                    <span class="font-weight-medium" :class="item.amount >= 0 ? 'text-success' : 'text-error'">
-                      ${{ Math.abs(item.amount).toFixed(2) }}
-                    </span>
-                  </template>
-                  
-                  <template v-slot:item.inflow="{ item }">
-                    <v-chip
-                      :color="item.inflow ? 'success' : 'error'"
-                      size="small"
-                      variant="outlined"
-                    >
-                      {{ item.inflow ? 'Income' : 'Expense' }}
-                    </v-chip>
+                    <v-tooltip location="top">
+                      <template v-slot:activator="{ props }">
+                        <span 
+                          v-bind="props"
+                          class="font-weight-medium transaction-amount"
+                          :class="(item.inflow === 1 || item.inflow === true) ? 'amount-income' : 'amount-expense'"
+                        >
+                          {{ (item.inflow === 1 || item.inflow === true) ? '+' : '' }}${{ Math.abs(item.amount || 0).toFixed(2) }}
+                        </span>
+                      </template>
+                      <span>{{ (item.inflow === 1 || item.inflow === true) ? 'Income' : 'Expense' }}</span>
+                    </v-tooltip>
                   </template>
                   
                   <template v-slot:item.category="{ item }">
@@ -275,19 +273,18 @@
                   </template>
                   
                   <template v-slot:item.amount="{ item }">
-                    <span class="font-weight-medium" :class="item.amount >= 0 ? 'text-success' : 'text-error'">
-                      ${{ Math.abs(item.amount).toFixed(2) }}
-                    </span>
-                  </template>
-                  
-                  <template v-slot:item.inflow="{ item }">
-                    <v-chip
-                      :color="item.inflow ? 'success' : 'error'"
-                      size="small"
-                      variant="outlined"
-                    >
-                      {{ item.inflow ? 'Income' : 'Expense' }}
-                    </v-chip>
+                    <v-tooltip location="top">
+                      <template v-slot:activator="{ props }">
+                        <span 
+                          v-bind="props"
+                          class="font-weight-medium transaction-amount"
+                          :class="(item.inflow === 1 || item.inflow === true) ? 'amount-income' : 'amount-expense'"
+                        >
+                          {{ (item.inflow === 1 || item.inflow === true) ? '+' : '' }}${{ Math.abs(item.amount || 0).toFixed(2) }}
+                        </span>
+                      </template>
+                      <span>{{ (item.inflow === 1 || item.inflow === true) ? 'Income' : 'Expense' }}</span>
+                    </v-tooltip>
                   </template>
                   
                   <template v-slot:item.category="{ item }">
@@ -397,6 +394,15 @@ export default {
   },
   emits: ['toggle-category', 'save-item', 'row-click', 'category-change', 'transaction-name-click'],
   setup(props, { emit }) {
+    // Helper function to check if transaction is inflow (handles both number and string)
+    function isInflow(transaction) {
+      if (!transaction || transaction.inflow === undefined || transaction.inflow === null) {
+        return false
+      }
+      // Handle both number (0/1) and string ("0"/"1") cases
+      return transaction.inflow === 1 || transaction.inflow === true || transaction.inflow === '1'
+    }
+
     function formatDate(dateString) {
       if (!dateString) return 'Unknown'
       const date = new Date(dateString)
@@ -452,6 +458,7 @@ export default {
       categorySelectOptions: CATEGORY_SELECT_OPTIONS,
       formatDate,
       getLabels,
+      isInflow,
       toggleCategory,
       onSaveItem,
       onCategoryChange,
@@ -508,5 +515,17 @@ export default {
 
 .transaction-name-clickable:hover {
   color: rgb(var(--v-theme-primary-darken-1));
+}
+
+.transaction-amount {
+  cursor: help;
+}
+
+.amount-income {
+  color: #4caf50;
+}
+
+.amount-expense {
+  color: #000000;
 }
 </style>

@@ -4,6 +4,7 @@ import { CATEGORY_STEPS, CATEGORY_NAMES } from '../../config/categories.js'
 import ManageRules from '../RulesReview/ManageRules.vue'
 import TransactionReview from '../TransactionReview/TransactionReview.vue'
 import AccountManager from '../AccountManager/AccountManager.vue'
+import FieldMapping from '../FieldMapping/FieldMapping.vue'
 import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule } from '../../utils/ruleMatcher.js'
 import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm } from '../../utils/notifications.js'
 
@@ -12,7 +13,8 @@ export default {
   components: {
     ManageRules,
     TransactionReview,
-    AccountManager
+    AccountManager,
+    FieldMapping
   },
   props: {
     accounts: Array,
@@ -27,7 +29,7 @@ export default {
   },
   emits: ['refresh-accounts', 'import-complete'],
   setup(props, { emit }) {
-    const step = ref(1) // 1: file selection, 2: account assignment, 3: rules review, 4: transaction review, 5: complete
+    const step = ref(1) // 1: file selection, 2: account assignment, 2.5: field mapping (CSV only, if needed), 3: rules review, 4: transaction review, 5: complete
     const files = ref([])
     const fileAnalysis = ref([])
     const filesByAccount = ref(new Map()) // Map<accountId, File[]>
@@ -36,6 +38,14 @@ export default {
     const autoRules = ref(null)
     const newRules = ref([])
     const allTransactions = ref([])
+    
+    // Field mapping state
+    const csvPreview = ref(null) // { columns: [], preview: [] }
+    const fieldMapping = ref(null) // { date, name, inflow, outflow }
+    const showFieldMappingStep = ref(false) // Show field mapping step before processing
+    const pendingFileForProcessing = ref(null) // File waiting to be processed after field mapping
+    const pendingAccountForProcessing = ref(null) // Account waiting to be processed after field mapping
+    const fieldMappingComponent = ref(null) // Reference to FieldMapping component
     
     // Centralized rule matching results
     const existingRuleMatches = ref(new Map())
@@ -436,6 +446,34 @@ export default {
     async function processAllFiles() {
       if (filesByAccount.value.size === 0) return
       
+      // Check if we need field mapping for CSV files
+      for (const [accountId, accountFiles] of filesByAccount.value) {
+        const file = accountFiles[0]
+        const account = props.accounts.find(a => a.id === accountId)
+        
+        // If CSV file and account has no field mapping, show field mapping step
+        if (file.name.toLowerCase().endsWith('.csv') && account && !account.field_mapping) {
+          try {
+            // Preview CSV for field mapping
+            const preview = await api.previewCSV(file)
+            csvPreview.value = preview
+            fieldMapping.value = null
+            pendingFileForProcessing.value = file
+            pendingAccountForProcessing.value = accountId
+            showFieldMappingStep.value = true
+            return // Wait for user to confirm field mapping
+          } catch (error) {
+            console.error('Error previewing CSV:', error)
+            showError('Error previewing CSV: ' + error.message)
+          }
+        }
+      }
+      
+      // No field mapping needed, proceed with processing
+      await doProcessAllFiles()
+    }
+    
+    async function doProcessAllFiles() {
       processing.value = true
       previewsByAccount.value.clear()
       usedRules.value = []
@@ -564,6 +602,44 @@ export default {
       }
     }
 
+    async function handleFieldMappingConfirmed(mapping) {
+      // mapping is index-based format: { 0: 'date', 1: 'name', 2: 'outflow', 3: 'inflow' }
+      // Get it from the component if not provided directly
+      const indexMapping = mapping || fieldMappingComponent.value?.getIndexMapping?.() || {}
+      
+      console.log('Field mapping confirmed:', {
+        indexMapping,
+        csvColumns: csvPreview.value?.columns
+      })
+      
+      // Store the index-based mapping
+      fieldMapping.value = indexMapping
+      
+      // Save mapping to account (using index-based mapping)
+      if (pendingAccountForProcessing.value && indexMapping) {
+        try {
+          await api.updateAccountFieldMapping(pendingAccountForProcessing.value, indexMapping)
+          showSuccess('Field mapping saved to account')
+          // Refresh accounts to get updated field_mapping
+          await emit('refresh-accounts')
+        } catch (error) {
+          console.error('Error saving field mapping:', error)
+          showWarning('Field mapping could not be saved, but will be used for this import')
+        }
+      }
+      
+      // Hide field mapping step and proceed with processing
+      showFieldMappingStep.value = false
+      await doProcessAllFiles()
+    }
+    
+    async function handleFieldMappingSkip() {
+      // Skip field mapping, use defaults (no mapping)
+      fieldMapping.value = null
+      showFieldMappingStep.value = false
+      await doProcessAllFiles()
+    }
+    
     function resetImport() {
       files.value = []
       fileAnalysis.value = []
@@ -571,6 +647,11 @@ export default {
       previewsByAccount.value.clear()
       usedRules.value = []
       newRules.value = []
+      csvPreview.value = null
+      fieldMapping.value = null
+      showFieldMappingStep.value = false
+      pendingFileForProcessing.value = null
+      pendingAccountForProcessing.value = null
       step.value = 1
       currentCategoryStep.value = 0
     }
@@ -865,6 +946,15 @@ export default {
       // Use existing commitAllImports() logic
       await commitAllImports()
     }
+    
+    // Check if field mapping is complete (all required fields mapped)
+    const isFieldMappingComplete = computed(() => {
+      if (!fieldMapping.value || typeof fieldMapping.value !== 'object') return false
+      
+      const values = Object.values(fieldMapping.value)
+      return values.includes('date') && values.includes('name') && 
+             values.includes('inflow') && values.includes('outflow')
+    })
 
     return {
       // Props
@@ -879,6 +969,11 @@ export default {
       autoRules,
       newRules,
       allTransactions,
+      csvPreview,
+      fieldMapping,
+      showFieldMappingStep,
+      pendingFileForProcessing,
+      pendingAccountForProcessing,
       existingRuleMatches,
       newRuleMatches,
       autoRuleMatches,
@@ -925,7 +1020,11 @@ export default {
       handleImportTransactions,
       handleSaveAndImport,
       goToTransactionReview,
-      goBackToRules: () => { step.value = 3 }
+      goBackToRules: () => { step.value = 3 },
+      handleFieldMappingConfirmed,
+      handleFieldMappingSkip,
+      fieldMappingComponent,
+      isFieldMappingComplete
     }
   }
 }

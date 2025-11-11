@@ -1,0 +1,32 @@
+/* FieldMapping component styles */
+.header-clickable {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.header-clickable:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.header-unmapped {
+  border: 2px dashed rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.header-unmapped:hover {
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+.mapped-header {
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+.header-label {
+  font-weight: 500;
+  flex: 1;
+}
+

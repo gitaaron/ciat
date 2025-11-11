@@ -4,19 +4,36 @@ import { parseLabels } from '../../common/src/ruleMatcher.js';
 
 export const Accounts = {
   all() {
-    return db.prepare('SELECT * FROM accounts ORDER BY name').all();
+    const accounts = db.prepare('SELECT * FROM accounts ORDER BY name').all();
+    // Parse field_mapping JSON for each account
+    return accounts.map(account => ({
+      ...account,
+      field_mapping: account.field_mapping ? JSON.parse(account.field_mapping) : null
+    }));
   },
   create(name) {
     return db.prepare('INSERT INTO accounts (name) VALUES (?)').run(name);
   },
   findByName(name) {
-    return db.prepare('SELECT * FROM accounts WHERE name = ?').get(name);
+    const account = db.prepare('SELECT * FROM accounts WHERE name = ?').get(name);
+    if (account && account.field_mapping) {
+      account.field_mapping = JSON.parse(account.field_mapping);
+    }
+    return account;
   },
   findById(id) {
-    return db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    if (account && account.field_mapping) {
+      account.field_mapping = JSON.parse(account.field_mapping);
+    }
+    return account;
   },
   update(id, name) {
     return db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(name, id);
+  },
+  updateFieldMapping(id, fieldMapping) {
+    const mappingJson = fieldMapping ? JSON.stringify(fieldMapping) : null;
+    return db.prepare('UPDATE accounts SET field_mapping = ? WHERE id = ?').run(mappingJson, id);
   },
   delete(id) {
     return db.prepare('DELETE FROM accounts WHERE id = ?').run(id);

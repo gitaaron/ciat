@@ -140,7 +140,13 @@
               class="transaction-item"
             >
               <span class="merchant">{{ transaction.name }}</span>
-              <span class="amount">{{ formatAmount(transaction.amount) }}</span>
+              <span 
+                class="amount"
+                :class="isInflow(transaction) ? 'amount-income' : 'amount-expense'"
+                :title="isInflow(transaction) ? 'Income' : 'Expense'"
+              >
+                {{ isInflow(transaction) ? '+' : '' }}{{ formatAmount(transaction.amount) }}
+              </span>
               <span class="date">{{ formatDate(transaction.date) }}</span>
               <span v-if="transaction.account_id" class="account">{{ getAccountName(transaction.account_id) }}</span>
               <span 
@@ -184,7 +190,13 @@
               class="preview-item"
             >
               <span class="merchant">{{ transaction.name }}</span>
-              <span class="amount">{{ formatAmount(transaction.amount) }}</span>
+              <span 
+                class="amount"
+                :class="isInflow(transaction) ? 'amount-income' : 'amount-expense'"
+                :title="isInflow(transaction) ? 'Income' : 'Expense'"
+              >
+                {{ isInflow(transaction) ? '+' : '' }}{{ formatAmount(transaction.amount) }}
+              </span>
               <span class="date">{{ formatDate(transaction.date) }}</span>
               <span v-if="transaction.account_id" class="account">{{ getAccountName(transaction.account_id) }}</span>
               <span 
@@ -271,6 +283,15 @@ export default {
     getAccountName(accountId) {
       const account = this.accounts.find(a => a.id === accountId)
       return account ? account.name : 'Unknown Account'
+    },
+
+    // Helper function to check if transaction is inflow (handles both number and string)
+    isInflow(transaction) {
+      if (!transaction || transaction.inflow === undefined || transaction.inflow === null) {
+        return false
+      }
+      // Handle both number (0/1) and string ("0"/"1") cases
+      return transaction.inflow === 1 || transaction.inflow === true || transaction.inflow === '1'
     },
 
     formatAmount(amount) {

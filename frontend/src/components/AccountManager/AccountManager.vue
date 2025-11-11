@@ -104,6 +104,13 @@
                   </div>
                   <div v-else class="d-flex">
                     <v-btn
+                      icon="mdi-table-cog"
+                      size="small"
+                      @click="openFieldMappingDialog(account)"
+                      class="mr-2"
+                      title="Edit Field Mapping"
+                    />
+                    <v-btn
                       icon="mdi-pencil"
                       size="small"
                       @click="startEdit(account)"
@@ -123,6 +130,82 @@
         </v-card>
       </v-card-text>
     </v-card>
+
+    <!-- Field Mapping Dialog -->
+    <v-dialog v-model="fieldMappingDialog" max-width="900" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          <v-icon left>mdi-table-cog</v-icon>
+          Edit Field Mapping for {{ accountForFieldMapping?.name }}
+        </v-card-title>
+        
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4">
+            Upload a CSV file to preview and map the fields. The mapping will be saved to this account and used for future imports.
+          </v-alert>
+          
+          <v-card variant="outlined" class="mb-4">
+            <v-card-text>
+              <v-file-input
+                label="Upload CSV File for Preview"
+                accept=".csv,text/csv"
+                @change="handleCSVUploadForMapping"
+                variant="outlined"
+                density="compact"
+                prepend-icon="mdi-file-upload"
+              />
+            </v-card-text>
+          </v-card>
+          
+          <FieldMapping
+            v-if="csvPreviewForMapping"
+            :csv-columns="csvPreviewForMapping.columns"
+            :preview-rows="csvPreviewForMapping.preview"
+            :initial-mapping="fieldMappingValue"
+            @mapping-changed="(mapping) => { 
+              // mapping is index-based: { 0: 'date', 1: 'name', ... }
+              // Convert to field->column format for internal use
+              if (mapping && typeof mapping === 'object') {
+                const fieldMapping = {}
+                for (const [indexStr, field] of Object.entries(mapping)) {
+                  const index = parseInt(indexStr, 10)
+                  if (!isNaN(index) && csvPreviewForMapping?.columns) {
+                    const columnName = csvPreviewForMapping.columns[index]
+                    if (columnName) {
+                      fieldMapping[field] = columnName
+                    }
+                  }
+                }
+                fieldMappingValue = fieldMapping
+              }
+            }"
+          />
+          
+          <v-alert v-else type="warning" variant="tonal">
+            Please upload a CSV file to preview and configure field mapping.
+          </v-alert>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="closeFieldMappingDialog"
+            :disabled="savingFieldMapping"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="saveFieldMapping"
+            :loading="savingFieldMapping"
+            :disabled="!isFieldMappingComplete"
+          >
+            <v-icon left>mdi-content-save</v-icon>
+            Save Mapping
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="deleteDialog" max-width="500">

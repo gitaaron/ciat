@@ -17,6 +17,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
+  field_mapping TEXT,              -- JSON object mapping CSV columns to fields: {date, name, inflow, outflow}
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -73,4 +74,13 @@ try {
 } catch (e) {
   // Column already exists, ignore error
   console.log('Labels column already exists in transactions table');
+}
+
+// Migration: Add field_mapping column if it doesn't exist
+try {
+  db.exec('ALTER TABLE accounts ADD COLUMN field_mapping TEXT;');
+  console.log('Added field_mapping column to accounts table');
+} catch (e) {
+  // Column already exists, ignore error
+  console.log('Field_mapping column already exists in accounts table');
 }

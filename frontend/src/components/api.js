@@ -91,5 +91,16 @@ export default {
   async reapplyRules() {
     const { data } = await axios.post(apiBase + '/reapply-categories')
     return data
+  },
+  // Field mapping APIs
+  async previewCSV(file) {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await axios.post(apiBase + '/import/preview-csv', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return data
+  },
+  async updateAccountFieldMapping(accountId, fieldMapping) {
+    const { data } = await axios.put(apiBase + `/accounts/${accountId}/field-mapping`, { field_mapping: fieldMapping })
+    return data
   }
 }

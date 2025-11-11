@@ -329,9 +329,17 @@
 
 .transaction-item .amount {
   font-weight: bold;
-  color: #1976d2;
   min-width: 80px;
   text-align: right;
+  cursor: help;
+}
+
+.transaction-item .amount-income {
+  color: #4caf50;
+}
+
+.transaction-item .amount-expense {
+  color: #000000;
 }
 
 .transaction-item .date {
@@ -342,6 +350,28 @@
 .transaction-item .account {
   color: #666;
   min-width: 120px;
+}
+
+.transaction-item .inflow-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  min-width: 70px;
+  text-align: center;
+  border: 1px solid;
+}
+
+.transaction-item .inflow-badge.income {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #4caf50;
+}
+
+.transaction-item .inflow-badge.expense {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #f44336;
 }
 
 .transaction-item .category-change {
@@ -425,14 +455,44 @@
 
 .preview-item .amount {
   font-weight: bold;
-  color: #1976d2;
   min-width: 70px;
   text-align: right;
+  cursor: help;
+}
+
+.preview-item .amount-income {
+  color: #4caf50;
+}
+
+.preview-item .amount-expense {
+  color: #000000;
 }
 
 .preview-item .date {
   color: #666;
   min-width: 70px;
+}
+
+.preview-item .inflow-badge {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  min-width: 60px;
+  text-align: center;
+  border: 1px solid;
+}
+
+.preview-item .inflow-badge.income {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-color: #4caf50;
+}
+
+.preview-item .inflow-badge.expense {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #f44336;
 }
 
 .preview-item .category-change {

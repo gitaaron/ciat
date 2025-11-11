@@ -44,7 +44,6 @@ export default {
       { title: 'Name', key: 'name', sortable: true },
       { title: 'Description', key: 'description', sortable: true },
       { title: 'Amount', key: 'amount', sortable: true },
-      { title: 'Type', key: 'inflow', sortable: true },
       { title: 'Category', key: 'category', sortable: false },
       { title: 'Labels', key: 'labels', sortable: false },
       { title: 'Explain', key: 'category_explain', sortable: false }
