@@ -117,7 +117,7 @@ export default {
       default: ''
     },
     selectedAccount: {
-      type: String,
+      type: [String, Number],
       default: ''
     },
     startDate: {
