@@ -70,7 +70,7 @@
                 >
                   mdi-circle
                 </v-icon>
-                <span class="text-subtitle-1 font-weight-medium">
+                <span class="text-subtitle-1 font-weight-medium text-black">
                   {{ CATEGORY_NAMES[category] }}
                 </span>
               </div>
@@ -88,6 +88,7 @@
                   density="compact"
                   variant="outlined"
                   hide-details
+                  class="target-input"
                 />
               </div>
               
@@ -209,5 +210,13 @@ const {
 <style scoped>
 .gap-2 {
   gap: 8px;
+}
+
+.target-input :deep(.v-field__input) {
+  color: black !important;
+}
+
+.target-input :deep(input) {
+  color: black !important;
 }
 </style>
