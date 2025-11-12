@@ -30,24 +30,32 @@ async function loadTransactions() {
   }
 }
 
-// Filter to only expense transactions with valid categories
+// Calculate category spend as outflows - inflows (matching totalActual from CategoryTargets)
 const chartData = computed(() => {
-  const expenseTransactions = transactions.value.filter(tx => 
-    tx.inflow === 0 && 
-    tx.category && 
-    CATEGORY_STEPS.includes(tx.category)
-  )
+  const spending = {}
   
-  const totals = d3.rollups(
-    expenseTransactions, 
-    v => d3.sum(v, d => Number(d.amount)), 
-    d => d.category
-  )
+  CATEGORY_STEPS.forEach(category => {
+    const categoryTransactions = transactions.value.filter(tx => 
+      tx.category === category && CATEGORY_STEPS.includes(tx.category)
+    )
+    
+    const inflows = categoryTransactions
+      .filter(tx => tx.inflow === 1)
+      .reduce((sum, tx) => sum + Number(tx.amount), 0)
+    
+    const outflows = categoryTransactions
+      .filter(tx => tx.inflow === 0)
+      .reduce((sum, tx) => sum + Number(tx.amount), 0)
+    
+    // Calculate difference (outflows - inflows), use 0 if inflow > outflow
+    const difference = outflows - inflows
+    spending[category] = Math.max(0, difference)
+  })
   
-  return totals.map(([category, value]) => ({
+  return CATEGORY_STEPS.map(category => ({
     category,
     label: CATEGORY_NAMES[category],
-    value: value,
+    value: spending[category],
     color: colorScale(category)
   })).filter(d => d.value > 0)
 })
@@ -192,7 +200,7 @@ defineExpose({
   <v-card>
     <v-card-title class="text-h6">
       <v-icon left>mdi-chart-pie</v-icon>
-      Category Breakdown (Pie)
+      Category Spend
     </v-card-title>
     <v-card-text>
       <div ref="el" class="chart-container"></div>

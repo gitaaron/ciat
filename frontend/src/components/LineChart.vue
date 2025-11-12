@@ -30,38 +30,44 @@ async function loadTransactions() {
   }
 }
 
-// Process data for line chart
+// Process data for line chart - calculate outflows - inflows per month
 const chartData = computed(() => {
-  // Filter to only expense transactions with valid categories
-  const expenseTransactions = transactions.value.filter(tx => 
-    tx.inflow === 0 && 
+  // Filter to transactions with valid categories
+  const categoryTransactions = transactions.value.filter(tx => 
     tx.category && 
     CATEGORY_STEPS.includes(tx.category)
   )
   
   // Parse dates and group by month
-  const parsed = expenseTransactions.map(r => ({
+  const parsed = categoryTransactions.map(r => ({
     ...r, 
     month: (r.date || '').slice(0, 7), // YYYY-MM
-    val: Number(r.amount)
+    amount: Number(r.amount),
+    isInflow: r.inflow === 1
   }))
   
   const months = Array.from(new Set(parsed.map(d => d.month)))
     .filter(Boolean)
     .sort()
   
-  // Create series for each category
+  // Create series for each category - calculate outflows - inflows per month
   const series = CATEGORY_STEPS.map(category => ({
     key: category,
     label: CATEGORY_NAMES[category],
     color: colorScale(category),
-    values: months.map(month => ({
-      month,
-      value: d3.sum(
-        parsed.filter(d => d.category === category && d.month === month),
-        d => d.val
-      )
-    }))
+    values: months.map(month => {
+      const monthTransactions = parsed.filter(d => d.category === category && d.month === month)
+      const inflows = monthTransactions
+        .filter(d => d.isInflow)
+        .reduce((sum, d) => sum + d.amount, 0)
+      const outflows = monthTransactions
+        .filter(d => !d.isInflow)
+        .reduce((sum, d) => sum + d.amount, 0)
+      return {
+        month,
+        value: outflows - inflows // Can be negative
+      }
+    })
   }))
   
   return { series, months }
@@ -103,9 +109,17 @@ async function draw() {
     .domain(months)
     .range([margin.left, width - margin.right])
   
-  const maxValue = d3.max(series.flatMap(s => s.values.map(v => v.value))) || 1
+  // Calculate min and max values (allowing negative values)
+  const allValues = series.flatMap(s => s.values.map(v => v.value))
+  const minValue = d3.min(allValues) || 0
+  const maxValue = d3.max(allValues) || 1
+  
+  // Ensure domain includes 0 and extends to min/max with padding
+  const yMin = minValue < 0 ? minValue * 1.1 : 0
+  const yMax = maxValue > 0 ? maxValue * 1.1 : 1
+  
   const y = d3.scaleLinear()
-    .domain([0, maxValue])
+    .domain([yMin, yMax])
     .nice()
     .range([height - margin.bottom, margin.top])
   
@@ -147,6 +161,18 @@ async function draw() {
       .tickFormat('')
     )
     .style('opacity', 0.1)
+  
+  // Add x-axis line at y=0 if domain includes negative values
+  if (yMin < 0) {
+    svg.append('line')
+      .attr('x1', margin.left)
+      .attr('x2', width - margin.right)
+      .attr('y1', y(0))
+      .attr('y2', y(0))
+      .attr('stroke', '#333')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '2,2')
+  }
   
   // Add Y-axis label
   svg.append('text')
@@ -227,7 +253,7 @@ async function draw() {
     .attr('transform', `translate(${width - margin.right + 10}, ${margin.top})`)
   
   const legendItems = legend.selectAll('.legend-item')
-    .data(series.filter(s => s.values.some(v => v.value > 0)))
+    .data(series.filter(s => s.values.some(v => v.value !== 0)))
     .enter()
     .append('g')
     .attr('class', 'legend-item')
@@ -268,7 +294,7 @@ defineExpose({
   <v-card>
     <v-card-title class="text-h6">
       <v-icon left>mdi-chart-line</v-icon>
-      Monthly Breakdown (Line)
+      Monthly Breakdown
     </v-card-title>
     <v-card-text>
       <div ref="el" class="chart-container"></div>
