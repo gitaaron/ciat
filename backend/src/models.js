@@ -62,7 +62,7 @@ export const Transactions = {
     let sql = `SELECT t.*, a.name as account_name FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE 1=1`;
     const params = {};
     if (q) {
-      sql += ` AND (t.name LIKE @q OR t.description LIKE @q OR t.note LIKE @q)`;
+      sql += ` AND (t.name LIKE @q OR t.description LIKE @q OR t.note LIKE @q OR CAST(t.amount AS TEXT) LIKE @q)`;
       params.q = `%${q}%`;
     }
     if (category) { sql += ` AND t.category=@category`; params.category = category; }
