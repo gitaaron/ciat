@@ -165,22 +165,27 @@ export default {
       }
     }
     
-    // Load targets from localStorage
-    const loadTargets = () => {
-      const saved = localStorage.getItem('categoryTargets')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          targets.value = { ...targets.value, ...parsed }
-        } catch (error) {
-          console.error('Error loading saved targets:', error)
+    // Load targets from backend
+    const loadTargets = async () => {
+      try {
+        const saved = await api.getCategoryTargets()
+        if (saved) {
+          targets.value = { ...targets.value, ...saved }
         }
+      } catch (error) {
+        console.error('Error loading saved targets:', error)
+        // Keep defaults if loading fails
       }
     }
     
-    // Save targets to localStorage
-    const saveTargets = () => {
-      localStorage.setItem('categoryTargets', JSON.stringify(targets.value))
+    // Save targets to backend
+    const saveTargets = async () => {
+      try {
+        await api.saveCategoryTargets(targets.value)
+      } catch (error) {
+        console.error('Error saving targets:', error)
+        throw error // Re-throw so saveChanges can handle it
+      }
     }
     
     // Start editing
@@ -200,13 +205,14 @@ export default {
       if (targetsValid.value) {
         try {
           saving.value = true
-          // Simulate a small delay for better UX
-          await new Promise(resolve => setTimeout(resolve, 500))
           
           targets.value = { ...tempTargets.value }
-          saveTargets()
+          await saveTargets()
           editing.value = false
           tempTargets.value = {}
+        } catch (error) {
+          console.error('Failed to save targets:', error)
+          // Optionally show error to user - for now just log it
         } finally {
           saving.value = false
         }
@@ -232,9 +238,9 @@ export default {
       return `${value.toFixed(1)}%`
     }
     
-    onMounted(() => {
-      loadTargets()
-      loadTransactions()
+    onMounted(async () => {
+      await loadTargets()
+      await loadTransactions()
     })
     
     // Watch for transaction changes

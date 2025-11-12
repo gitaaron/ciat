@@ -102,5 +102,14 @@ export default {
   async updateAccountFieldMapping(accountId, fieldMapping) {
     const { data } = await axios.put(apiBase + `/accounts/${accountId}/field-mapping`, { field_mapping: fieldMapping })
     return data
+  },
+  // Category targets APIs
+  async getCategoryTargets() {
+    const { data } = await axios.get(apiBase + '/category-targets')
+    return data
+  },
+  async saveCategoryTargets(targets) {
+    const { data } = await axios.put(apiBase + '/category-targets', { targets })
+    return data
   }
 }

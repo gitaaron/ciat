@@ -15,9 +15,13 @@ import { parseLabels } from '../../common/src/ruleMatcher.js';
 import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const dataDir = path.join(__dirname, '..', 'data');
+const categoryTargetsPath = path.join(dataDir, 'category-targets.json');
 
 const app = express();
 app.use(cors());
@@ -591,6 +595,67 @@ app.get('/api/versions/status', (_req, res) => {
       isUpToDate: latestVersion ? latestVersion.hash === currentHash : true
     });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Category targets endpoints
+const getDefaultCategoryTargets = () => ({
+  fixed_costs: 35,
+  investments: 10,
+  guilt_free: 40,
+  short_term_savings: 15
+});
+
+app.get('/api/category-targets', (req, res) => {
+  try {
+    if (fs.existsSync(categoryTargetsPath)) {
+      const content = fs.readFileSync(categoryTargetsPath, 'utf8');
+      const targets = JSON.parse(content);
+      res.json(targets);
+    } else {
+      // Return defaults if file doesn't exist
+      const defaults = getDefaultCategoryTargets();
+      res.json(defaults);
+    }
+  } catch (error) {
+    console.error('Error reading category targets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/category-targets', (req, res) => {
+  try {
+    const { targets } = req.body;
+    
+    if (!targets || typeof targets !== 'object') {
+      return res.status(400).json({ error: 'targets object is required' });
+    }
+    
+    // Validate that all required categories are present
+    const requiredCategories = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings'];
+    for (const category of requiredCategories) {
+      if (!(category in targets) || typeof targets[category] !== 'number') {
+        return res.status(400).json({ error: `Invalid or missing target for category: ${category}` });
+      }
+    }
+    
+    // Validate that percentages sum to 100
+    const total = Object.values(targets).reduce((sum, val) => sum + val, 0);
+    if (Math.abs(total - 100) > 0.01) {
+      return res.status(400).json({ error: 'Target percentages must sum to exactly 100%' });
+    }
+    
+    // Ensure data directory exists
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    // Write to file
+    fs.writeFileSync(categoryTargetsPath, JSON.stringify(targets, null, 2), 'utf8');
+    res.json({ ok: true, targets });
+  } catch (error) {
+    console.error('Error saving category targets:', error);
     res.status(500).json({ error: error.message });
   }
 });
