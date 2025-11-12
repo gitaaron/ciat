@@ -101,20 +101,28 @@
                 </div>
               </div>
               
-              <!-- Target Amount -->
-              <div class="text-body-2 text-grey mb-2">
-                Target: {{ formatCurrency(targetAmounts[category]) }}
-              </div>
-              
-              <!-- Actual Amount -->
-              <div class="text-body-2 text-grey mb-2">
-                Actual: {{ formatCurrency(actualSpending[category]) }}
-              </div>
-              
-              <!-- Historical Average -->
-              <div class="text-body-2 text-grey mb-2">
-                Avg: {{ formatCurrency(historicalAverages[category]) }}
-              </div>
+              <!-- Target vs Actual Table -->
+              <v-table density="compact" class="mb-2">
+                <thead>
+                  <tr>
+                    <th class="text-left text-caption"></th>
+                    <th class="text-center text-caption">Monthly</th>
+                    <th class="text-center text-caption">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-body-2 font-weight-medium">Target</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(monthlyTarget[category]) }}</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(totalTarget[category]) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-body-2 font-weight-medium">Actual</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(monthlyActual[category]) }}</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(totalActual[category]) }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
               
               <!-- Surplus/Deficit -->
               <div class="d-flex align-center">
@@ -179,8 +187,11 @@ const {
   monthlyNetIncome,
   annualNetIncome,
   dateRange,
-  actualSpending,
+  monthlyActual,
+  totalActual,
   targetAmounts,
+  monthlyTarget,
+  totalTarget,
   categoryAnalysis,
   historicalAverages,
   targetsValid,

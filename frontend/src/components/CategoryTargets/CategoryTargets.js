@@ -72,19 +72,35 @@ export default {
       return totalNetIncome.value / dateRange.value.years
     })
     
-    // Calculate actual spending by category
-    const actualSpending = computed(() => {
+    // Calculate total actual spending by category (outflows - inflows, not averaged)
+    const totalActual = computed(() => {
       const spending = {}
       CATEGORY_STEPS.forEach(category => {
-        spending[category] = transactions.value
-          .filter(tx => tx.category === category && tx.inflow === 0)
+        const categoryTransactions = transactions.value.filter(tx => tx.category === category)
+        const inflows = categoryTransactions
+          .filter(tx => tx.inflow === 1)
           .reduce((sum, tx) => sum + Number(tx.amount), 0)
+        const outflows = categoryTransactions
+          .filter(tx => tx.inflow === 0)
+          .reduce((sum, tx) => sum + Number(tx.amount), 0)
+        spending[category] = outflows - inflows
       })
       return spending
     })
     
-    // Calculate target amounts based on monthly net income
-    const targetAmounts = computed(() => {
+    // Calculate monthly actual spending (derived from totalActual)
+    const monthlyActual = computed(() => {
+      const spending = {}
+      CATEGORY_STEPS.forEach(category => {
+        spending[category] = dateRange.value.months > 0 
+          ? totalActual.value[category] / dateRange.value.months 
+          : 0
+      })
+      return spending
+    })
+    
+    // Calculate monthly target amounts based on monthly net income
+    const monthlyTarget = computed(() => {
       const amounts = {}
       CATEGORY_STEPS.forEach(category => {
         amounts[category] = (monthlyNetIncome.value * targets.value[category]) / 100
@@ -92,12 +108,24 @@ export default {
       return amounts
     })
     
-    // Calculate surplus/deficit for each category
+    // Calculate total target amounts (monthly target * number of months)
+    const totalTarget = computed(() => {
+      const amounts = {}
+      CATEGORY_STEPS.forEach(category => {
+        amounts[category] = monthlyTarget.value[category] * dateRange.value.months
+      })
+      return amounts
+    })
+    
+    // Keep targetAmounts for backward compatibility
+    const targetAmounts = computed(() => monthlyTarget.value)
+    
+    // Calculate surplus/deficit for each category (using monthly values)
     const categoryAnalysis = computed(() => {
       const analysis = {}
       CATEGORY_STEPS.forEach(category => {
-        const actual = actualSpending.value[category]
-        const target = targetAmounts.value[category]
+        const actual = monthlyActual.value[category]
+        const target = monthlyTarget.value[category]
         const difference = target - actual
         const percentage = monthlyNetIncome.value > 0 ? (actual / monthlyNetIncome.value) * 100 : 0
         
@@ -113,29 +141,34 @@ export default {
       return analysis
     })
     
-    // Calculate historical averages
+    // Calculate historical averages (inflows - outflows per month, then averaged)
     const historicalAverages = computed(() => {
       const averages = {}
       CATEGORY_STEPS.forEach(category => {
         const categoryTransactions = transactions.value
-          .filter(tx => tx.category === category && tx.inflow === 0)
+          .filter(tx => tx.category === category)
         
         if (categoryTransactions.length === 0) {
           averages[category] = 0
           return
         }
         
-        // Group by month and calculate monthly averages
+        // Group by month and calculate monthly net (inflows - outflows)
         const monthlyTotals = {}
         categoryTransactions.forEach(tx => {
           const month = tx.date.slice(0, 7) // YYYY-MM
           if (!monthlyTotals[month]) {
-            monthlyTotals[month] = 0
+            monthlyTotals[month] = { inflows: 0, outflows: 0 }
           }
-          monthlyTotals[month] += Number(tx.amount)
+          if (tx.inflow === 1) {
+            monthlyTotals[month].inflows += Number(tx.amount)
+          } else {
+            monthlyTotals[month].outflows += Number(tx.amount)
+          }
         })
         
-        const monthlyValues = Object.values(monthlyTotals)
+        // Calculate net for each month (inflows - outflows)
+        const monthlyValues = Object.values(monthlyTotals).map(month => month.inflows - month.outflows)
         averages[category] = monthlyValues.length > 0 
           ? monthlyValues.reduce((sum, val) => sum + val, 0) / monthlyValues.length
           : 0
@@ -249,8 +282,11 @@ export default {
       monthlyNetIncome,
       annualNetIncome,
       dateRange,
-      actualSpending,
+      monthlyActual,
+      totalActual,
       targetAmounts,
+      monthlyTarget,
+      totalTarget,
       categoryAnalysis,
       historicalAverages,
       targetsValid,
