@@ -35,11 +35,11 @@
           <div class="stat-item">
             <div 
               class="stat-value" 
-              :class="totalSurplus >= 0 ? 'stat-surplus' : 'stat-deficit'"
+              :class="surplusDeficitClass"
             >
-              {{ formatCurrencyValue(totalSurplus) }}
+              {{ formattedTotalSurplus }}
             </div>
-            <div class="stat-label">{{ totalSurplus >= 0 ? 'Total Surplus' : 'Total Deficit' }}</div>
+            <div class="stat-label">{{ surplusDeficitLabel }}</div>
           </div>
         </v-col>
       </v-row>
@@ -48,7 +48,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import NetIncome from './NetIncome.js'
+import { getSurplusDeficitLabel, getSurplusDeficitClass, formatCurrencyValue } from '../../utils/surplusDeficit.js'
 
 const {
   loading,
@@ -60,14 +62,9 @@ const {
   formatCurrency
 } = NetIncome.setup()
 
-// Format currency value for display (matching TransactionStats format)
-const formatCurrencyValue = (amount) => {
-  const formatted = new Intl.NumberFormat('en-CA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(Math.abs(amount))
-  return (amount >= 0 ? '+' : '') + '$' + formatted
-}
+const surplusDeficitLabel = computed(() => getSurplusDeficitLabel(totalSurplus.value))
+const surplusDeficitClass = computed(() => getSurplusDeficitClass(totalSurplus.value))
+const formattedTotalSurplus = computed(() => formatCurrencyValue(totalSurplus.value))
 
 defineExpose({
   loadTransactions

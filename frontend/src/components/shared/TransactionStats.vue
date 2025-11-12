@@ -24,11 +24,11 @@
           <div class="stat-item">
             <div 
               class="stat-value" 
-              :class="netAmount >= 0 ? 'stat-surplus' : 'stat-deficit'"
+              :class="surplusDeficitClass"
             >
-              {{ netAmount >= 0 ? '+' : '' }}${{ Math.abs(netAmount).toFixed(2) }}
+              {{ formattedNetAmount }}
             </div>
-            <div class="stat-label">{{ netAmount >= 0 ? 'Total Surplus' : 'Total Deficit' }}</div>
+            <div class="stat-label">{{ surplusDeficitLabel }}</div>
           </div>
         </v-col>
         <v-col v-if="showUncategorizedAmount" cols="12" md="3">
@@ -44,6 +44,7 @@
 
 <script>
 import { computed } from 'vue'
+import { calculateNetAmount, getSurplusDeficitLabel, getSurplusDeficitClass, formatCurrencyValue } from '../../utils/surplusDeficit.js'
 
 export default {
   name: 'TransactionStats',
@@ -90,10 +91,16 @@ export default {
     }
   },
   setup(props) {
-    const netAmount = computed(() => props.totalInflow - props.totalOutflow)
+    const netAmount = computed(() => calculateNetAmount(props.totalInflow, props.totalOutflow))
+    const surplusDeficitLabel = computed(() => getSurplusDeficitLabel(netAmount.value))
+    const surplusDeficitClass = computed(() => getSurplusDeficitClass(netAmount.value))
+    const formattedNetAmount = computed(() => formatCurrencyValue(netAmount.value))
     
     return {
-      netAmount
+      netAmount,
+      surplusDeficitLabel,
+      surplusDeficitClass,
+      formattedNetAmount
     }
   }
 }
