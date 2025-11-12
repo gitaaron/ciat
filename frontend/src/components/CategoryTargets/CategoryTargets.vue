@@ -166,7 +166,6 @@
           variant="tonal"
           class="mt-4"
         >
-          <v-icon left>mdi-alert</v-icon>
           Target percentages must sum to exactly 100%
         </v-alert>
       </div>
