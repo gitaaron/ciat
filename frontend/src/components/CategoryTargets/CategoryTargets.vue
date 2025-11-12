@@ -11,21 +11,13 @@
         <p class="mt-2">Loading transactions...</p>
       </div>
       
-      <div v-else-if="netIncome <= 0" class="text-center pa-4">
+      <div v-else-if="monthlyNetIncome <= 0" class="text-center pa-4">
         <v-icon size="48" color="grey">mdi-information</v-icon>
         <p class="text-h6 mt-2">No income data available</p>
         <p class="text-body-2">Import transactions to set up category targets</p>
       </div>
       
       <div v-else>
-        <!-- Net Income Display -->
-        <v-alert type="info" variant="tonal" class="mb-4">
-          <div class="d-flex align-center">
-            <v-icon left>mdi-cash</v-icon>
-            <span class="text-h6">Monthly Net Income: {{ formatCurrency(netIncome) }}</span>
-          </div>
-        </v-alert>
-        
         <!-- Edit Controls -->
         <div class="d-flex justify-end mb-4">
           <v-btn
@@ -183,7 +175,10 @@ const {
   transactions,
   loading,
   editing,
-  netIncome,
+  totalNetIncome,
+  monthlyNetIncome,
+  annualNetIncome,
+  dateRange,
   actualSpending,
   targetAmounts,
   categoryAnalysis,

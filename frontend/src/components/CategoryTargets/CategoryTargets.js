@@ -18,11 +18,58 @@ export default {
     const editing = ref(false)
     const tempTargets = ref({})
     
-    // Calculate net income from inflow transactions
-    const netIncome = computed(() => {
+    // Calculate total net income from inflow transactions
+    const totalNetIncome = computed(() => {
       return transactions.value
         .filter(tx => tx.inflow === 1)
         .reduce((sum, tx) => sum + Number(tx.amount), 0)
+    })
+    
+    // Calculate date range from all transactions
+    const dateRange = computed(() => {
+      if (transactions.value.length === 0) {
+        return { start: null, end: null, months: 0, years: 0 }
+      }
+      
+      const dates = transactions.value
+        .map(tx => tx.date)
+        .filter(date => date)
+        .sort()
+      
+      if (dates.length === 0) {
+        return { start: null, end: null, months: 0, years: 0 }
+      }
+      
+      const startDate = new Date(dates[0])
+      const endDate = new Date(dates[dates.length - 1])
+      
+      // Calculate total days between dates
+      const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24) // milliseconds to days
+      
+      // Total months as a decimal (using average days per month: 365.25 / 12 = 30.4375)
+      const totalMonths = totalDays / 30.4375
+      
+      // Total years as a decimal (accounting for leap years)
+      const totalYears = totalDays / 365.25
+      
+      return {
+        start: dates[0],
+        end: dates[dates.length - 1],
+        months: Math.max(totalMonths, 0.1), // Minimum 0.1 to avoid division by zero
+        years: Math.max(totalYears, 0.01) // Minimum 0.01 to avoid division by zero
+      }
+    })
+    
+    // Calculate monthly net income (total divided by number of months)
+    const monthlyNetIncome = computed(() => {
+      if (dateRange.value.months === 0) return 0
+      return totalNetIncome.value / dateRange.value.months
+    })
+    
+    // Calculate annual net income (total divided by number of years)
+    const annualNetIncome = computed(() => {
+      if (dateRange.value.years === 0) return 0
+      return totalNetIncome.value / dateRange.value.years
     })
     
     // Calculate actual spending by category
@@ -36,11 +83,11 @@ export default {
       return spending
     })
     
-    // Calculate target amounts based on net income
+    // Calculate target amounts based on monthly net income
     const targetAmounts = computed(() => {
       const amounts = {}
       CATEGORY_STEPS.forEach(category => {
-        amounts[category] = (netIncome.value * targets.value[category]) / 100
+        amounts[category] = (monthlyNetIncome.value * targets.value[category]) / 100
       })
       return amounts
     })
@@ -52,7 +99,7 @@ export default {
         const actual = actualSpending.value[category]
         const target = targetAmounts.value[category]
         const difference = target - actual
-        const percentage = netIncome.value > 0 ? (actual / netIncome.value) * 100 : 0
+        const percentage = monthlyNetIncome.value > 0 ? (actual / monthlyNetIncome.value) * 100 : 0
         
         analysis[category] = {
           actual,
@@ -198,7 +245,10 @@ export default {
       loading,
       saving,
       editing,
-      netIncome,
+      totalNetIncome,
+      monthlyNetIncome,
+      annualNetIncome,
+      dateRange,
       actualSpending,
       targetAmounts,
       categoryAnalysis,

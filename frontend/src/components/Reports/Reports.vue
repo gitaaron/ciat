@@ -4,7 +4,10 @@
     <div class="mb-6">
       <CategoryTargets ref="categoryTargetsRef" />
     </div>
-    
+    <!-- Net Income Section -->
+    <div class="mb-6">
+      <NetIncome ref="netIncomeRef" />
+    </div>
     <!-- Charts Section -->
     <v-row v-if="!loading && hasTransactions">
       <v-col cols="12" lg="6">
@@ -14,7 +17,6 @@
         <LineChart ref="lineChartRef" />
       </v-col>
     </v-row>
-    
     <!-- Empty State -->
     <v-card v-else-if="!loading && !hasTransactions" class="text-center pa-8">
       <v-icon size="64" color="grey" class="mb-4">mdi-chart-pie</v-icon>
@@ -41,6 +43,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import NetIncome from '../NetIncome/NetIncome.vue'
 import CategoryTargets from '../CategoryTargets/CategoryTargets.vue'
 import PieChart from '../PieChart.vue'
 import LineChart from '../LineChart.vue'
@@ -48,6 +51,7 @@ import api from '../api.js'
 
 const loading = ref(true)
 const hasTransactions = ref(false)
+const netIncomeRef = ref(null)
 const pieChartRef = ref(null)
 const lineChartRef = ref(null)
 const categoryTargetsRef = ref(null)
@@ -73,6 +77,10 @@ async function refresh() {
   }
   if (lineChartRef.value && lineChartRef.value.refresh) {
     await lineChartRef.value.refresh()
+  }
+  // Refresh NetIncome if it exists
+  if (netIncomeRef.value && netIncomeRef.value.loadTransactions) {
+    await netIncomeRef.value.loadTransactions()
   }
   // Refresh CategoryTargets if it exists
   if (categoryTargetsRef.value && categoryTargetsRef.value.loadTransactions) {
