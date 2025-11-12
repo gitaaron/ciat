@@ -124,7 +124,7 @@
                 </tbody>
               </v-table>
               
-              <!-- Surplus/Deficit -->
+              <!-- Deviation -->
               <div class="d-flex align-center">
                 <v-icon
                   :color="categoryAnalysis[category].isSurplus ? 'green' : categoryAnalysis[category].isDeficit ? 'red' : 'grey'"
@@ -141,7 +141,7 @@
                   }"
                   class="text-body-2 font-weight-medium"
                 >
-                  {{ categoryAnalysis[category].isSurplus ? 'Surplus' : categoryAnalysis[category].isDeficit ? 'Deficit' : 'On Target' }}
+                  Deviation
                 </span>
                 <v-spacer></v-spacer>
                 <span
@@ -152,7 +152,7 @@
                   }"
                   class="text-body-2 font-weight-medium"
                 >
-                  {{ formatCurrency(Math.abs(categoryAnalysis[category].difference)) }}
+                  {{ categoryAnalysis[category].difference > 0 ? '+' : '' }}{{ formatCurrency(categoryAnalysis[category].difference) }}
                 </span>
               </div>
             </v-card>
