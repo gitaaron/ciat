@@ -22,8 +22,13 @@
         </v-col>
         <v-col v-if="showTotalAmount" cols="12" md="3">
           <div class="stat-item">
-            <div class="stat-value">${{ totalAmount.toFixed(2) }}</div>
-            <div class="stat-label">Total Amount</div>
+            <div 
+              class="stat-value" 
+              :class="netAmount >= 0 ? 'stat-surplus' : 'stat-deficit'"
+            >
+              {{ netAmount >= 0 ? '+' : '' }}${{ Math.abs(netAmount).toFixed(2) }}
+            </div>
+            <div class="stat-label">{{ netAmount >= 0 ? 'Total Surplus' : 'Total Deficit' }}</div>
           </div>
         </v-col>
         <v-col v-if="showUncategorizedAmount" cols="12" md="3">
@@ -38,6 +43,8 @@
 </template>
 
 <script>
+import { computed } from 'vue'
+
 export default {
   name: 'TransactionStats',
   props: {
@@ -53,7 +60,11 @@ export default {
       type: Number,
       default: 0
     },
-    totalAmount: {
+    totalInflow: {
+      type: Number,
+      default: 0
+    },
+    totalOutflow: {
       type: Number,
       default: 0
     },
@@ -77,6 +88,13 @@ export default {
       type: Boolean,
       default: false
     }
+  },
+  setup(props) {
+    const netAmount = computed(() => props.totalInflow - props.totalOutflow)
+    
+    return {
+      netAmount
+    }
   }
 }
 </script>
@@ -91,6 +109,14 @@ export default {
   font-weight: bold;
   color: #1976d2;
   margin-bottom: 0.25rem;
+}
+
+.stat-value.stat-surplus {
+  color: #4caf50;
+}
+
+.stat-value.stat-deficit {
+  color: #f44336;
 }
 
 .stat-label {

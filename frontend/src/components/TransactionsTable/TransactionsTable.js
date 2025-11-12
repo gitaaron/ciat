@@ -275,8 +275,21 @@ export default {
     const uncategorizedCount = computed(() => 
       rows.value.filter(transaction => !transaction.category).length
     )
-    const totalAmount = computed(() => 
-      rows.value.reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
+    const totalInflow = computed(() => 
+      rows.value
+        .filter(transaction => {
+          const inflow = transaction.inflow
+          return inflow === 1 || inflow === true || inflow === '1'
+        })
+        .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
+    )
+    const totalOutflow = computed(() => 
+      rows.value
+        .filter(transaction => {
+          const inflow = transaction.inflow
+          return !(inflow === 1 || inflow === true || inflow === '1')
+        })
+        .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
     )
 
     return {
@@ -300,7 +313,8 @@ export default {
       totalTransactions,
       categorizedCount,
       uncategorizedCount,
-      totalAmount,
+      totalInflow,
+      totalOutflow,
       // Methods
       loadTransactions,
       getLabels,
