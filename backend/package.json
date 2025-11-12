@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "api": "node src/server.js",
+    "api": "nodemon --watch src --ext js,json src/server.js",
     "reapply": "node scripts/reapplyCategories.js",
     "db": "node src/cli.js --",
     "test": "node tests/simple-test-runner.js",
