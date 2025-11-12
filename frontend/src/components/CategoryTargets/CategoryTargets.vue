@@ -203,8 +203,14 @@ const {
   saveChanges,
   updateTarget,
   formatCurrency,
-  formatPercentage
+  formatPercentage,
+  loadTransactions
 } = CategoryTargets.setup()
+
+// Expose loadTransactions to parent components
+defineExpose({
+  loadTransactions
+})
 </script>
 
 <style scoped>
