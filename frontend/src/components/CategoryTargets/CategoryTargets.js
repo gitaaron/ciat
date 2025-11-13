@@ -222,6 +222,28 @@ export default {
       }
     }
     
+    // Reset to calculated defaults
+    const resetToDefaults = async () => {
+      try {
+        saving.value = true
+        const defaults = await api.getDefaultCategoryTargets()
+        
+        if (editing.value) {
+          // If editing, update tempTargets
+          tempTargets.value = { ...defaults }
+        } else {
+          // If not editing, update targets directly and save
+          targets.value = { ...defaults }
+          await saveTargets()
+        }
+      } catch (error) {
+        console.error('Failed to reset to defaults:', error)
+        // Optionally show error to user - for now just log it
+      } finally {
+        saving.value = false
+      }
+    }
+    
     // Update target value
     const updateTarget = (category, value) => {
       const numValue = Math.max(0, Math.min(100, Number(value) || 0))
@@ -236,9 +258,12 @@ export default {
       }).format(amount)
     }
     
-    // Format percentage
+    // Format percentage (remove trailing zeros)
     const formatPercentage = (value) => {
-      return `${value.toFixed(1)}%`
+      const formatted = value.toFixed(5)
+      // Remove trailing zeros and trailing decimal point
+      const trimmed = formatted.replace(/\.?0+$/, '')
+      return `${trimmed}%`
     }
     
     onMounted(async () => {
@@ -277,6 +302,7 @@ export default {
       startEditing,
       cancelEditing,
       saveChanges,
+      resetToDefaults,
       updateTarget,
       formatCurrency,
       formatPercentage

@@ -108,6 +108,10 @@ export default {
     const { data } = await axios.get(apiBase + '/category-targets')
     return data
   },
+  async getDefaultCategoryTargets() {
+    const { data } = await axios.get(apiBase + '/category-targets/defaults')
+    return data
+  },
   async saveCategoryTargets(targets) {
     const { data } = await axios.put(apiBase + '/category-targets', { targets })
     return data

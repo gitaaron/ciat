@@ -20,15 +20,25 @@
       <div v-else>
         <!-- Edit Controls -->
         <div class="d-flex justify-end mb-4">
-          <v-btn
-            v-if="!editing"
-            @click="startEditing"
-            color="primary"
-            variant="outlined"
-            prepend-icon="mdi-pencil"
-          >
-            Edit Targets
-          </v-btn>
+          <div v-if="!editing" class="d-flex gap-2">
+            <v-btn
+              @click="resetToDefaults"
+              :loading="saving"
+              color="secondary"
+              variant="outlined"
+              prepend-icon="mdi-refresh"
+            >
+              Reset to Default
+            </v-btn>
+            <v-btn
+              @click="startEditing"
+              color="primary"
+              variant="outlined"
+              prepend-icon="mdi-pencil"
+            >
+              Edit Targets
+            </v-btn>
+          </div>
           <div v-else class="d-flex gap-2">
             <v-btn
               @click="cancelEditing"
@@ -194,6 +204,7 @@ const {
   tempTargets,
   transactions,
   loading,
+  saving,
   editing,
   totalNetIncome,
   monthlyNetIncome,
@@ -213,6 +224,7 @@ const {
   startEditing,
   cancelEditing,
   saveChanges,
+  resetToDefaults,
   updateTarget,
   formatCurrency,
   formatPercentage,

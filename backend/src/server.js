@@ -639,9 +639,7 @@ const calculateDefaultCategoryTargets = () => {
     .filter(tx => tx.inflow === 1)
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   
-  const monthlyNetIncome = totalNetIncome / totalMonths;
-  
-  if (monthlyNetIncome <= 0) {
+  if (totalNetIncome <= 0) {
     // No income, return fallback defaults
     return {
       fixed_costs: 35,
@@ -651,37 +649,23 @@ const calculateDefaultCategoryTargets = () => {
     };
   }
   
-  // Calculate monthly actual spending by category
+  // Calculate total actual spending by category (total outflows - total inflows)
   const categories = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings'];
-  const monthlyActual = {};
+  const totalActual = {};
   
   categories.forEach(category => {
     const categoryTransactions = allTransactions.filter(tx => tx.category === category);
     
-    // Group by month and calculate monthly net (outflows - inflows)
-    const monthlyTotals = {};
-    categoryTransactions.forEach(tx => {
-      const month = tx.date ? tx.date.slice(0, 7) : null; // YYYY-MM
-      if (!month) return;
-      
-      if (!monthlyTotals[month]) {
-        monthlyTotals[month] = { inflows: 0, outflows: 0 };
-      }
-      
-      if (tx.inflow === 1) {
-        monthlyTotals[month].inflows += Number(tx.amount || 0);
-      } else {
-        monthlyTotals[month].outflows += Number(tx.amount || 0);
-      }
-    });
+    const inflows = categoryTransactions
+      .filter(tx => tx.inflow === 1)
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
     
-    // Calculate net for each month (outflows - inflows)
-    const monthlyValues = Object.values(monthlyTotals).map(month => month.outflows - month.inflows);
-    const avgMonthlyActual = monthlyValues.length > 0
-      ? monthlyValues.reduce((sum, val) => sum + val, 0) / monthlyValues.length
-      : 0;
+    const outflows = categoryTransactions
+      .filter(tx => tx.inflow === 0)
+      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
     
-    monthlyActual[category] = avgMonthlyActual;
+    // Total actual = outflows - inflows (matching frontend calculation)
+    totalActual[category] = outflows - inflows;
   });
   
   // Calculate defaults based on heuristic:
@@ -692,17 +676,17 @@ const calculateDefaultCategoryTargets = () => {
   const investments = 10;
   
   // Calculate fixed_costs and guilt_free percentages to achieve $0 surplus
-  // surplus = target - actual = 0, so target = actual
-  // target = (monthlyNetIncome * percentage) / 100
-  // So: (monthlyNetIncome * percentage) / 100 = actual
-  // percentage = (actual * 100) / monthlyNetIncome
+  // For total values: totalTarget = totalActual
+  // totalTarget = (totalNetIncome * percentage) / 100
+  // So: (totalNetIncome * percentage) / 100 = totalActual
+  // percentage = (totalActual * 100) / totalNetIncome
   
-  let fixed_costs = monthlyNetIncome > 0
-    ? (monthlyActual.fixed_costs * 100) / monthlyNetIncome
+  let fixed_costs = totalNetIncome > 0
+    ? (totalActual.fixed_costs * 100) / totalNetIncome
     : 35;
   
-  let guilt_free = monthlyNetIncome > 0
-    ? (monthlyActual.guilt_free * 100) / monthlyNetIncome
+  let guilt_free = totalNetIncome > 0
+    ? (totalActual.guilt_free * 100) / totalNetIncome
     : 40;
   
   // Ensure percentages are non-negative
@@ -733,10 +717,10 @@ const calculateDefaultCategoryTargets = () => {
   }
   
   return {
-    fixed_costs: Math.round(fixed_costs * 10) / 10, // Round to 1 decimal place
+    fixed_costs: Math.round(fixed_costs * 100000) / 100000, // Round to 5 decimal places
     investments: investments,
-    guilt_free: Math.round(guilt_free * 10) / 10,
-    short_term_savings: Math.round(short_term_savings * 10) / 10
+    guilt_free: Math.round(guilt_free * 100000) / 100000, // Round to 5 decimal places
+    short_term_savings: Math.round(short_term_savings * 100000) / 100000 // Round to 5 decimal places
   };
 };
 
@@ -753,6 +737,17 @@ app.get('/api/category-targets', (req, res) => {
     }
   } catch (error) {
     console.error('Error reading category targets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint to get calculated default targets (always returns calculated defaults)
+app.get('/api/category-targets/defaults', (req, res) => {
+  try {
+    const defaults = calculateDefaultCategoryTargets();
+    res.json(defaults);
+  } catch (error) {
+    console.error('Error calculating default category targets:', error);
     res.status(500).json({ error: error.message });
   }
 });
