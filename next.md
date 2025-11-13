@@ -1,0 +1,216 @@
+# Next
+
+In reports:
+
+    * targets
+
+        * when first showing targets and selecting defaults it should do so such that fixed / and guilt free have $0 surplus, investments are 10% and short term savings is remainder from 100% with either surplus or defecit
+
+---
+
+In between account transfers:
+
+    * when importing transactions get rid of the logic that adds 'transfer' label and any code that was required to implement it and not used anymore
+
+    * try to apply 'transfer' manually ensuring transfer rules all apply to same category
+
+---
+
+move 'create rule' and 'reapply rule' buttons to top of transactions page
+
+when clicking 'reapply rule' show a modal with all transactions that will change along with their old / new categories and a 'confirm' button
+
+---
+
+Transaction amount balancing
+
+    - ability to manually create transactions (eg/ one on sep 28 in amount that makes account go to 0)
+
+        - triggers reports refresh
+
+
+---
+
+Income and transfers should be their own category?
+
+---
+
+Reports Income / Salary:
+
+    * extra compensation stats
+
+        * should be based on transactions with label "compensation"
+
+        * if no transactions are labelled then show message 'label your transactions as compensation first'
+
+    * after this our net annual compensation should be around ~$150K
+
+---
+
+During preview optionally detect credit card
+
+---
+
+When reviewing transactions in rules review transactions they should show if they are income or expense
+
+---
+
+Infow and outflow seems to be in different places in each .csv so when importing a csv for a certain account for the first time I should be shown a table with a preview of the first five transactions along with guesses for each field.
+
+- date
+- merchant name
+- inflow
+- outflow
+
+It asks me to very the fields and the user can then select each header in the table to set its field manually
+
+after clicking next the field mapping gets saved to the account entity in the accounts table 
+
+this is now the first step in the import wizard that gets skipped when a user has already set the fields for the account
+
+i should also be able to click on an account and edit these fields (with a preview of 5 transactions from the account) - use the same table as used in the import wizard
+
+---
+
+targets are not editable
+
+---
+
+
+---
+
+Instead of having a special inflow field the transaction should just be categorized as 'income' meaning the rule matcher should check fs the transaction is income as its first step and set the category to 'income' and return.
+
+---
+
+it should be possible to remove and edit labels for a transaction from the transctions tab
+
+---
+
+when coming up with default category targets:
+
+   - investments should stay at 10%, fixed costs and guilt free should be set such that their net is 0 (in other words no surplus or defecit), short term savings is calculated as 100-fixed-investments-guilt free
+
+
+---
+
+
+- make ‘transfer’ a category instead of label
+
+- new category called ‘income’
+
+- pie chart excludes ‘income’ and ‘transfer’ categories
+
+- there needs to be a way to see that the ‘net’ of transfers is negative
+
+- show net income
+
+- how can i calculate my net annual and monthly income?
+
+
+---
+
+- label filter seems to be not working
+
+- in the transactions tab the start and end date should be prepopulated with the date of the first and last transactions
+
+
+---
+
+- in transactions tab, clicking on the title of a transaction in the transactions table should pull up the rule that it matches unless it is overridden with `manual_override` set to true
+
+- in rules tab there should be a section in each rule similar to rules review where i preview a transaction and a way to expand and see all transactions that the rule matches
+
+- after clicking 'reapply rules' it should show the exact number of transactions that were changed - right now it seems to be updating all transactions
+
+---
+
+
+- when editing a rule after import include label
+
+- 'payment thank you' goes into 'fixed costs' with label `credit_card_payment`
+
+---
+
+- auto generate rules
+
+    - when a rule is generated how is the category determined?
+
+    - how is confidence determined?
+
+    - recurring window should be +- 10 days
+
+    - there should be no max on auto rules generated (currently 50?)
+
+    - reduce category confidence to 0, 10, 20 and see what happens
+
+    - conflict resolution
+
+        - is this part of rule auto generation process or part of transaction -> category mapping process with all rules?
+
+        - is this necessary if transactions are removed after creating a matching rule?
+
+    - create an 'exclude' list that is a list of rules
+
+    - higher token patterns should be given provide over lower token patterns
+        - higher character words should also be given priority over lower character rules
+
+    - reapply categories should not be called in backend when rules are saved - instead it should be called from frontend after transactions are reviewed
+
+    - explanation for autogenerated rules should just say 'auto'
+
+    - submit any transactions without autogenerated rules to LLM?
+
+---
+
+- during import instead of showing a "save rules" button show a "review transactions" button
+    - clicking the "review transactions" button does not persist the rules to the backend
+    - instead the "import transactions" button should be renamed to "save"
+    - clicking 'save' at the final step updates persists both rules and transactions similarly to how they are currently persisted
+
+
+---
+
+- the "manage rules" should should use the same "rules review" components as used during import
+
+- from the "manage rules" section after editing a set of rules
+    - display a 'review transactions' button at the bottom when clicking displays:
+        - the transactions table for review (same view component as used during import)
+        - save button that updates both rules and transactions
+
+- improve 'auto generate rules' algo
+
+    - "the home depot #7073 EAST YORK" should result in "the home depot" or "home depot" instead of "the"
+
+
+- review and clean up code ensuring that ‘pre existing’ rules are handled similarly to ‘auto generated’ rules 
+
+    - the only thing that should be different is the rules list they are operating on
+
+—
+
+- review ‘auto generated’ rules logic
+
+—
+
+- fix logic for adding new rules
+    - it should not get created in back-end until ‘continue to import’ button is pressed similarly as auto generated rules
+
+—
+
+- after importing, why do all auto generated rules say “50 transactions” ?  for example, ‘west’ says 50 transactions but then says “west” appears 150 times
+
+- how is ‘confidence’ determined?
+
+- explain auto generated rule stats
+
+- after auto generating rules why are there still transactions that do not match any rules?
+
+- what does the ‘delete rule’ action do?
+
+    - when importing rules and showing auto generated rules, update the ‘delete’ rule action so that it prompts the user if they want to add it to an exclude list; if the user says “yes” then the same auto generated rule should not be created in the future; excluded rules should be persisted
+
+
+- rules should have a field ‘source’ that is enum of either ‘auto’ or ‘user’ and rule cards should include this instead of ‘USER_RULE’
+
+    - when creating an auto-generated rule the explanation should be empty
