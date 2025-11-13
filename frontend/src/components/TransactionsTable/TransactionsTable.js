@@ -20,7 +20,7 @@ export default {
       default: () => []
     }
   },
-  emits: ['open-rule'],
+  emits: ['open-rule', 'categories-updated'],
   setup(props, { emit }) {
     // Reactive properties for filters and data
     const q = ref('')
@@ -200,6 +200,8 @@ export default {
         
         if (succeeded > 0) {
           showSuccess(`Successfully saved ${succeeded} transaction${succeeded !== 1 ? 's' : ''}`)
+          // Emit event to notify parent that categories were updated
+          emit('categories-updated')
         }
       } catch (error) {
         console.error('Error saving transactions:', error)

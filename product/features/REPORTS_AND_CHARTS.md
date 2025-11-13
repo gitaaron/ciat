@@ -11,6 +11,7 @@ Visualize spending by category and trends over time.
 - **Pie chart** for the breakdown of money flow into each category.
 - **Line graphs** showing monthly spending breakdowns.
 - Include 'Category Targets' in this tab
+- **Auto-refresh**: Reports automatically refresh when transaction categories are modified in the Transactions table
 
 ### Tech Notes
 - Frontend uses **D3.js** for charting (see Architecture).

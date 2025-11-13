@@ -60,6 +60,13 @@ async function handleRulesReapplied() {
   }
 }
 
+async function handleCategoriesUpdated() {
+  // Refresh reports when transaction categories are updated
+  if (reportsRef.value && reportsRef.value.refresh) {
+    await reportsRef.value.refresh()
+  }
+}
+
 async function handleOpenRule(rule) {
   // Navigate to rules tab
   selected.value = 'manage-rules'
@@ -205,6 +212,7 @@ onMounted(async () => {
               ref="transactionsTableRef" 
               :accounts="accounts"
               @open-rule="handleOpenRule"
+              @categories-updated="handleCategoriesUpdated"
             />
           </v-window-item>
 

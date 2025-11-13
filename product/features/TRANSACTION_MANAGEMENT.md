@@ -33,6 +33,7 @@ Search, filter, sort, annotate, and correct transactions in a consolidated view.
 - **Button state**: Save button is disabled until at least one transaction is modified.
 - **Save feedback**: Shows loading state during save operation and success/error notifications.
 - **Partial failure handling**: If some transactions fail to save, continue saving others and report which ones failed.
+- **Reports refresh**: When transaction categories are saved, the Reports tab automatically refreshes to reflect the updated category assignments in all charts and visualizations.
 
 ### UI Considerations
 - Include **line graphs** for monthly breakdowns. See **Reports & Charts**.【19†REQUIREMENTS.md】
