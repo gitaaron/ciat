@@ -86,6 +86,24 @@
           />
         </v-col>
         
+        <v-col v-if="showHideNetZero" cols="12" md="auto">
+          <v-tooltip location="top">
+            <template v-slot:activator="{ props }">
+              <v-switch
+                v-bind="props"
+                :model-value="hideNetZero"
+                @update:model-value="$emit('update:hide-net-zero', $event)"
+                label="Hide Net Zero"
+                color="primary"
+                density="compact"
+                hide-details
+                class="mt-2"
+              />
+            </template>
+            <span>Hide pairs of transactions with equal amounts where one is inflow and the other is outflow</span>
+          </v-tooltip>
+        </v-col>
+        
         <v-col cols="12" :md="buttonColSize">
           <v-btn
             @click="clearFilters"
@@ -186,6 +204,24 @@
         />
       </v-col>
       
+      <v-col v-if="showHideNetZero" cols="12" md="auto">
+        <v-tooltip location="top">
+          <template v-slot:activator="{ props }">
+            <v-switch
+              v-bind="props"
+              :model-value="hideNetZero"
+              @update:model-value="$emit('update:hide-net-zero', $event)"
+              label="Hide Net Zero"
+              color="primary"
+              density="compact"
+              hide-details
+              class="mt-2"
+            />
+          </template>
+          <span>Hide pairs of transactions with equal amounts where one is inflow and the other is outflow</span>
+        </v-tooltip>
+      </v-col>
+      
       <v-col cols="12" :md="buttonColSize">
         <v-btn
           @click="clearFilters"
@@ -231,6 +267,14 @@ export default {
       type: String,
       default: ''
     },
+    hideNetZero: {
+      type: Boolean,
+      default: false
+    },
+    showHideNetZero: {
+      type: Boolean,
+      default: false
+    },
     categoryOptions: {
       type: Array,
       default: () => []
@@ -272,7 +316,7 @@ export default {
       default: true
     }
   },
-  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'clear-filters'],
+  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'clear-filters'],
   setup(props, { emit }) {
     const buttonColSize = computed(() => {
       let visibleFilters = 0
@@ -294,6 +338,7 @@ export default {
       emit('update:startDate', '')
       emit('update:endDate', '')
       emit('update:selectedLabel', '')
+      emit('update:hide-net-zero', false)
       emit('clear-filters')
     }
 

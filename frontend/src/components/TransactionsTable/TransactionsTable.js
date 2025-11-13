@@ -29,6 +29,7 @@ export default {
     const category = ref('')
     const label = ref('')
     const account = ref('')
+    const hideNetZero = ref(false)
     const rows = ref([])
     const loading = ref(false)
     const saving = ref(false)
@@ -94,7 +95,7 @@ export default {
     }
 
     // Watch for filter changes and reload data
-    watch([q, start, end, category, label, account], async () => {
+    watch([q, start, end, category, label, account, hideNetZero], async () => {
       await loadTransactions()
     })
 
@@ -110,11 +111,18 @@ export default {
         if (account.value) params.accountId = account.value
 
         const transactions = await api.listTransactions(params)
-        rows.value = transactions
+        
+        // Apply hide net zero filter if enabled
+        let filteredTransactions = transactions
+        if (hideNetZero.value) {
+          filteredTransactions = filterNetZeroPairs(transactions)
+        }
+        
+        rows.value = filteredTransactions
         // Store original states for change detection
         originalTransactions.value.clear()
         modifiedTransactions.value.clear()
-        transactions.forEach(tx => {
+        filteredTransactions.forEach(tx => {
           originalTransactions.value.set(tx.id, { ...tx })
         })
       } catch (error) {
@@ -215,6 +223,68 @@ export default {
     const hasUnsavedChanges = computed(() => modifiedTransactions.value.size > 0)
     const modifiedTransactionsCount = computed(() => modifiedTransactions.value.size)
 
+    function filterNetZeroPairs(transactions) {
+      // Group transactions by absolute amount
+      const amountGroups = new Map()
+      
+      transactions.forEach(tx => {
+        const amount = Math.abs(parseFloat(tx.amount) || 0)
+        if (!amountGroups.has(amount)) {
+          amountGroups.set(amount, [])
+        }
+        amountGroups.get(amount).push(tx)
+      })
+      
+      // Find pairs and mark them for exclusion
+      const excludeIds = new Set()
+      
+      amountGroups.forEach((txs, amount) => {
+        if (txs.length < 2) return
+        
+        // Separate inflows and outflows
+        const inflows = txs.filter(tx => {
+          const inflow = tx.inflow
+          return inflow === 1 || inflow === true || inflow === '1'
+        })
+        const outflows = txs.filter(tx => {
+          const inflow = tx.inflow
+          return !(inflow === 1 || inflow === true || inflow === '1')
+        })
+        
+        // Match pairs: one inflow and one outflow with same absolute amount
+        const matchedPairs = []
+        const usedInflows = new Set()
+        const usedOutflows = new Set()
+        
+        inflows.forEach((inflowTx, i) => {
+          if (usedInflows.has(i)) return
+          
+          outflows.forEach((outflowTx, j) => {
+            if (usedOutflows.has(j)) return
+            
+            // Check if amounts match (considering sign)
+            const inflowAmount = Math.abs(parseFloat(inflowTx.amount) || 0)
+            const outflowAmount = Math.abs(parseFloat(outflowTx.amount) || 0)
+            
+            if (inflowAmount === outflowAmount && inflowAmount === amount) {
+              matchedPairs.push([inflowTx, outflowTx])
+              usedInflows.add(i)
+              usedOutflows.add(j)
+            }
+          })
+        })
+        
+        // Mark all matched pairs for exclusion
+        matchedPairs.forEach(([inflowTx, outflowTx]) => {
+          excludeIds.add(inflowTx.id)
+          excludeIds.add(outflowTx.id)
+        })
+      })
+      
+      // Filter out excluded transactions
+      return transactions.filter(tx => !excludeIds.has(tx.id))
+    }
+
     function clearFilters() {
       q.value = ''
       start.value = ''
@@ -222,6 +292,7 @@ export default {
       category.value = ''
       label.value = ''
       account.value = ''
+      hideNetZero.value = false
     }
 
     async function handleTransactionNameClick(transaction) {
@@ -316,6 +387,7 @@ export default {
       category,
       label,
       account,
+      hideNetZero,
       rows,
       loading,
       saving,
