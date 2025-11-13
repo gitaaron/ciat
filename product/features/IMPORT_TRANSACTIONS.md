@@ -14,7 +14,6 @@ Import historical transactions from multiple accounts using common bank formats,
 - Post‑import flow: prompt user to **select the account** for each file via dropdown; support **creating accounts** in an “Accounts” section (list, rename, delete).
 - Attempt initial **category guess** for each transaction based on current rules.
 - **Deduplicate** if the same transaction is imported more than once.
-- **Transfer detection**: Automatically detect and label transactions that appear to be transfers between accounts with a `'transfer'` label. Transfer transactions are saved to the database and can be viewed, categorized, and filtered like any other transaction.
 - Show **rules created** rather than lists of transactions to revieww; clicking **Expand** reveals affected transactions; allow **edit/delete** rules with preview. Categories shown step‑by‑step: **Fixed → Investments → Guilt Free → Short‑Term**.
     - When previewing the rule, it should be possible to edit the rule (match type, pattern, category)
     - **Rule editing behavior**:

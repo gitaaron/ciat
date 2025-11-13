@@ -8,9 +8,10 @@ Visualize spending by category and trends over time.
 - Track monthly changes.
 
 ### Functional Requirements
-- **Pie chart** for the breakdown of money flow into each category.
-- **Line graphs** showing monthly spending breakdowns.
-- Include 'Category Targets' in this tab
+- **Pie chart** for the breakdown of money flow into each category (excludes Transfer category).
+- **Line graphs** showing monthly spending breakdowns (excludes Transfer category).
+- Include 'Category Targets' in this tab (excludes Transfer category).
+- **Note**: The Transfer category is excluded from all reports sections but can be viewed and filtered in the Transactions tab.
 - **Date filters**: Start and end date filters that apply to all sections of the reports:
   - Uses the same filter component as the Transactions tab (promoting DRY)
   - Start date is prepopulated with the date of the first transaction in history

@@ -22,7 +22,7 @@ Before pattern discovery, normalize each transaction's merchant string:
 Retain both **raw** and **normalized** strings for rule generation and preview.
 
 #### 2. Business Logic Category Assignment
-Rules are assigned categories using deterministic business logic rather than learning from existing transaction categories:
+Rules are assigned categories using deterministic business logic rather than learning from existing transaction categories. **Note**: The `transfer` category is never auto-generated and can only be set manually.
 
 **Category Assignment Rules:**
 1. **Essential food/groceries keywords** → `fixed_costs`

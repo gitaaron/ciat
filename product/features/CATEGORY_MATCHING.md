@@ -2,7 +2,7 @@
 
 ### Overview
 
-When importing a new transaction that has not already been assigned a category, assign it to one of the four categories using a "rules engine".
+When importing a new transaction that has not already been assigned a category, assign it to one of the four main categories using a "rules engine". The system also supports a **Transfer** category that can be manually set but is never auto-generated.
 
 This mirrors the command‑line and import flows for consistency.
 

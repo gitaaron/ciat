@@ -8,6 +8,7 @@ export const CATEGORY_NAMES = {
   'investments': 'Investments', 
   'guilt_free': 'Guilt Free',
   'short_term_savings': 'Short Term Savings',
+  'transfer': 'Transfer',
   'uncategorized': 'Uncategorized'
 }
 
@@ -16,6 +17,7 @@ export const CATEGORY_ICONS = {
   'investments': 'mdi-trending-up',
   'guilt_free': 'mdi-heart',
   'short_term_savings': 'mdi-piggy-bank',
+  'transfer': 'mdi-swap-horizontal',
   'uncategorized': 'mdi-folder'
 }
 
@@ -24,6 +26,7 @@ export const CATEGORY_COLORS = {
   'investments': 'green',
   'guilt_free': 'pink',
   'short_term_savings': 'orange',
+  'transfer': 'purple',
   'uncategorized': 'grey'
 }
 
@@ -35,6 +38,7 @@ export const CATEGORY_OPTIONS = [
   { title: CATEGORY_NAMES.investments, value: 'investments' },
   { title: CATEGORY_NAMES.guilt_free, value: 'guilt_free' },
   { title: CATEGORY_NAMES.short_term_savings, value: 'short_term_savings' },
+  { title: CATEGORY_NAMES.transfer, value: 'transfer' },
   { title: CATEGORY_NAMES.uncategorized, value: 'uncategorized' }
 ]
 
@@ -43,7 +47,8 @@ export const CATEGORY_SELECT_OPTIONS = [
   { title: CATEGORY_NAMES.guilt_free, value: 'guilt_free' },
   { title: CATEGORY_NAMES.short_term_savings, value: 'short_term_savings' },
   { title: CATEGORY_NAMES.fixed_costs, value: 'fixed_costs' },
-  { title: CATEGORY_NAMES.investments, value: 'investments' }
+  { title: CATEGORY_NAMES.investments, value: 'investments' },
+  { title: CATEGORY_NAMES.transfer, value: 'transfer' }
 ]
 
 // Helper functions

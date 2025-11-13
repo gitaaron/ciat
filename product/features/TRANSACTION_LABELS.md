@@ -22,12 +22,4 @@ I should also be able to remove labels from the rule.
 
 ### Automatic Labels
 
-#### Transfer Detection
-- During import, the system automatically detects transactions that appear to be transfers between accounts.
-- Transfer detection uses two methods:
-  1. **Amount and date matching**: Pairs opposite-signed amounts between different accounts on the same date
-  2. **Keyword matching**: Identifies common transfer patterns in transaction names (e.g., "transfer", "payment", "bill payment", "autopay")
-- Transactions detected as transfers are automatically labeled with the `'transfer'` label
-- **Important**: Transfer transactions are still saved to the database (not filtered out) and can be viewed, categorized, and filtered like any other transaction
-- The `'transfer'` label is preserved when rules are applied to transactions (merged with rule labels)
-- Users can filter transactions by the `'transfer'` label to view all transfer transactions
+(No automatic labels are currently applied during import.)

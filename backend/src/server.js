@@ -10,7 +10,6 @@ import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV, previewCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
-import { detectTransfers } from './utils/transferDetector.js';
 import { parseLabels } from '../../common/src/ruleMatcher.js';
 import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
@@ -424,18 +423,9 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       hash: txHash({ ...r, account_id })
     }));
 
-    // Transfer detection (pre-save)
-    const transferHashes = detectTransfers(processedRows);
-
-    // Add 'transfer' label to detected transfers instead of ignoring them
+    // Parse labels for each transaction (preserve existing labels if any)
     const processedWithLabels = processedRows.map(r => {
-      const isTransfer = transferHashes.has(r.hash);
-      
-      // Parse existing labels and add 'transfer' label if needed
-      let labels = parseLabels(r.labels);
-      if (isTransfer && !labels.includes('transfer')) {
-        labels = [...labels, 'transfer'];
-      }
+      const labels = parseLabels(r.labels);
       
       return {
         ...r,
