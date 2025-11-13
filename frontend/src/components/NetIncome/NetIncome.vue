@@ -48,9 +48,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import NetIncome from './NetIncome.js'
 import { getSurplusDeficitLabel, getSurplusDeficitClass, formatCurrencyValue } from '../../utils/surplusDeficit.js'
+
+const props = defineProps({
+  startDate: {
+    type: String,
+    default: ''
+  },
+  endDate: {
+    type: String,
+    default: ''
+  }
+})
 
 const {
   loading,
@@ -60,7 +71,12 @@ const {
   totalSurplus,
   loadTransactions,
   formatCurrency
-} = NetIncome.setup()
+} = NetIncome.setup(props)
+
+// Watch for date changes and reload transactions
+watch([() => props.startDate, () => props.endDate], () => {
+  loadTransactions()
+})
 
 const surplusDeficitLabel = computed(() => getSurplusDeficitLabel(totalSurplus.value))
 const surplusDeficitClass = computed(() => getSurplusDeficitClass(totalSurplus.value))

@@ -175,7 +175,19 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import CategoryTargets from './CategoryTargets.js'
+
+const props = defineProps({
+  startDate: {
+    type: String,
+    default: ''
+  },
+  endDate: {
+    type: String,
+    default: ''
+  }
+})
 
 const {
   targets,
@@ -205,7 +217,12 @@ const {
   formatCurrency,
   formatPercentage,
   loadTransactions
-} = CategoryTargets.setup()
+} = CategoryTargets.setup(props)
+
+// Watch for date changes and reload transactions
+watch([() => props.startDate, () => props.endDate], () => {
+  loadTransactions()
+})
 
 // Expose loadTransactions to parent components
 defineExpose({

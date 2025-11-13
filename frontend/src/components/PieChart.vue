@@ -1,9 +1,20 @@
 
 <script setup>
 import * as d3 from 'd3'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import api from './api.js'
 import { CATEGORY_NAMES, CATEGORY_COLORS, CATEGORY_STEPS } from '../config/categories.js'
+
+const props = defineProps({
+  startDate: {
+    type: String,
+    default: ''
+  },
+  endDate: {
+    type: String,
+    default: ''
+  }
+})
 
 const el = ref(null)
 const transactions = ref([])
@@ -22,7 +33,10 @@ const colorScale = d3.scaleOrdinal()
 async function loadTransactions() {
   try {
     loading.value = true
-    transactions.value = await api.listTransactions()
+    const params = {}
+    if (props.startDate) params.start = props.startDate
+    if (props.endDate) params.end = props.endDate
+    transactions.value = await api.listTransactions(params)
   } catch (error) {
     console.error('Error loading transactions:', error)
   } finally {
@@ -187,6 +201,11 @@ async function refresh() {
   await loadTransactions()
   draw()
 }
+
+// Watch for date changes and reload
+watch([() => props.startDate, () => props.endDate], async () => {
+  await refresh()
+})
 
 onMounted(async () => {
   await refresh()

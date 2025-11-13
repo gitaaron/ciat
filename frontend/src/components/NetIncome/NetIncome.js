@@ -4,7 +4,7 @@ import { calculateDateRange } from '../../utils/dateRange.js'
 
 export default {
   name: 'NetIncome',
-  setup() {
+  setup(props = {}) {
     const transactions = ref([])
     const loading = ref(true)
     
@@ -61,7 +61,10 @@ export default {
     const loadTransactions = async () => {
       try {
         loading.value = true
-        transactions.value = await api.listTransactions()
+        const params = {}
+        if (props?.startDate) params.start = props.startDate
+        if (props?.endDate) params.end = props.endDate
+        transactions.value = await api.listTransactions(params)
       } catch (error) {
         console.error('Error loading transactions:', error)
       } finally {

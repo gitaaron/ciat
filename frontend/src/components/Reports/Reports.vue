@@ -1,20 +1,47 @@
 <template>
   <div>
+    <!-- Date Filters -->
+    <v-card v-if="hasTransactions" class="mb-6">
+      <v-card-title class="text-h6">
+        <v-icon left>mdi-chart-pie</v-icon>
+        Reports
+      </v-card-title>
+      <v-card variant="outlined" class="ma-4">
+        <v-card-text>
+          <TransactionFilters
+            v-model:start-date="startDate"
+            v-model:end-date="endDate"
+            :show-category-filter="false"
+            :show-account-filter="false"
+            :show-date-filters="true"
+            :show-label-filter="false"
+            :show-search-filter="false"
+            :show-card="false"
+            :search-query="''"
+            clear-button-text="Reset"
+            @clear-filters="clearDateFilters"
+          />
+        </v-card-text>
+
+
+      </v-card>
+    </v-card>
+    
     <!-- Category Targets Section -->
     <div class="mb-6">
-      <CategoryTargets ref="categoryTargetsRef" />
+      <CategoryTargets ref="categoryTargetsRef" :start-date="startDate" :end-date="endDate" />
     </div>
     <!-- Net Income Section -->
     <div class="mb-6">
-      <NetIncome ref="netIncomeRef" />
+      <NetIncome ref="netIncomeRef" :start-date="startDate" :end-date="endDate" />
     </div>
     <!-- Charts Section -->
     <v-row v-if="!loading && hasTransactions">
       <v-col cols="12" lg="6">
-        <PieChart ref="pieChartRef" />
+        <PieChart ref="pieChartRef" :start-date="startDate" :end-date="endDate" />
       </v-col>
       <v-col cols="12" lg="6">
-        <LineChart ref="lineChartRef" />
+        <LineChart ref="lineChartRef" :start-date="startDate" :end-date="endDate" />
       </v-col>
     </v-row>
     <!-- Empty State -->
@@ -47,6 +74,7 @@ import NetIncome from '../NetIncome/NetIncome.vue'
 import CategoryTargets from '../CategoryTargets/CategoryTargets.vue'
 import PieChart from '../PieChart.vue'
 import LineChart from '../LineChart.vue'
+import TransactionFilters from '../shared/TransactionFilters.vue'
 import api from '../api.js'
 
 const loading = ref(true)
@@ -55,6 +83,37 @@ const netIncomeRef = ref(null)
 const pieChartRef = ref(null)
 const lineChartRef = ref(null)
 const categoryTargetsRef = ref(null)
+const startDate = ref('')
+const endDate = ref('')
+const datesInitialized = ref(false)
+
+async function initializeDateRange() {
+  try {
+    // Load all transactions without date filters to find min/max dates
+    const allTransactions = await api.listTransactions({})
+    
+    if (allTransactions.length > 0) {
+      // Find the earliest and latest dates
+      const dates = allTransactions
+        .map(tx => tx.date)
+        .filter(date => date) // Filter out null/undefined dates
+        .sort()
+      
+      if (dates.length > 0) {
+        const earliestDate = dates[0]
+        const latestDate = dates[dates.length - 1]
+        
+        // Set dates - the watch will automatically trigger refresh
+        datesInitialized.value = true
+        startDate.value = earliestDate
+        endDate.value = latestDate
+      }
+    }
+  } catch (error) {
+    console.error('Error initializing date range:', error)
+    // Continue with empty dates if there's an error
+  }
+}
 
 async function checkTransactions() {
   try {
@@ -88,8 +147,20 @@ async function refresh() {
   }
 }
 
-onMounted(() => {
-  checkTransactions()
+function clearDateFilters() {
+  // Re-initialize dates to first and last transaction dates
+  initializeDateRange()
+}
+
+// Note: Child components watch their props (startDate/endDate) and automatically refresh
+// when dates change, so no need for a watch here
+
+onMounted(async () => {
+  await checkTransactions()
+  // Initialize date range if transactions exist
+  if (hasTransactions.value && !datesInitialized.value) {
+    await initializeDateRange()
+  }
 })
 
 defineExpose({

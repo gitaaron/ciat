@@ -5,7 +5,7 @@ import { calculateDateRange } from '../../utils/dateRange.js'
 
 export default {
   name: 'CategoryTargets',
-  setup() {
+  setup(props = {}) {
     const targets = ref({
       fixed_costs: 35,
       investments: 10,
@@ -157,7 +157,10 @@ export default {
     const loadTransactions = async () => {
       try {
         loading.value = true
-        transactions.value = await api.listTransactions()
+        const params = {}
+        if (props?.startDate) params.start = props.startDate
+        if (props?.endDate) params.end = props.endDate
+        transactions.value = await api.listTransactions(params)
       } catch (error) {
         console.error('Error loading transactions:', error)
       } finally {
