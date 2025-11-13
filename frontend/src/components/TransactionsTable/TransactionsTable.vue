@@ -23,6 +23,7 @@
         :show-label-filter="true"
         :show-hide-net-zero="true"
         search-placeholder="Search name/amount/note"
+        clear-button-text="Reset"
         @clear-filters="clearFilters"
       />
 

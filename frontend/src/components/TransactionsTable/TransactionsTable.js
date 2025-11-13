@@ -52,6 +52,9 @@ export default {
 
     // Track if dates have been initialized
     const datesInitialized = ref(false)
+    // Store initial date values for reset functionality
+    const initialStartDate = ref('')
+    const initialEndDate = ref('')
 
     // Load transactions on component mount
     onMounted(async () => {
@@ -86,6 +89,9 @@ export default {
             datesInitialized.value = true
             start.value = earliestDate
             end.value = latestDate
+            // Store initial values for reset functionality
+            initialStartDate.value = earliestDate
+            initialEndDate.value = latestDate
           }
         }
       } catch (error) {
@@ -287,8 +293,9 @@ export default {
 
     function clearFilters() {
       q.value = ''
-      start.value = ''
-      end.value = ''
+      // Reset dates to initial values instead of clearing them
+      start.value = initialStartDate.value
+      end.value = initialEndDate.value
       category.value = ''
       label.value = ''
       account.value = ''
