@@ -294,6 +294,20 @@ export default {
         .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
     )
 
+    function setFilters(filters) {
+      // Set filters programmatically
+      if (filters.category !== undefined) {
+        category.value = filters.category
+      }
+      if (filters.startDate !== undefined) {
+        start.value = filters.startDate
+      }
+      if (filters.endDate !== undefined) {
+        end.value = filters.endDate
+      }
+      // The watch will automatically trigger loadTransactions()
+    }
+
     return {
       // Reactive properties
       q,
@@ -323,7 +337,8 @@ export default {
       trackTransactionChange,
       saveAllChanges,
       clearFilters,
-      handleTransactionNameClick
+      handleTransactionNameClick,
+      setFilters
     }
   }
 }

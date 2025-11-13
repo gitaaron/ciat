@@ -82,6 +82,23 @@ async function handleOpenRule(rule) {
   }, 150)
 }
 
+async function handleNavigateToTransactions(filterData) {
+  // Navigate to transactions tab
+  selected.value = 'transactions'
+  // Wait for next tick to ensure TransactionsTable is rendered
+  await nextTick()
+  // Use a small delay to ensure the component is fully mounted
+  setTimeout(() => {
+    if (transactionsTableRef.value && typeof transactionsTableRef.value.setFilters === 'function') {
+      transactionsTableRef.value.setFilters({
+        category: filterData.category,
+        startDate: filterData.startDate,
+        endDate: filterData.endDate
+      })
+    }
+  }, 150)
+}
+
 async function handleImportComplete() {
   await checkTransactions()
   // Navigate to reports tab after import completion
@@ -217,7 +234,7 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="reports">
-            <Reports ref="reportsRef" @navigate-to-import="selected = 'import'" />
+            <Reports ref="reportsRef" @navigate-to-import="selected = 'import'" @navigate-to-transactions="handleNavigateToTransactions" />
           </v-window-item>
 
           <v-window-item value="manage-rules">

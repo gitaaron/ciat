@@ -15,6 +15,7 @@ Search, filter, sort, annotate, and correct transactions in a consolidated view.
   - **Sort** by date, amount, or name.【19†REQUIREMENTS.md】
   - **Edit** the transaction category.【19†REQUIREMENTS.md】
   - **Add a note** (searchable later).【19†REQUIREMENTS.md】
+- **Programmatic filtering**: The Transactions tab can be navigated to with pre-set filters from other parts of the application (e.g., clicking a dot in the Reports line chart automatically filters by month and category).
 
 #### Category Editing
 - **Batch editing**: Users can edit multiple transaction categories before saving.

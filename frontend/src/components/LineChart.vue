@@ -16,6 +16,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['dot-click'])
+
 const el = ref(null)
 const transactions = ref([])
 const loading = ref(true)
@@ -259,6 +261,22 @@ async function draw() {
           .transition()
           .duration(200)
           .attr('r', 4)
+      })
+      .on('click', function(event, d) {
+        // Calculate first and last day of the month
+        const yearMonth = d.month // Format: YYYY-MM
+        const [year, month] = yearMonth.split('-').map(Number)
+        const firstDay = `${yearMonth}-01`
+        // Get last day of the month (month is 1-12, Date constructor uses 0-11, so month (e.g., 3) becomes April, day 0 gives last day of March)
+        const lastDay = new Date(year, month, 0).getDate()
+        const lastDayStr = `${yearMonth}-${String(lastDay).padStart(2, '0')}`
+        
+        // Emit event with month range and category
+        emit('dot-click', {
+          category: s.key,
+          startDate: firstDay,
+          endDate: lastDayStr
+        })
       })
   })
   

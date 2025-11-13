@@ -41,7 +41,7 @@
         <PieChart ref="pieChartRef" :start-date="startDate" :end-date="endDate" />
       </v-col>
       <v-col cols="12" lg="6">
-        <LineChart ref="lineChartRef" :start-date="startDate" :end-date="endDate" />
+        <LineChart ref="lineChartRef" :start-date="startDate" :end-date="endDate" @dot-click="handleDotClick" />
       </v-col>
     </v-row>
     <!-- Empty State -->
@@ -86,6 +86,8 @@ const categoryTargetsRef = ref(null)
 const startDate = ref('')
 const endDate = ref('')
 const datesInitialized = ref(false)
+
+const emit = defineEmits(['navigate-to-import', 'navigate-to-transactions'])
 
 async function initializeDateRange() {
   try {
@@ -163,11 +165,13 @@ onMounted(async () => {
   }
 })
 
+function handleDotClick(data) {
+  emit('navigate-to-transactions', data)
+}
+
 defineExpose({
   refresh
 })
-
-defineEmits(['navigate-to-import'])
 </script>
 
 <style scoped>
