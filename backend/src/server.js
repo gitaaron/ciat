@@ -600,12 +600,145 @@ app.get('/api/versions/status', (_req, res) => {
 });
 
 // Category targets endpoints
-const getDefaultCategoryTargets = () => ({
-  fixed_costs: 35,
-  investments: 10,
-  guilt_free: 40,
-  short_term_savings: 15
-});
+const calculateDefaultCategoryTargets = () => {
+  // Get all transactions
+  const allTransactions = Transactions.list({});
+  
+  if (allTransactions.length === 0) {
+    // No transactions, return fallback defaults
+    return {
+      fixed_costs: 35,
+      investments: 10,
+      guilt_free: 40,
+      short_term_savings: 15
+    };
+  }
+  
+  // Calculate date range
+  const dates = allTransactions
+    .map(tx => tx.date)
+    .filter(date => date)
+    .sort();
+  
+  if (dates.length === 0) {
+    return {
+      fixed_costs: 35,
+      investments: 10,
+      guilt_free: 40,
+      short_term_savings: 15
+    };
+  }
+  
+  const startDate = new Date(dates[0]);
+  const endDate = new Date(dates[dates.length - 1]);
+  const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+  const totalMonths = Math.max(totalDays / 30.4375, 0.1); // Minimum 0.1 to avoid division by zero
+  
+  // Calculate total net income (inflows)
+  const totalNetIncome = allTransactions
+    .filter(tx => tx.inflow === 1)
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  
+  const monthlyNetIncome = totalNetIncome / totalMonths;
+  
+  if (monthlyNetIncome <= 0) {
+    // No income, return fallback defaults
+    return {
+      fixed_costs: 35,
+      investments: 10,
+      guilt_free: 40,
+      short_term_savings: 15
+    };
+  }
+  
+  // Calculate monthly actual spending by category
+  const categories = ['fixed_costs', 'investments', 'guilt_free', 'short_term_savings'];
+  const monthlyActual = {};
+  
+  categories.forEach(category => {
+    const categoryTransactions = allTransactions.filter(tx => tx.category === category);
+    
+    // Group by month and calculate monthly net (outflows - inflows)
+    const monthlyTotals = {};
+    categoryTransactions.forEach(tx => {
+      const month = tx.date ? tx.date.slice(0, 7) : null; // YYYY-MM
+      if (!month) return;
+      
+      if (!monthlyTotals[month]) {
+        monthlyTotals[month] = { inflows: 0, outflows: 0 };
+      }
+      
+      if (tx.inflow === 1) {
+        monthlyTotals[month].inflows += Number(tx.amount || 0);
+      } else {
+        monthlyTotals[month].outflows += Number(tx.amount || 0);
+      }
+    });
+    
+    // Calculate net for each month (outflows - inflows)
+    const monthlyValues = Object.values(monthlyTotals).map(month => month.outflows - month.inflows);
+    const avgMonthlyActual = monthlyValues.length > 0
+      ? monthlyValues.reduce((sum, val) => sum + val, 0) / monthlyValues.length
+      : 0;
+    
+    monthlyActual[category] = avgMonthlyActual;
+  });
+  
+  // Calculate defaults based on heuristic:
+  // - investments = 10%
+  // - fixed_costs and guilt_free set such that they have $0 surplus (target = actual)
+  // - short_term_savings = remainder to make it 100%
+  
+  const investments = 10;
+  
+  // Calculate fixed_costs and guilt_free percentages to achieve $0 surplus
+  // surplus = target - actual = 0, so target = actual
+  // target = (monthlyNetIncome * percentage) / 100
+  // So: (monthlyNetIncome * percentage) / 100 = actual
+  // percentage = (actual * 100) / monthlyNetIncome
+  
+  let fixed_costs = monthlyNetIncome > 0
+    ? (monthlyActual.fixed_costs * 100) / monthlyNetIncome
+    : 35;
+  
+  let guilt_free = monthlyNetIncome > 0
+    ? (monthlyActual.guilt_free * 100) / monthlyNetIncome
+    : 40;
+  
+  // Ensure percentages are non-negative
+  fixed_costs = Math.max(0, fixed_costs);
+  guilt_free = Math.max(0, guilt_free);
+  
+  // Calculate short_term_savings as remainder
+  let short_term_savings = 100 - investments - fixed_costs - guilt_free;
+  
+  // If short_term_savings would be negative, normalize fixed_costs and guilt_free
+  // to ensure all four add up to 100% while maintaining their relative proportions
+  if (short_term_savings < 0) {
+    const available = 100 - investments; // 90% available for fixed_costs, guilt_free, and short_term_savings
+    const totalRequested = fixed_costs + guilt_free;
+    
+    if (totalRequested > 0) {
+      // Scale down proportionally
+      const scale = available / totalRequested;
+      fixed_costs = fixed_costs * scale;
+      guilt_free = guilt_free * scale;
+      short_term_savings = 0; // No room for short_term_savings
+    } else {
+      // Both are 0, allocate all to short_term_savings
+      fixed_costs = 0;
+      guilt_free = 0;
+      short_term_savings = available;
+    }
+  }
+  
+  return {
+    fixed_costs: Math.round(fixed_costs * 10) / 10, // Round to 1 decimal place
+    investments: investments,
+    guilt_free: Math.round(guilt_free * 10) / 10,
+    short_term_savings: Math.round(short_term_savings * 10) / 10
+  };
+};
 
 app.get('/api/category-targets', (req, res) => {
   try {
@@ -614,8 +747,8 @@ app.get('/api/category-targets', (req, res) => {
       const targets = JSON.parse(content);
       res.json(targets);
     } else {
-      // Return defaults if file doesn't exist
-      const defaults = getDefaultCategoryTargets();
+      // Calculate defaults based on transaction data
+      const defaults = calculateDefaultCategoryTargets();
       res.json(defaults);
     }
   } catch (error) {
