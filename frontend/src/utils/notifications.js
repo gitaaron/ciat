@@ -16,7 +16,8 @@ const confirmDialog = ref({
   cancelText: 'Cancel',
   color: 'primary',
   onConfirm: null,
-  onCancel: null
+  onCancel: null,
+  showCancel: true
 })
 
 // Snackbar functions
@@ -55,6 +56,7 @@ export function showConfirmDialog(options) {
       confirmText: options.confirmText || 'Confirm',
       cancelText: options.cancelText || 'Cancel',
       color: options.color || 'primary',
+      showCancel: options.showCancel !== undefined ? options.showCancel : true,
       onConfirm: () => {
         confirmDialog.value.show = false
         resolve(true)
@@ -64,6 +66,16 @@ export function showConfirmDialog(options) {
         resolve(false)
       }
     }
+  })
+}
+
+export function showInfoDialog(message, title = 'Information', buttonText = 'OK') {
+  return showConfirmDialog({
+    title,
+    message,
+    confirmText: buttonText,
+    showCancel: false,
+    color: 'info'
   })
 }
 

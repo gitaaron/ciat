@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import api from '../api.js'
 import { CATEGORY_STEPS, CATEGORY_NAMES } from '../../config/categories.js'
 import ManageRules from '../RulesReview/ManageRules.vue'
@@ -6,7 +6,7 @@ import TransactionReview from '../TransactionReview/TransactionReview.vue'
 import AccountManager from '../AccountManager/AccountManager.vue'
 import FieldMapping from '../FieldMapping/FieldMapping.vue'
 import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule } from '../../utils/ruleMatcher.js'
-import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm } from '../../utils/notifications.js'
+import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm, showInfoDialog } from '../../utils/notifications.js'
 
 export default {
   name: 'ImportWizard',
@@ -45,6 +45,7 @@ export default {
     const showFieldMappingStep = ref(false) // Show field mapping step before processing
     const pendingFileForProcessing = ref(null) // File waiting to be processed after field mapping
     const pendingAccountForProcessing = ref(null) // Account waiting to be processed after field mapping
+    const pendingImportResult = ref(null) // Import result stored when checking for new transactions
     const fieldMappingComponent = ref(null) // Reference to FieldMapping component
     
     // Centralized rule matching results
@@ -446,31 +447,82 @@ export default {
     async function processAllFiles() {
       if (filesByAccount.value.size === 0) return
       
-      // Check if we need field mapping for CSV files
-      for (const [accountId, accountFiles] of filesByAccount.value) {
-        const file = accountFiles[0]
-        const account = props.accounts.find(a => a.id === accountId)
-        
-        // If CSV file and account has no field mapping, show field mapping step
-        if (file.name.toLowerCase().endsWith('.csv') && account && !account.field_mapping) {
+      processing.value = true
+      
+      try {
+        // First, import the file to check if there are any new transactions
+        // This check happens BEFORE field mapping so we can show the "no new transactions" dialog immediately
+        for (const [accountId, accountFiles] of filesByAccount.value) {
+          const file = accountFiles[0]
+          
           try {
-            // Preview CSV for field mapping
-            const preview = await api.previewCSV(file)
-            csvPreview.value = preview
-            fieldMapping.value = null
+            // Import transactions to check for duplicates
+            const res = await api.importCSV(accountId, file)
+            const rawTransactions = res.preview || []
+            
+            // Check if no new transactions were imported
+            const hasNoNewTransactions = rawTransactions.length === 0 || 
+                                        (res.newTransactions !== undefined && res.newTransactions === 0) ||
+                                        (res.totalTransactions !== undefined && res.duplicatesSkipped !== undefined && 
+                                         res.totalTransactions > 0 && res.duplicatesSkipped === res.totalTransactions)
+            
+            if (hasNoNewTransactions) {
+              processing.value = false
+              
+              // Show dialog and reset import interface after user closes it
+              await showInfoDialog(
+                'All transactions in this file have already been imported. There are no new transactions to add.',
+                'No New Transactions',
+                'Back to Import'
+              )
+              
+              // Reset the import interface
+              resetImport()
+              return
+            }
+            
+            // There are new transactions, so continue with the flow
+            // Store the import result for later use
             pendingFileForProcessing.value = file
             pendingAccountForProcessing.value = accountId
-            showFieldMappingStep.value = true
-            return // Wait for user to confirm field mapping
+            pendingImportResult.value = res
           } catch (error) {
-            console.error('Error previewing CSV:', error)
-            showError('Error previewing CSV: ' + error.message)
+            console.error('Error importing file:', error)
+            showError('Error importing file: ' + error.message)
+            processing.value = false
+            return
           }
         }
+        
+        // Now check if we need field mapping for CSV files (only if there are new transactions)
+        for (const [accountId, accountFiles] of filesByAccount.value) {
+          const file = accountFiles[0]
+          const account = props.accounts.find(a => a.id === accountId)
+          
+          // If CSV file and account has no field mapping, show field mapping step
+          if (file.name.toLowerCase().endsWith('.csv') && account && !account.field_mapping) {
+            try {
+              // Preview CSV for field mapping
+              const preview = await api.previewCSV(file)
+              csvPreview.value = preview
+              fieldMapping.value = null
+              showFieldMappingStep.value = true
+              processing.value = false
+              return // Wait for user to confirm field mapping
+            } catch (error) {
+              console.error('Error previewing CSV:', error)
+              showError('Error previewing CSV: ' + error.message)
+            }
+          }
+        }
+        
+        // No field mapping needed, proceed with processing
+        await doProcessAllFiles()
+      } catch (error) {
+        console.error('Error in processAllFiles:', error)
+        showError('Error processing files: ' + error.message)
+        processing.value = false
       }
-      
-      // No field mapping needed, proceed with processing
-      await doProcessAllFiles()
     }
     
     async function doProcessAllFiles() {
@@ -483,8 +535,15 @@ export default {
         for (const [accountId, accountFiles] of filesByAccount.value) {
           const file = accountFiles[0] // Only one file now
           try {
-            // Import transactions without categorization
-            const res = await api.importCSV(accountId, file)
+            // Use the import result if we already have it (from processAllFiles check)
+            // Otherwise import again
+            let res = pendingImportResult.value
+            if (!res) {
+              res = await api.importCSV(accountId, file)
+            }
+            // Clear the pending result after using it
+            pendingImportResult.value = null
+            
             const rawTransactions = res.preview || []
             
             // Load existing rules from backend
@@ -630,6 +689,10 @@ export default {
       
       // Hide field mapping step and proceed with processing
       showFieldMappingStep.value = false
+      // Wait for the dialog to close before proceeding
+      await nextTick()
+      // Add a small delay to ensure persistent dialog closes completely
+      await new Promise(resolve => setTimeout(resolve, 150))
       await doProcessAllFiles()
     }
     
@@ -637,6 +700,10 @@ export default {
       // Skip field mapping, use defaults (no mapping)
       fieldMapping.value = null
       showFieldMappingStep.value = false
+      // Wait for the dialog to close before proceeding
+      await nextTick()
+      // Add a small delay to ensure persistent dialog closes completely
+      await new Promise(resolve => setTimeout(resolve, 150))
       await doProcessAllFiles()
     }
     
@@ -652,6 +719,7 @@ export default {
       showFieldMappingStep.value = false
       pendingFileForProcessing.value = null
       pendingAccountForProcessing.value = null
+      pendingImportResult.value = null
       step.value = 1
       currentCategoryStep.value = 0
     }

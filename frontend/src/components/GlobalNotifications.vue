@@ -64,6 +64,7 @@
         >
           <template v-if="confirmDialog.color === 'error'">mdi-alert-circle</template>
           <template v-else-if="confirmDialog.color === 'warning'">mdi-alert</template>
+          <template v-else-if="confirmDialog.color === 'info'">mdi-information</template>
           <template v-else>mdi-help-circle</template>
         </v-icon>
         {{ confirmDialog.title }}
@@ -76,6 +77,7 @@
       <v-card-actions>
         <v-spacer />
         <v-btn
+          v-if="confirmDialog.showCancel"
           variant="text"
           @click="confirmDialog.onCancel"
         >
