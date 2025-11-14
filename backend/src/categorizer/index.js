@@ -9,14 +9,36 @@ function normalize(s='') {
   return normalizeMerchant(s).normalized;
 }
 
+/**
+ * Get the system-level income rule (lowest priority)
+ * This rule matches all transactions with inflow=true
+ */
+function getSystemIncomeRule() {
+  return {
+    id: 'system_income_rule',
+    match_type: 'inflow',
+    pattern: '',
+    category: 'income',
+    priority: 0, // Lowest priority - all other rules take precedence
+    enabled: true,
+    explain: 'System rule: All income transactions',
+    labels: [],
+    source: 'system',
+    created_at: new Date(0).toISOString(), // Oldest date to ensure it's last in priority tie-breaks
+    updated_at: new Date(0).toISOString()
+  };
+}
+
 export function guessCategory(tx) {
   // Preserve existing labels (e.g., 'transfer' label)
   const existingLabels = parseLabels(tx.labels);
   
   const rules = Rules.findEnabled();
+  // Add system rule at the end (lowest priority)
+  const allRules = [...rules, getSystemIncomeRule()];
 
   // Check rules in priority order using shared matching logic
-  for (const r of rules) {
+  for (const r of allRules) {
     if (matchesRule(r, tx)) {
       // Merge existing labels with rule labels, removing duplicates
       const mergedLabels = mergeLabels(tx.labels, r.labels);
@@ -27,7 +49,7 @@ export function guessCategory(tx) {
         source: 'rule', 
         explain: r.explain || 'Rule match',
         rule_id: r.id,
-        rule_type: 'user_rule'
+        rule_type: r.source === 'system' ? 'system_rule' : 'user_rule'
       };
     }
   }
@@ -210,10 +232,12 @@ export async function reapplyCategories() {
   
   // Get all enabled rules
   const rules = Rules.findEnabled();
+  // Add system rule at the end (lowest priority)
+  const allRules = [...rules, getSystemIncomeRule()];
   
   // Use optimized rule matching from common folder (already imported at top)
   // This automatically skips manual_override transactions
-  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, rules);
+  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, allRules);
   
   // Update transactions where category changed
   let updated = 0;

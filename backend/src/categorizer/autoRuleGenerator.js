@@ -935,11 +935,22 @@ export function generateAutoRules(transactions) {
     return { rules: [], analysis: null };
   }
   
-  console.log(`Generating auto rules from ${transactions.length} transactions...`);
-  console.log('Sample transactions:', transactions.slice(0, 3).map(t => ({ name: t.name, category: t.category })));
+  // Filter out inflow transactions - auto rules should only be generated from outflow transactions
+  const outflowTransactions = transactions.filter(tx => {
+    const inflow = tx.inflow;
+    return !(inflow === 1 || inflow === true || inflow === '1');
+  });
+  
+  if (outflowTransactions.length === 0) {
+    console.log('No outflow transactions provided for auto rule generation');
+    return { rules: [], analysis: null };
+  }
+  
+  console.log(`Generating auto rules from ${outflowTransactions.length} outflow transactions (filtered from ${transactions.length} total)...`);
+  console.log('Sample transactions:', outflowTransactions.slice(0, 3).map(t => ({ name: t.name, category: t.category })));
   
   // Pre-normalize all transactions once (reused by analyzeTransactionPatterns and resolveRuleConflicts)
-  const normalizedTransactions = transactions.map(tx => ({
+  const normalizedTransactions = outflowTransactions.map(tx => ({
     ...tx,
     _merchantNormalized: normalizeMerchant(tx.name || '').normalized,
     _descriptionNormalized: normalizeMerchant(tx.description || '').normalized
@@ -1006,7 +1017,8 @@ export function generateAutoRules(transactions) {
   });
   
   const stats = {
-    totalTransactions: transactions.length,
+    totalTransactions: outflowTransactions.length,
+    totalTransactionsOriginal: transactions.length,
     rulesGenerated: allRules.length,
     frequencyRules: frequencyRules.length,
     mccRules: mccRules.length,

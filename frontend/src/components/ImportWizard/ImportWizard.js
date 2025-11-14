@@ -72,12 +72,28 @@ export default {
       const existingRules = usedRules.value || []
       const newRulesList = newRules.value || []
       const autoRulesList = autoRules.value?.rules?.filter(r => !r.applied) || []
+      
+      // Add system-level income rule (lowest priority)
+      const systemIncomeRule = {
+        id: 'system_income_rule',
+        match_type: 'inflow',
+        pattern: '',
+        category: 'income',
+        priority: 0, // Lowest priority - all other rules take precedence
+        enabled: true,
+        explain: 'System rule: All income transactions',
+        labels: [],
+        source: 'system',
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date(0).toISOString()
+      }
 
       // Combine all rules and sort by priority
       const allRules = [
         ...existingRules.map(rule => ({ ...rule, source: 'existing' })),
         ...newRulesList.map(rule => ({ ...rule, source: 'new' })),
-        ...autoRulesList.map(rule => ({ ...rule, source: 'auto' }))
+        ...autoRulesList.map(rule => ({ ...rule, source: 'auto' })),
+        systemIncomeRule
       ].sort((a, b) => {
         // Sort by priority (highest first)
         if (b.priority !== a.priority) return b.priority - a.priority
@@ -549,12 +565,28 @@ export default {
             // Load existing rules from backend
             const existingRules = await api.getRules()
             
+            // Add system-level income rule (lowest priority)
+            const systemIncomeRule = {
+              id: 'system_income_rule',
+              match_type: 'inflow',
+              pattern: '',
+              category: 'income',
+              priority: 0, // Lowest priority - all other rules take precedence
+              enabled: true,
+              explain: 'System rule: All income transactions',
+              labels: [],
+              source: 'system',
+              created_at: new Date(0).toISOString(),
+              updated_at: new Date(0).toISOString()
+            }
+            const allRules = [...existingRules, systemIncomeRule]
+            
             // Apply rules to transactions using centralized logic
-            const ruleMatchingResult = applyRulesWithDetails(rawTransactions, existingRules)
+            const ruleMatchingResult = applyRulesWithDetails(rawTransactions, allRules)
             const categorizedTransactions = ruleMatchingResult.categorizedTransactions
             
-            // Get unmatched transactions for auto rule generation
-            const unmatchedTransactions = getUnmatchedTransactions(rawTransactions, existingRules)
+            // Get unmatched transactions for auto rule generation (use allRules to include system rule)
+            const unmatchedTransactions = getUnmatchedTransactions(rawTransactions, allRules)
             
             // Generate auto rules for unmatched transactions
             // Send raw transactions so auto rule generator can learn from actual transaction patterns

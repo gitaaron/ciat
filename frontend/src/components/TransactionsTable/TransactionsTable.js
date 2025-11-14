@@ -30,6 +30,7 @@ export default {
     const label = ref('')
     const account = ref('')
     const hideNetZero = ref(false)
+    const inflowFilter = ref('both')
     const rows = ref([])
     const loading = ref(false)
     const saving = ref(false)
@@ -101,7 +102,7 @@ export default {
     }
 
     // Watch for filter changes and reload data
-    watch([q, start, end, category, label, account, hideNetZero], async () => {
+    watch([q, start, end, category, label, account, hideNetZero, inflowFilter], async () => {
       await loadTransactions()
     })
 
@@ -122,6 +123,19 @@ export default {
         let filteredTransactions = transactions
         if (hideNetZero.value) {
           filteredTransactions = filterNetZeroPairs(transactions)
+        }
+        
+        // Apply inflow/outflow filter
+        if (inflowFilter.value !== 'both') {
+          filteredTransactions = filteredTransactions.filter(tx => {
+            const isInflow = tx.inflow === 1 || tx.inflow === true || tx.inflow === '1'
+            if (inflowFilter.value === 'inflow') {
+              return isInflow
+            } else if (inflowFilter.value === 'outflow') {
+              return !isInflow
+            }
+            return true
+          })
         }
         
         rows.value = filteredTransactions
@@ -300,6 +314,7 @@ export default {
       label.value = ''
       account.value = ''
       hideNetZero.value = false
+      inflowFilter.value = 'both'
     }
 
     async function handleTransactionNameClick(transaction) {
@@ -395,6 +410,7 @@ export default {
       label,
       account,
       hideNetZero,
+      inflowFilter,
       rows,
       loading,
       saving,

@@ -104,6 +104,20 @@
           </v-tooltip>
         </v-col>
         
+        <v-col v-if="showInflowFilter" cols="12" md="3">
+          <v-radio-group
+            :model-value="inflowFilter"
+            @update:model-value="$emit('update:inflowFilter', $event)"
+            inline
+            density="compact"
+            hide-details
+          >
+            <v-radio label="Both" value="both" />
+            <v-radio label="Inflow Only" value="inflow" />
+            <v-radio label="Outflow Only" value="outflow" />
+          </v-radio-group>
+        </v-col>
+        
         <v-col cols="12" :md="buttonColSize">
           <v-btn
             @click="clearFilters"
@@ -222,6 +236,20 @@
         </v-tooltip>
       </v-col>
       
+      <v-col v-if="showInflowFilter" cols="12" md="3">
+        <v-radio-group
+          :model-value="inflowFilter"
+          @update:model-value="$emit('update:inflowFilter', $event)"
+          inline
+          density="compact"
+          hide-details
+        >
+          <v-radio label="Both" value="both" />
+          <v-radio label="Inflow Only" value="inflow" />
+          <v-radio label="Outflow Only" value="outflow" />
+        </v-radio-group>
+      </v-col>
+      
       <v-col cols="12" :md="buttonColSize">
         <v-btn
           @click="clearFilters"
@@ -275,6 +303,14 @@ export default {
       type: Boolean,
       default: false
     },
+    inflowFilter: {
+      type: String,
+      default: 'both'
+    },
+    showInflowFilter: {
+      type: Boolean,
+      default: false
+    },
     categoryOptions: {
       type: Array,
       default: () => []
@@ -316,7 +352,7 @@ export default {
       default: true
     }
   },
-  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'clear-filters'],
+  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'clear-filters'],
   setup(props, { emit }) {
     const buttonColSize = computed(() => {
       let visibleFilters = 0
@@ -325,6 +361,7 @@ export default {
       if (props.showAccountFilter) visibleFilters++
       if (props.showDateFilters) visibleFilters += 1 // date filters take 1 column (4/12)
       if (props.showLabelFilter) visibleFilters++
+      if (props.showInflowFilter) visibleFilters++
       
       // Calculate remaining space for button
       const remainingSpace = 12 - visibleFilters
@@ -339,6 +376,7 @@ export default {
       emit('update:endDate', '')
       emit('update:selectedLabel', '')
       emit('update:hide-net-zero', false)
+      emit('update:inflowFilter', 'both')
       emit('clear-filters')
     }
 

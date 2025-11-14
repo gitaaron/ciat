@@ -148,6 +148,11 @@ export function matchesRuleOptimized(rule, transaction) {
       // MCC matching doesn't need normalization
       result = transaction.mcc === rule.pattern;
       break;
+    case 'inflow':
+      // Match transactions where inflow is true
+      const inflow = transaction.inflow;
+      result = inflow === 1 || inflow === true || inflow === '1';
+      break;
     default:
       result = false;
   }
@@ -204,6 +209,11 @@ export function matchesRule(rule, transaction) {
       break;
     case 'mcc':
       result = transaction.mcc === pattern;
+      break;
+    case 'inflow':
+      // Match transactions where inflow is true
+      const inflow = transaction.inflow;
+      result = inflow === 1 || inflow === true || inflow === '1';
       break;
     default:
       result = false;
