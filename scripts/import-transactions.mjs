@@ -14,7 +14,9 @@ import { parseTransactionsCSV } from '../backend/src/utils/parseCSV.js';
 import { parseTransactionsQFX } from '../backend/src/utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat } from '../backend/src/utils/fileFormatDetector.js';
 import { txHash } from '../backend/src/utils/hash.js';
-import { parseLabels } from '../common/src/ruleMatcher.js';
+import { parseLabels, applyRulesToTransactions } from '../common/src/ruleMatcher.js';
+import { Rules, AutogenRules } from '../backend/src/models.js';
+import { loadSystemRules } from '../backend/src/utils/systemRules.js';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -262,10 +264,20 @@ async function importTransactions() {
     let saved = 0;
     let skipped = 0;
     
+    // Prepare transactions for rule application
+    const transactionsToCategorize = [];
+    
     for (const row of rows) {
       try {
         // Add account_id and hash to each transaction
         const hash = txHash({ ...row, account_id: account.id });
+        
+        // Check if transaction already exists
+        const existing = db.prepare('SELECT id FROM transactions WHERE hash=?').get(hash);
+        if (existing) {
+          skipped++;
+          continue;
+        }
         
         // Parse labels if present
         const labels = parseLabels(row.labels || []);
@@ -278,7 +290,7 @@ async function importTransactions() {
           description: row.description || '',
           amount: Number(row.amount),
           inflow: row.inflow ? 1 : 0,
-          category: null, // No auto-categorization in CLI import
+          category: null, // Will be set by rules
           category_source: null,
           category_explain: null,
           labels: labels.length > 0 ? JSON.stringify(labels) : null,
@@ -287,15 +299,55 @@ async function importTransactions() {
           manual_override: 0
         };
         
-        const result = Transactions.upsert(tx);
-        if (result.skipped) {
-          skipped++;
-        } else {
-          saved++;
-        }
+        transactionsToCategorize.push(tx);
       } catch (error) {
         console.error(`   ⚠️  Error processing transaction: ${error.message}`);
         totalErrors++;
+      }
+    }
+    
+    // Apply system rules, user rules, and autogen rules to transactions
+    if (transactionsToCategorize.length > 0) {
+      console.log(`   🔍 Applying rules to ${transactionsToCategorize.length} transactions...`);
+      
+      // Get all enabled rules (user, autogen, and system)
+      const userRules = Rules.findEnabled();
+      const autogenRules = AutogenRules.findEnabled();
+      const systemRulesList = loadSystemRules();
+      
+      // Log rule counts for visibility
+      console.log(`   📋 Rules: ${userRules.length} user, ${autogenRules.length} autogen, ${systemRulesList.length} system`);
+      
+      // Combine all rules in priority order
+      const allRules = [...userRules, ...autogenRules, ...systemRulesList];
+      
+      // Apply rules to transactions
+      const categorizedTransactions = applyRulesToTransactions(transactionsToCategorize, allRules);
+      
+      // Save categorized transactions
+      for (const tx of categorizedTransactions) {
+        try {
+          const labelsJson = tx.labels && Array.isArray(tx.labels) 
+            ? JSON.stringify(tx.labels) 
+            : (tx.labels || null);
+          
+          const txToSave = {
+            ...tx,
+            labels: labelsJson,
+            category_source: tx.category_source || 'none',
+            category_explain: tx.category_explain || 'No match'
+          };
+          
+          const result = Transactions.upsert(txToSave);
+          if (result.skipped) {
+            skipped++;
+          } else {
+            saved++;
+          }
+        } catch (error) {
+          console.error(`   ⚠️  Error saving transaction: ${error.message}`);
+          totalErrors++;
+        }
       }
     }
     
