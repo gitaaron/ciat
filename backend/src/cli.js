@@ -227,7 +227,7 @@ program
         }
       }
       
-      versioner.clearAllData();
+      await versioner.clearAllData();
       
     } catch (error) {
       console.error('Error clearing database:', error.message);

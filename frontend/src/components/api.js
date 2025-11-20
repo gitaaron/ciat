@@ -65,6 +65,10 @@ export default {
     const { data } = await axios.get(apiBase + '/rules')
     return data
   },
+  async getSystemRules() {
+    const { data } = await axios.get(apiBase + '/rules/system')
+    return data
+  },
   async updateRule(ruleId, ruleData) {
     const { data } = await axios.put(apiBase + `/rules/${ruleId}`, ruleData)
     return data

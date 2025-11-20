@@ -1,6 +1,8 @@
 
 import { db } from './db.js';
 import { parseLabels } from '../../common/src/ruleMatcher.js';
+import { loadUserRules, saveUserRules } from './utils/userRules.js';
+import { loadAutogenRules, saveAutogenRules } from './utils/autogenRules.js';
 
 export const Accounts = {
   all() {
@@ -137,35 +139,41 @@ export const Transactions = {
 
 /**
  * Normalize a rule object to ensure it has required properties with correct types
- * Future-proofs rule objects by ensuring 'enabled' is always a boolean (defaults to true)
- * Also handles database INTEGER to boolean conversion and parses JSON strings for labels/exceptions
- * @param {Object} rule - Rule object from database or elsewhere
+ * Ensures 'enabled' is always a boolean (defaults to true)
+ * Ensures labels and exceptions are arrays
+ * @param {Object} rule - Rule object from file or elsewhere
  * @returns {Object} - Normalized rule object
  */
 function normalizeRule(rule) {
   if (!rule) return null;
   
-  // Convert database INTEGER (0/1) to boolean, defaulting to true if missing
+  // Ensure enabled is a boolean, defaulting to true if missing
   let enabled = rule.enabled;
   if (enabled === undefined || enabled === null) {
     enabled = true; // Default to enabled
   } else if (typeof enabled === 'number') {
-    enabled = enabled !== 0; // Convert 0/1 to boolean
+    enabled = enabled !== 0; // Convert 0/1 to boolean (for backward compatibility)
   } else if (typeof enabled !== 'boolean') {
     enabled = true; // Fallback: treat any non-boolean as enabled
   }
   
-  // Parse labels from JSON string to array (labels are stored as JSON strings in database)
+  // Ensure labels is an array (already arrays in JSON file, but handle edge cases)
   let labels = rule.labels;
-  if (labels !== undefined && labels !== null) {
+  if (labels === undefined || labels === null) {
+    labels = [];
+  } else if (typeof labels === 'string') {
+    // Handle legacy JSON string format
     labels = parseLabels(labels);
-  } else {
+  } else if (!Array.isArray(labels)) {
     labels = [];
   }
   
-  // Parse exceptions from JSON string to array (exceptions are stored as JSON strings in database)
+  // Ensure exceptions is an array or null (already arrays in JSON file, but handle edge cases)
   let exceptions = rule.exceptions;
-  if (exceptions !== undefined && exceptions !== null && typeof exceptions === 'string') {
+  if (exceptions === undefined || exceptions === null) {
+    exceptions = null;
+  } else if (typeof exceptions === 'string') {
+    // Handle legacy JSON string format
     try {
       const parsed = JSON.parse(exceptions);
       exceptions = Array.isArray(parsed) ? parsed : null;
@@ -196,76 +204,250 @@ function normalizeRules(rules) {
 
 export const Rules = {
   all() {
-    const rules = db.prepare('SELECT * FROM rules ORDER BY priority DESC, created_at DESC').all();
-    return normalizeRules(rules);
+    const rules = loadUserRules();
+    // Sort by priority DESC, then created_at DESC
+    const sorted = rules.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+    return normalizeRules(sorted);
   },
   findById(id) {
-    const rule = db.prepare('SELECT * FROM rules WHERE id = ?').get(id);
+    const rules = loadUserRules();
+    const rule = rules.find(r => r.id === id);
     return normalizeRule(rule);
   },
   findByCategory(category) {
-    const rules = db.prepare('SELECT * FROM rules WHERE category = ? ORDER BY priority DESC').all(category);
-    return normalizeRules(rules);
+    const rules = loadUserRules();
+    const filtered = rules.filter(r => r.category === category);
+    // Sort by priority DESC
+    filtered.sort((a, b) => b.priority - a.priority);
+    return normalizeRules(filtered);
   },
   findEnabled() {
-    const rules = db.prepare('SELECT * FROM rules WHERE enabled = 1 ORDER BY priority DESC, created_at DESC').all();
-    return normalizeRules(rules);
+    const rules = loadUserRules();
+    const enabled = rules.filter(r => {
+      const enabledValue = r.enabled;
+      // Handle boolean, number (0/1), or undefined
+      if (enabledValue === undefined || enabledValue === null) return true;
+      if (typeof enabledValue === 'number') return enabledValue !== 0;
+      return enabledValue === true;
+    });
+    // Sort by priority DESC, then created_at DESC
+    enabled.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+    return normalizeRules(enabled);
   },
   create(rule) {
-    const stmt = db.prepare(`
-      INSERT INTO rules (
-        id, match_type, pattern, category, priority, support, exceptions, 
-        enabled, explain, labels, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    return stmt.run(
-      rule.id,
-      rule.match_type,
-      rule.pattern,
-      rule.category,
-      rule.priority || 1000,
-      rule.support || 0,
-      rule.exceptions ? JSON.stringify(rule.exceptions) : null,
-      rule.enabled ? 1 : 0,
-      rule.explain || '',
-      rule.labels ? JSON.stringify(rule.labels) : null,
-      rule.created_at || new Date().toISOString(),
-      rule.updated_at || new Date().toISOString()
-    );
+    const rules = loadUserRules();
+    
+    // Ensure rule has required fields
+    const newRule = {
+      id: rule.id,
+      match_type: rule.match_type,
+      pattern: rule.pattern,
+      category: rule.category,
+      priority: rule.priority || 1000,
+      support: rule.support || 0,
+      exceptions: rule.exceptions || null,
+      enabled: rule.enabled !== undefined ? rule.enabled : true,
+      explain: rule.explain || '',
+      labels: rule.labels || [],
+      created_at: rule.created_at || new Date().toISOString(),
+      updated_at: rule.updated_at || new Date().toISOString()
+    };
+    
+    rules.push(newRule);
+    saveUserRules(rules);
+    
+    // Return a result object similar to database run() result
+    return {
+      lastInsertRowid: rules.length - 1,
+      changes: 1
+    };
   },
   update(id, rule) {
-    const stmt = db.prepare(`
-      UPDATE rules SET 
-        match_type = ?, pattern = ?, category = ?, priority = ?, support = ?, 
-        exceptions = ?, enabled = ?, explain = ?, labels = ?, updated_at = ?
-      WHERE id = ?
-    `);
-    return stmt.run(
-      rule.match_type,
-      rule.pattern,
-      rule.category,
-      rule.priority || 1000,
-      rule.support || 0,
-      rule.exceptions ? JSON.stringify(rule.exceptions) : null,
-      rule.enabled ? 1 : 0,
-      rule.explain || '',
-      rule.labels ? JSON.stringify(rule.labels) : null,
-      new Date().toISOString(),
-      id
-    );
+    const rules = loadUserRules();
+    const index = rules.findIndex(r => r.id === id);
+    
+    if (index === -1) {
+      return { changes: 0 };
+    }
+    
+    // Update the rule
+    const updatedRule = {
+      ...rules[index],
+      ...rule,
+      id: id, // Ensure ID doesn't change
+      updated_at: new Date().toISOString()
+    };
+    
+    rules[index] = updatedRule;
+    saveUserRules(rules);
+    
+    return { changes: 1 };
   },
   delete(id) {
-    return db.prepare('DELETE FROM rules WHERE id = ?').run(id);
+    const rules = loadUserRules();
+    const initialLength = rules.length;
+    const filtered = rules.filter(r => r.id !== id);
+    
+    if (filtered.length === initialLength) {
+      return { changes: 0 };
+    }
+    
+    saveUserRules(filtered);
+    return { changes: 1 };
   },
   updateSupport(id, support) {
-    return db.prepare('UPDATE rules SET support = ?, updated_at = ? WHERE id = ?').run(
-      support, 
-      new Date().toISOString(), 
-      id
-    );
+    const rules = loadUserRules();
+    const index = rules.findIndex(r => r.id === id);
+    
+    if (index === -1) {
+      return { changes: 0 };
+    }
+    
+    rules[index].support = support;
+    rules[index].updated_at = new Date().toISOString();
+    saveUserRules(rules);
+    
+    return { changes: 1 };
   },
   getNextPriority() {
-    const result = db.prepare('SELECT MAX(priority) as max_priority FROM rules').get();
-    return (result.max_priority || 0) + 1;
+    const rules = loadUserRules();
+    if (rules.length === 0) return 1000;
+    const maxPriority = Math.max(...rules.map(r => r.priority || 0));
+    return maxPriority + 1;
+  }
+};
+
+export const AutogenRules = {
+  all() {
+    const rules = loadAutogenRules();
+    // Sort by priority DESC, then created_at DESC
+    const sorted = rules.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+    return normalizeRules(sorted);
+  },
+  findById(id) {
+    const rules = loadAutogenRules();
+    const rule = rules.find(r => r.id === id);
+    return normalizeRule(rule);
+  },
+  findByCategory(category) {
+    const rules = loadAutogenRules();
+    const filtered = rules.filter(r => r.category === category);
+    // Sort by priority DESC
+    filtered.sort((a, b) => b.priority - a.priority);
+    return normalizeRules(filtered);
+  },
+  findEnabled() {
+    const rules = loadAutogenRules();
+    const enabled = rules.filter(r => {
+      const enabledValue = r.enabled;
+      // Handle boolean, number (0/1), or undefined
+      if (enabledValue === undefined || enabledValue === null) return true;
+      if (typeof enabledValue === 'number') return enabledValue !== 0;
+      return enabledValue === true;
+    });
+    // Sort by priority DESC, then created_at DESC
+    enabled.sort((a, b) => {
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+    return normalizeRules(enabled);
+  },
+  create(rule) {
+    const rules = loadAutogenRules();
+    
+    // Ensure rule has required fields
+    const newRule = {
+      id: rule.id,
+      match_type: rule.match_type,
+      pattern: rule.pattern,
+      category: rule.category,
+      priority: rule.priority || 1000,
+      support: rule.support || 0,
+      exceptions: rule.exceptions || null,
+      enabled: rule.enabled !== undefined ? rule.enabled : true,
+      explain: rule.explain || '',
+      labels: rule.labels || [],
+      created_at: rule.created_at || new Date().toISOString(),
+      updated_at: rule.updated_at || new Date().toISOString()
+    };
+    
+    rules.push(newRule);
+    saveAutogenRules(rules);
+    
+    // Return a result object similar to database run() result
+    return {
+      lastInsertRowid: rules.length - 1,
+      changes: 1
+    };
+  },
+  update(id, rule) {
+    const rules = loadAutogenRules();
+    const index = rules.findIndex(r => r.id === id);
+    
+    if (index === -1) {
+      return { changes: 0 };
+    }
+    
+    // Update the rule
+    const updatedRule = {
+      ...rules[index],
+      ...rule,
+      id: id, // Ensure ID doesn't change
+      updated_at: new Date().toISOString()
+    };
+    
+    rules[index] = updatedRule;
+    saveAutogenRules(rules);
+    
+    return { changes: 1 };
+  },
+  delete(id) {
+    const rules = loadAutogenRules();
+    const initialLength = rules.length;
+    const filtered = rules.filter(r => r.id !== id);
+    
+    if (filtered.length === initialLength) {
+      return { changes: 0 };
+    }
+    
+    saveAutogenRules(filtered);
+    return { changes: 1 };
+  },
+  updateSupport(id, support) {
+    const rules = loadAutogenRules();
+    const index = rules.findIndex(r => r.id === id);
+    
+    if (index === -1) {
+      return { changes: 0 };
+    }
+    
+    rules[index].support = support;
+    rules[index].updated_at = new Date().toISOString();
+    saveAutogenRules(rules);
+    
+    return { changes: 1 };
+  },
+  getNextPriority() {
+    const rules = loadAutogenRules();
+    if (rules.length === 0) return 1000;
+    const maxPriority = Math.max(...rules.map(r => r.priority || 0));
+    return maxPriority + 1;
   }
 };

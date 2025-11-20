@@ -193,7 +193,7 @@ class DatabaseVersioner {
   }
 
   // Clear all data from the database (transactions, accounts, and rules)
-  clearAllData() {
+  async clearAllData() {
     const db = new Database(this.dbPath);
     try {
       // Delete all transactions
@@ -203,10 +203,6 @@ class DatabaseVersioner {
       // Delete all accounts
       const accountResult = db.prepare('DELETE FROM accounts').run();
       console.log(`Deleted ${accountResult.changes} accounts`);
-      
-      // Delete all rules
-      const rulesResult = db.prepare('DELETE FROM rules').run();
-      console.log(`Deleted ${rulesResult.changes} rules`);
       
       console.log('✅ Successfully cleared all data from database');
     } finally {

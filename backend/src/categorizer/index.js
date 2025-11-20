@@ -1,8 +1,9 @@
 
-import { Rules } from '../models.js';
+import { Rules, AutogenRules } from '../models.js';
 
 // Import shared rule matching logic from common folder
 import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions, parseLabels, mergeLabels } from '../../../common/src/ruleMatcher.js';
+import { loadSystemRules } from '../utils/systemRules.js';
 
 function normalize(s='') {
   // Use the same normalization as auto rule generator for consistency
@@ -10,32 +11,27 @@ function normalize(s='') {
 }
 
 /**
- * Get the system-level income rule (lowest priority)
- * This rule matches all transactions with inflow=true
+ * Get all system-level rules (lowest priority)
+ * These rules are loaded from the system-rules.json file
  */
-function getSystemIncomeRule() {
-  return {
-    id: 'system_income_rule',
-    match_type: 'inflow',
-    pattern: '',
-    category: 'income',
-    priority: 0, // Lowest priority - all other rules take precedence
-    enabled: true,
-    explain: 'System rule: All income transactions',
-    labels: [],
-    source: 'system',
-    created_at: new Date(0).toISOString(), // Oldest date to ensure it's last in priority tie-breaks
-    updated_at: new Date(0).toISOString()
-  };
+function getSystemRules() {
+  return loadSystemRules();
 }
 
 export function guessCategory(tx) {
   // Preserve existing labels (e.g., 'transfer' label)
   const existingLabels = parseLabels(tx.labels);
   
-  const rules = Rules.findEnabled();
-  // Add system rule at the end (lowest priority)
-  const allRules = [...rules, getSystemIncomeRule()];
+  const userRules = Rules.findEnabled();
+  const autogenRules = AutogenRules.findEnabled();
+  // Add system rules at the end (lowest priority)
+  const systemRules = getSystemRules();
+  
+  // Create a map of autogen rule IDs for quick lookup
+  const autogenRuleIds = new Set(autogenRules.map(r => r.id));
+  
+  // Combine all rules in priority order
+  const allRules = [...userRules, ...autogenRules, ...systemRules];
 
   // Check rules in priority order using shared matching logic
   for (const r of allRules) {
@@ -43,13 +39,21 @@ export function guessCategory(tx) {
       // Merge existing labels with rule labels, removing duplicates
       const mergedLabels = mergeLabels(tx.labels, r.labels);
       
+      // Determine rule type
+      let ruleType = 'user_rule';
+      if (r.source === 'system') {
+        ruleType = 'system_rule';
+      } else if (autogenRuleIds.has(r.id)) {
+        ruleType = 'autogen_rule';
+      }
+      
       return { 
         category: r.category, 
         labels: mergedLabels,
         source: 'rule', 
         explain: r.explain || 'Rule match',
         rule_id: r.id,
-        rule_type: r.source === 'system' ? 'system_rule' : 'user_rule'
+        rule_type: ruleType
       };
     }
   }
@@ -230,10 +234,12 @@ export async function reapplyCategories() {
     labels: parseLabels(tx.labels)
   }));
   
-  // Get all enabled rules
-  const rules = Rules.findEnabled();
-  // Add system rule at the end (lowest priority)
-  const allRules = [...rules, getSystemIncomeRule()];
+  // Get all enabled rules (user, autogen, and system)
+  const userRules = Rules.findEnabled();
+  const autogenRules = AutogenRules.findEnabled();
+  // Add system rules at the end (lowest priority)
+  const systemRules = getSystemRules();
+  const allRules = [...userRules, ...autogenRules, ...systemRules];
   
   // Use optimized rule matching from common folder (already imported at top)
   // This automatically skips manual_override transactions
@@ -280,23 +286,43 @@ export async function reapplyCategories() {
 }
 
 export function getAllRules() {
+  const userRules = Rules.all();
+  const autogenRules = AutogenRules.all();
+  // Combine and sort by priority
+  const allRules = [...userRules, ...autogenRules].sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    const aTime = new Date(a.created_at || 0).getTime();
+    const bTime = new Date(b.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+  return allRules;
+}
+
+export function getUserRules() {
   return Rules.all();
 }
 
+export function getAutogenRules() {
+  return AutogenRules.all();
+}
+
 export function getRulesUsedInImport(transactions) {
-  const rules = Rules.all();
+  const userRules = Rules.all();
+  const autogenRules = AutogenRules.all();
+  const allRules = [...userRules, ...autogenRules];
   const usedRules = new Map();
   
   for (const tx of transactions) {
-    if (tx.rule_id && tx.rule_type === 'user_rule') {
-      const key = `user_rule:${tx.rule_id}`;
+    if (tx.rule_id && (tx.rule_type === 'user_rule' || tx.rule_type === 'autogen_rule')) {
+      const ruleType = tx.rule_type === 'autogen_rule' ? 'autogen_rule' : 'user_rule';
+      const key = `${ruleType}:${tx.rule_id}`;
       if (!usedRules.has(key)) {
-        const rule = rules.find(r => r.id === tx.rule_id);
+        const rule = allRules.find(r => r.id === tx.rule_id);
         
         if (rule) {
           usedRules.set(key, {
             ...rule,
-            type: 'user_rule',
+            type: ruleType,
             transactions: []
           });
         }
@@ -363,17 +389,22 @@ export async function applyAutoRules(rulesToApply, transactions) {
 
   for (const rule of rulesToApply) {
     try {
-      // Convert auto rule to user rule format
-      const userRule = {
+      // Convert auto rule to autogen rule format
+      const autogenRule = {
+        id: rule.id || `autogen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         category: rule.category,
         match_type: rule.match_type || (rule.type === 'mcc' ? 'exact' : rule.type),
         pattern: rule.pattern,
         explain: rule.explain || `Auto-generated: "${rule.pattern}" ${rule.match_type || rule.type} rule`,
         labels: rule.labels || [],
-        priority: rule.priority || 500
+        priority: rule.priority || 500,
+        support: rule.support || 0,
+        enabled: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      await addUserRule(userRule);
+      AutogenRules.create(autogenRule);
       appliedCount++;
     } catch (error) {
       console.error(`Failed to apply auto rule ${rule.id}:`, error);

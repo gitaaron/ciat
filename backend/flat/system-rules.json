@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "system_income_rule",
+      "match_type": "inflow",
+      "pattern": "",
+      "category": "income",
+      "priority": 0,
+      "enabled": true,
+      "explain": "System rule: All income transactions",
+      "labels": [],
+      "source": "system"
+    }
+  ]
+}
+

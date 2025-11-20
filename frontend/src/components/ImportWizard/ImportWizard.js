@@ -38,6 +38,7 @@ export default {
     const autoRules = ref(null)
     const newRules = ref([])
     const allTransactions = ref([])
+    const systemRules = ref([])
     
     // Field mapping state
     const csvPreview = ref(null) // { columns: [], preview: [] }
@@ -72,28 +73,14 @@ export default {
       const existingRules = usedRules.value || []
       const newRulesList = newRules.value || []
       const autoRulesList = autoRules.value?.rules?.filter(r => !r.applied) || []
-      
-      // Add system-level income rule (lowest priority)
-      const systemIncomeRule = {
-        id: 'system_income_rule',
-        match_type: 'inflow',
-        pattern: '',
-        category: 'income',
-        priority: 0, // Lowest priority - all other rules take precedence
-        enabled: true,
-        explain: 'System rule: All income transactions',
-        labels: [],
-        source: 'system',
-        created_at: new Date(0).toISOString(),
-        updated_at: new Date(0).toISOString()
-      }
+      const systemRulesList = systemRules.value || []
 
       // Combine all rules and sort by priority
       const allRules = [
         ...existingRules.map(rule => ({ ...rule, source: 'existing' })),
         ...newRulesList.map(rule => ({ ...rule, source: 'new' })),
         ...autoRulesList.map(rule => ({ ...rule, source: 'auto' })),
-        systemIncomeRule
+        ...systemRulesList.map(rule => ({ ...rule, source: 'system' }))
       ].sort((a, b) => {
         // Sort by priority (highest first)
         if (b.priority !== a.priority) return b.priority - a.priority
@@ -562,24 +549,12 @@ export default {
             
             const rawTransactions = res.preview || []
             
-            // Load existing rules from backend
+            // Load existing rules and system rules from backend
             const existingRules = await api.getRules()
+            const systemRulesList = await api.getSystemRules()
+            systemRules.value = systemRulesList
             
-            // Add system-level income rule (lowest priority)
-            const systemIncomeRule = {
-              id: 'system_income_rule',
-              match_type: 'inflow',
-              pattern: '',
-              category: 'income',
-              priority: 0, // Lowest priority - all other rules take precedence
-              enabled: true,
-              explain: 'System rule: All income transactions',
-              labels: [],
-              source: 'system',
-              created_at: new Date(0).toISOString(),
-              updated_at: new Date(0).toISOString()
-            }
-            const allRules = [...existingRules, systemIncomeRule]
+            const allRules = [...existingRules, ...systemRulesList]
             
             // Apply rules to transactions using centralized logic
             const ruleMatchingResult = applyRulesWithDetails(rawTransactions, allRules)

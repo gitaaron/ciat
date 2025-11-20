@@ -11,7 +11,8 @@ import { parseTransactionsCSV, previewCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
 import { detectFileFormat, isSupportedFormat, getFormatDisplayName } from './utils/fileFormatDetector.js';
 import { parseLabels } from '../../common/src/ruleMatcher.js';
-import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
+import { guessCategory, addUserRule, updateUserRule, deleteUserRule, toggleUserRule, reapplyCategories, getAllRules, getUserRules, getAutogenRules, getRulesUsedInImport, generateAutoRules, applyAutoRules } from './categorizer/index.js';
+import { loadSystemRules } from './utils/systemRules.js';
 import { findBestAccountMatch, suggestAccountName } from './utils/accountMatcher.js';
 import { versioner } from './versioning.js';
 import fs from 'fs';
@@ -299,8 +300,28 @@ app.get('/api/rules', (req, res) => {
 // List only user rules
 app.get('/api/rules/user', (req, res) => {
   try {
-    const rules = getAllRules();
+    const rules = getUserRules();
     res.json(rules);
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Get autogen rules
+app.get('/api/rules/autogen', (req, res) => {
+  try {
+    const rules = getAutogenRules();
+    res.json(rules);
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
+// Get system-level rules
+app.get('/api/rules/system', (req, res) => {
+  try {
+    const systemRules = loadSystemRules();
+    res.json(systemRules);
   } catch (e) {
     res.status(400).json({ error: String(e) });
   }
