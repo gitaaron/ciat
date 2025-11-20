@@ -161,6 +161,79 @@ node export-data.js --help
 - `--no-labels` - Exclude labels from export
 - `--no-notes` - Exclude notes from export
 
+#### `import-transactions.mjs`
+Import transactions from files specified in a configuration file. Creates accounts automatically if they don't exist.
+
+```bash
+# Import transactions (automatically loads import-config.json)
+node import-transactions.mjs
+
+# Show help
+node import-transactions.mjs --help
+```
+
+**Options:**
+- `-h, --help` - Show help message
+
+**Configuration File:**
+The script automatically loads `import-config.json` from the scripts directory. You can copy `import-config.json.example` as a starting point.
+
+**Configuration File Format:**
+The config file is a JSON file with an `accounts` array. Each account specifies:
+- `name` - Account name (will be created if it doesn't exist)
+- `file` - Path to transaction file (CSV or QFX), relative to config file or absolute
+- `fieldMapping` - (Optional) Maps CSV column indices to field names for CSV files
+
+**Field Mapping:**
+The `fieldMapping` object maps column indices (0-based) to field names:
+- `"0": "date"` - Date column (required)
+- `"1": "name"` - Merchant/transaction name column (required)
+- `"2": "outflow"` - Expense/outflow amount column (required)
+- `"3": "inflow"` - Income/inflow amount column (optional)
+- `"4": "external_id"` - External ID/credit card number column (optional)
+
+If `fieldMapping` is not provided, the script will use default column names (date, name, amount, credit) or the account's saved field mapping.
+
+Example `import-config.json`:
+```json
+{
+  "accounts": [
+    {
+      "name": "chequing",
+      "file": "../transactions/chequing.csv",
+      "fieldMapping": {
+        "0": "date",
+        "1": "name",
+        "2": "outflow",
+        "3": "inflow"
+      }
+    },
+    {
+      "name": "visa",
+      "file": "../transactions/visa.csv",
+      "fieldMapping": {
+        "0": "date",
+        "1": "name",
+        "2": "outflow"
+      }
+    }
+  ]
+}
+```
+
+**Features:**
+- Automatically creates accounts if they don't exist
+- Supports CSV and QFX file formats
+- Deduplicates transactions based on hash (skips duplicates)
+- Shows progress and summary statistics
+- File paths can be absolute or relative to the config file location
+
+**Supported File Formats:**
+- CSV files (.csv) - comma or tab delimited
+- QFX files (.qfx) - Quicken Financial Exchange format
+
+**Note:** This script does not generate auto rules or categorize transactions. Transactions are imported without categories.
+
 ### 🔍 Analysis Scripts
 
 #### `generate-auto-rules.js`
@@ -254,12 +327,13 @@ Scripts automatically connect to the database at `backend/data/ciat.sqlite`. Mak
 ### Common Use Cases
 
 1. **Quick Overview**: `node scripts/quick-summary.js`
-2. **Find Uncategorized**: `node scripts/list-transactions.js --uncategorized`
-3. **Export Data**: `node scripts/export-data.js --format csv`
-4. **Search Transactions**: `node scripts/transaction-search.js --query "amazon"`
-5. **Category Analysis**: `node scripts/category-analysis.js --category "Food"`
-6. **Find Duplicates**: `node scripts/duplicate-finder.js --exact`
-7. **Generate Auto Rules**: `node scripts/generate-auto-rules.js --file transactions.csv --format table`
+2. **Import Transactions**: `node scripts/import-transactions.mjs`
+3. **Find Uncategorized**: `node scripts/list-transactions.js --uncategorized`
+4. **Export Data**: `node scripts/export-data.js --format csv`
+5. **Search Transactions**: `node scripts/transaction-search.js --query "amazon"`
+6. **Category Analysis**: `node scripts/category-analysis.js --category "Food"`
+7. **Find Duplicates**: `node scripts/duplicate-finder.js --exact`
+8. **Generate Auto Rules**: `node scripts/generate-auto-rules.js --file transactions.csv --format table`
 
 ### Dependencies
 

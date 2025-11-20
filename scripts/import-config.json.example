@@ -1,0 +1,26 @@
+{
+  "accounts": [
+    {
+      "name": "chequing",
+      "file": "../transactions/chequing.csv",
+      "fieldMapping": {
+        "0": "date",
+        "1": "name",
+        "2": "outflow",
+        "3": "inflow"
+      }
+    },
+    {
+      "name": "visa",
+      "file": "../transactions/visa.csv",
+      "fieldMapping": {
+        "0": "date",
+        "1": "name",
+        "2": "outflow",
+        "3": "inflow",
+        "4": "external_id"
+      }
+    }
+  ]
+}
+

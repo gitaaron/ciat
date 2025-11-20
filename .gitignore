@@ -22,8 +22,10 @@ backend/data
 *.cache
 
 # Ignore transactions dir (my personal transactions)
-transactions
+transactions/personal
 
 backend/fixtures/personal
 
 benchmarks
+
+scripts/import-config.json
