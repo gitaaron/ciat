@@ -34,6 +34,10 @@ export default {
     const { data } = await axios.get(apiBase + '/transactions', { params })
     return data
   },
+  async createTransaction(transactionData) {
+    const { data } = await axios.post(apiBase + '/transactions', transactionData)
+    return data
+  },
   async setCategory(id, payload) {
     const { data } = await axios.post(apiBase + `/transactions/${id}/category`, payload)
     return data

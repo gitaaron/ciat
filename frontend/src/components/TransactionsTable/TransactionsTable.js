@@ -34,6 +34,8 @@ export default {
     const rows = ref([])
     const loading = ref(false)
     const saving = ref(false)
+    const showNewTransactionDialog = ref(false)
+    const creatingTransaction = ref(false)
     // Track original transaction states to detect changes
     const originalTransactions = ref(new Map()) // Map<id, originalTransaction>
     // Track modified transactions
@@ -401,6 +403,24 @@ export default {
       // The watch will automatically trigger loadTransactions()
     }
 
+    async function handleCreateTransaction(transactionData) {
+      creatingTransaction.value = true
+      try {
+        await api.createTransaction(transactionData)
+        showSuccess('Transaction created successfully')
+        showNewTransactionDialog.value = false
+        // Reload transactions to show the new one
+        await loadTransactions()
+        // Emit event to notify parent that transactions were updated
+        emit('categories-updated')
+      } catch (error) {
+        console.error('Error creating transaction:', error)
+        showError('Error creating transaction: ' + (error.response?.data?.error || error.message))
+      } finally {
+        creatingTransaction.value = false
+      }
+    }
+
     return {
       // Reactive properties
       q,
@@ -416,6 +436,8 @@ export default {
       saving,
       hasUnsavedChanges,
       modifiedTransactionsCount,
+      showNewTransactionDialog,
+      creatingTransaction,
       // Computed properties
       categoryFilterOptions,
       categorySelectOptions,
@@ -433,7 +455,8 @@ export default {
       saveAllChanges,
       clearFilters,
       handleTransactionNameClick,
-      setFilters
+      setFilters,
+      handleCreateTransaction
     }
   }
 }

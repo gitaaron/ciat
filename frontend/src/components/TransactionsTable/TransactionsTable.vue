@@ -1,8 +1,18 @@
 <template>
   <v-card>
-    <v-card-title class="text-h5">
-      <v-icon left>mdi-format-list-bulleted</v-icon>
-      Transactions
+    <v-card-title class="text-h5 d-flex justify-space-between align-center">
+      <div class="d-flex align-center">
+        <v-icon left>mdi-format-list-bulleted</v-icon>
+        Transactions
+      </div>
+      <v-btn
+        color="primary"
+        variant="elevated"
+        @click="showNewTransactionDialog = true"
+      >
+        <v-icon left>mdi-plus</v-icon>
+        New Transaction
+      </v-btn>
     </v-card-title>
 
     <v-card-text style="padding-bottom: 80px;">
@@ -80,12 +90,26 @@
       </v-btn>
     </div>
   </v-bottom-navigation>
+
+  <!-- New Transaction Dialog -->
+  <NewTransactionDialog
+    :show="showNewTransactionDialog"
+    :accounts="accounts"
+    :loading="creatingTransaction"
+    @save="handleCreateTransaction"
+    @cancel="showNewTransactionDialog = false"
+  />
 </template>
 
 <script>
 import TransactionsTableJS from './TransactionsTable.js'
+import NewTransactionDialog from '../shared/NewTransactionDialog.vue'
 
 export default {
-  ...TransactionsTableJS
+  ...TransactionsTableJS,
+  components: {
+    ...TransactionsTableJS.components,
+    NewTransactionDialog
+  }
 }
 </script>

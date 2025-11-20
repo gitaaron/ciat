@@ -155,6 +155,71 @@ app.post('/api/transactions/:id/category', async (req, res) => {
   }
 });
 
+// Create new transaction
+app.post('/api/transactions', async (req, res) => {
+  const { account_id, date, name, description, amount, inflow, category, labels, note } = req.body;
+  
+  // Validate required fields
+  if (!account_id || !date || !name || amount === undefined || amount === null) {
+    return res.status(400).json({ error: 'Missing required fields: account_id, date, name, and amount are required' });
+  }
+  
+  try {
+    // Validate account exists
+    const account = Accounts.findById(account_id);
+    if (!account) {
+      return res.status(404).json({ error: `Account with ID ${account_id} not found` });
+    }
+    
+    // Generate hash for the transaction
+    const hash = txHash({
+      external_id: null,
+      account_id: Number(account_id),
+      date: date,
+      name: name,
+      description: description || null,
+      amount: Number(amount),
+      inflow: inflow ? 1 : 0
+    });
+    
+    // Parse labels if provided
+    const parsedLabels = parseLabels(labels);
+    
+    // Create transaction object
+    const tx = {
+      external_id: null,
+      account_id: Number(account_id),
+      date: date,
+      name: name,
+      description: description || null,
+      amount: Number(amount),
+      inflow: inflow ? 1 : 0,
+      category: category || null,
+      category_source: category ? 'manual' : null,
+      category_explain: category ? 'Manually created transaction' : null,
+      labels: parsedLabels.length > 0 ? JSON.stringify(parsedLabels) : null,
+      note: note || null,
+      hash: hash,
+      manual_override: 1 // Manually created transactions are always manual overrides
+    };
+    
+    // Use upsert to create the transaction
+    const result = Transactions.upsert(tx);
+    
+    if (result.skipped) {
+      return res.status(409).json({ error: 'A transaction with the same details already exists' });
+    }
+    
+    // Get the created transaction
+    const createdTransaction = db.prepare('SELECT t.*, a.name as account_name FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE t.id = ?').get(result.id);
+    
+    res.json(createdTransaction);
+  } catch (e) {
+    console.error('Error creating transaction:', e);
+    res.status(400).json({ error: String(e) });
+  }
+});
+
 // Update transaction (general update endpoint)
 app.put('/api/transactions/:id', async (req, res) => {
   const id = Number(req.params.id);
