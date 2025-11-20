@@ -13,17 +13,25 @@ export default {
   emits: ['refresh-accounts'],
   setup(props, { emit }) {
     const newAccount = ref('')
+    const newAccountType = ref(null)
     const creating = ref(false)
     const createError = ref('')
     const createForm = ref(null)
     const editingAccount = ref(null)
     const editAccountName = ref('')
+    const editAccountType = ref(null)
     const editError = ref('')
     const updating = ref(false)
     const deleteDialog = ref(false)
     const accountToDelete = ref(null)
     const deleting = ref(false)
     const deleteError = ref('')
+    
+    // Account type options
+    const accountTypeOptions = [
+      { title: 'Bank Account', value: 'bank_account' },
+      { title: 'Credit Card', value: 'credit_card' }
+    ]
     
     // Field mapping dialog state
     const fieldMappingDialog = ref(false)
@@ -40,14 +48,15 @@ export default {
     ]
 
     async function addAccount() {
-      if (!newAccount.value.trim()) return
+      if (!newAccount.value.trim() || !newAccountType.value) return
       
       creating.value = true
       createError.value = ''
       
       try {
-        await api.createAccount(newAccount.value.trim())
+        await api.createAccount(newAccount.value.trim(), newAccountType.value)
         newAccount.value = ''
+        newAccountType.value = null
         // Reset form validation state
         if (createForm.value) {
           createForm.value.resetValidation()
@@ -63,12 +72,14 @@ export default {
     function startEdit(account) {
       editingAccount.value = account.id
       editAccountName.value = account.name
+      editAccountType.value = account.type || null
       editError.value = ''
     }
 
     function cancelEdit() {
       editingAccount.value = null
       editAccountName.value = ''
+      editAccountType.value = null
       editError.value = ''
     }
 
@@ -79,15 +90,22 @@ export default {
       editError.value = ''
       
       try {
-        await api.updateAccount(accountId, editAccountName.value.trim())
+        await api.updateAccount(accountId, editAccountName.value.trim(), editAccountType.value)
         editingAccount.value = null
         editAccountName.value = ''
+        editAccountType.value = null
         await emit('refresh-accounts')
       } catch (error) {
         editError.value = error.response?.data?.error || 'Failed to update account'
       } finally {
         updating.value = false
       }
+    }
+    
+    function formatAccountType(type) {
+      if (type === 'bank_account') return 'Bank Account'
+      if (type === 'credit_card') return 'Credit Card'
+      return type
     }
 
     function confirmDelete(account) {
@@ -217,11 +235,13 @@ export default {
     return {
       // Reactive data
       newAccount,
+      newAccountType,
       creating,
       createError,
       createForm,
       editingAccount,
       editAccountName,
+      editAccountType,
       editError,
       updating,
       deleteDialog,
@@ -229,6 +249,7 @@ export default {
       deleting,
       deleteError,
       accountNameRules,
+      accountTypeOptions,
       // Methods
       addAccount,
       startEdit,
@@ -237,6 +258,7 @@ export default {
       confirmDelete,
       deleteAccount,
       formatDate,
+      formatAccountType,
       fieldMappingDialog,
       accountForFieldMapping,
       csvPreviewForMapping,

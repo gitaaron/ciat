@@ -84,3 +84,12 @@ try {
   // Column already exists, ignore error
   console.log('Field_mapping column already exists in accounts table');
 }
+
+// Migration: Add type column if it doesn't exist
+try {
+  db.exec('ALTER TABLE accounts ADD COLUMN type TEXT CHECK(type IN (\'credit_card\', \'bank_account\'));');
+  console.log('Added type column to accounts table');
+} catch (e) {
+  // Column already exists, ignore error
+  console.log('Type column already exists in accounts table');
+}

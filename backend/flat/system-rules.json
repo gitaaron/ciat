@@ -9,7 +9,8 @@
       "enabled": true,
       "explain": "System rule: All income transactions",
       "labels": [],
-      "source": "system"
+      "source": "system",
+      "account_type": "bank_account"
     }
   ]
 }

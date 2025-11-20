@@ -7,12 +7,12 @@ export default {
     const { data } = await axios.get(apiBase + '/accounts')
     return data
   },
-  async createAccount(name) {
-    const { data } = await axios.post(apiBase + '/accounts', { name })
+  async createAccount(name, type) {
+    const { data } = await axios.post(apiBase + '/accounts', { name, type })
     return data
   },
-  async updateAccount(id, name) {
-    const { data } = await axios.put(apiBase + `/accounts/${id}`, { name })
+  async updateAccount(id, name, type) {
+    const { data } = await axios.put(apiBase + `/accounts/${id}`, { name, type })
     return data
   },
   async deleteAccount(id) {

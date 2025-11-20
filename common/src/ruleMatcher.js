@@ -107,9 +107,17 @@ export function mergeLabels(transactionLabels, ruleLabels) {
  * Use this when you know both rule and transaction are already normalized
  * @param {Object} rule - Rule object with _normalizedPattern, _regexPattern, _matchType
  * @param {Object} transaction - Transaction object with _merchantNormalized, _descriptionNormalized
+ * @param {Object} account - Optional account object with type field
  * @returns {boolean} - Whether the transaction matches the rule
  */
-export function matchesRuleOptimized(rule, transaction) {
+export function matchesRuleOptimized(rule, transaction, account = null) {
+  // Check account type filter if rule has one and account is provided
+  if (rule.account_type && account) {
+    if (account.type !== rule.account_type) {
+      return false;
+    }
+  }
+  
   // Use pre-normalized values if available
   const normalizedPattern = rule._normalizedPattern;
   const merchantNormalized = transaction._merchantNormalized || '';
@@ -171,9 +179,17 @@ export function matchesRuleOptimized(rule, transaction) {
  * Check if a transaction matches a rule
  * @param {Object} rule - Rule object with pattern, match_type, etc.
  * @param {Object} transaction - Transaction object with name, description, etc.
+ * @param {Object} account - Optional account object with type field
  * @returns {boolean} - Whether the transaction matches the rule
  */
-export function matchesRule(rule, transaction) {
+export function matchesRule(rule, transaction, account = null) {
+  // Check account type filter if rule has one and account is provided
+  if (rule.account_type && account) {
+    if (account.type !== rule.account_type) {
+      return false;
+    }
+  }
+  
   // If pre-normalized data is available, use optimized path
   if (rule._normalizedPattern !== undefined && 
       (transaction._merchantNormalized !== undefined || transaction._descriptionNormalized !== undefined)) {
@@ -235,9 +251,11 @@ export function matchesRule(rule, transaction) {
  * Apply rules to transactions and return categorized transactions
  * @param {Array} transactions - Array of transactions
  * @param {Array} rules - Array of rules (sorted by priority, highest first)
+ * @param {Object} options - Optional options including accounts map (account_id -> account object)
  * @returns {Array} - Array of transactions with category information
  */
-export function applyRulesToTransactions(transactions, rules) {
+export function applyRulesToTransactions(transactions, rules, options = {}) {
+  const { accounts = null } = options;
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   
@@ -288,6 +306,9 @@ export function applyRulesToTransactions(transactions, rules) {
       continue;
     }
     
+    // Get account information if available and needed for account type filtering
+    const account = (accounts && transaction.account_id) ? accounts[transaction.account_id] : null;
+    
     let matched = false;
     
     // Check each rule in priority order
@@ -295,8 +316,8 @@ export function applyRulesToTransactions(transactions, rules) {
       if (!rule.enabled) continue;
       if (coveredTransactions.has(transaction.hash)) continue;
       
-      // Use optimized matching with pre-normalized data
-      if (matchesRuleOptimized(rule, transaction)) {
+      // Use optimized matching with pre-normalized data and account info
+      if (matchesRuleOptimized(rule, transaction, account)) {
         // Merge existing transaction labels with rule labels
         const mergedLabels = mergeLabels(transaction.labels, rule.labels);
         
@@ -339,11 +360,11 @@ export function applyRulesToTransactions(transactions, rules) {
  * This is used for preview purposes
  * @param {Array} transactions - Array of transactions
  * @param {Array} rules - Array of rules (sorted by priority, highest first)
- * @param {Object} options - Options including { skipSort: boolean }
+ * @param {Object} options - Options including { skipSort: boolean, accounts: Object }
  * @returns {Object} - Object with categorized transactions and rule matches
  */
 export function applyRulesWithDetails(transactions, rules, options = {}) {
-  const { skipSort = false } = options;
+  const { skipSort = false, accounts = null } = options;
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   const ruleMatches = new Map(); // Map of ruleId -> matching transactions
@@ -400,6 +421,9 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
       continue;
     }
     
+    // Get account information if available and needed for account type filtering
+    const account = (accounts && transaction.account_id) ? accounts[transaction.account_id] : null;
+    
     let matched = false;
     
     // Check each rule in priority order
@@ -407,8 +431,8 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
       if (!rule.enabled) continue;
       if (coveredTransactions.has(transaction.hash)) continue;
       
-      // Use optimized matching with pre-normalized data
-      if (matchesRuleOptimized(rule, transaction)) {
+      // Use optimized matching with pre-normalized data and account info
+      if (matchesRuleOptimized(rule, transaction, account)) {
         // Merge existing transaction labels with rule labels
         const mergedLabels = mergeLabels(transaction.labels, rule.labels);
         

@@ -14,7 +14,7 @@
           <v-card-text>
             <v-form @submit.prevent="addAccount" ref="createForm">
               <v-row>
-                <v-col cols="12" md="8">
+                <v-col cols="12" md="5">
                   <v-text-field
                     v-model="newAccount"
                     label="Account Name"
@@ -26,12 +26,22 @@
                     required
                   />
                 </v-col>
+                <v-col cols="12" md="3">
+                  <v-select
+                    v-model="newAccountType"
+                    label="Account Type"
+                    :items="accountTypeOptions"
+                    variant="outlined"
+                    density="compact"
+                    required
+                  />
+                </v-col>
                 <v-col cols="12" md="4" class="d-flex align-center">
                   <v-btn
                     type="submit"
                     color="primary"
                     :loading="creating"
-                    :disabled="!newAccount.trim()"
+                    :disabled="!newAccount.trim() || !newAccountType"
                     block
                   >
                     <v-icon left>mdi-plus</v-icon>
@@ -67,18 +77,31 @@
                 </template>
                 
                 <v-list-item-title>
-                  <v-text-field
-                    v-if="editingAccount === account.id"
-                    v-model="editAccountName"
-                    :rules="accountNameRules"
-                    :error-messages="editError"
-                    @keyup.enter="saveAccount(account.id)"
-                    @keyup.escape="cancelEdit"
-                    autofocus
-                    density="compact"
-                    variant="outlined"
-                  />
-                  <span v-else>{{ account.name }}</span>
+                  <div v-if="editingAccount === account.id" class="d-flex flex-column ga-2">
+                    <v-text-field
+                      v-model="editAccountName"
+                      :rules="accountNameRules"
+                      :error-messages="editError"
+                      @keyup.enter="saveAccount(account.id)"
+                      @keyup.escape="cancelEdit"
+                      autofocus
+                      density="compact"
+                      variant="outlined"
+                    />
+                    <v-select
+                      v-model="editAccountType"
+                      label="Account Type"
+                      :items="accountTypeOptions"
+                      variant="outlined"
+                      density="compact"
+                    />
+                  </div>
+                  <div v-else>
+                    <div>{{ account.name }}</div>
+                    <div class="text-caption text-medium-emphasis mt-1">
+                      Type: {{ account.type ? formatAccountType(account.type) : 'Not set' }}
+                    </div>
+                  </div>
                 </v-list-item-title>
                 
                 <v-list-item-subtitle>

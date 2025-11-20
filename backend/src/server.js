@@ -35,9 +35,9 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // Accounts
 app.get('/api/accounts', (_req, res) => res.json(Accounts.all()));
 app.post('/api/accounts', (req, res) => {
-  const { name } = req.body;
+  const { name, type } = req.body;
   try {
-    Accounts.create(name);
+    Accounts.create(name, type);
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: String(e) });
@@ -45,9 +45,9 @@ app.post('/api/accounts', (req, res) => {
 });
 app.put('/api/accounts/:id', (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, type } = req.body;
   try {
-    const result = Accounts.update(id, name);
+    const result = Accounts.update(id, name, type);
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Account not found' });
     }

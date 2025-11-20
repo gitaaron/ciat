@@ -318,11 +318,18 @@ async function importTransactions() {
       // Log rule counts for visibility
       console.log(`   📋 Rules: ${userRules.length} user, ${autogenRules.length} autogen, ${systemRulesList.length} system`);
       
+      // Fetch all accounts and create a map for quick lookup (needed for account type filtering)
+      const allAccounts = Accounts.all();
+      const accountsMap = {};
+      for (const acc of allAccounts) {
+        accountsMap[acc.id] = acc;
+      }
+      
       // Combine all rules in priority order
       const allRules = [...userRules, ...autogenRules, ...systemRulesList];
       
-      // Apply rules to transactions
-      const categorizedTransactions = applyRulesToTransactions(transactionsToCategorize, allRules);
+      // Apply rules to transactions with account information
+      const categorizedTransactions = applyRulesToTransactions(transactionsToCategorize, allRules, { accounts: accountsMap });
       
       // Save categorized transactions
       for (const tx of categorizedTransactions) {

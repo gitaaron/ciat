@@ -1,5 +1,5 @@
 
-import { Rules, AutogenRules } from '../models.js';
+import { Rules, AutogenRules, Accounts } from '../models.js';
 
 // Import shared rule matching logic from common folder
 import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions, parseLabels, mergeLabels } from '../../../common/src/ruleMatcher.js';
@@ -22,6 +22,12 @@ export function guessCategory(tx) {
   // Preserve existing labels (e.g., 'transfer' label)
   const existingLabels = parseLabels(tx.labels);
   
+  // Fetch account information if account_id is present (needed for account type filtering)
+  let account = null;
+  if (tx.account_id) {
+    account = Accounts.findById(tx.account_id);
+  }
+  
   const userRules = Rules.findEnabled();
   const autogenRules = AutogenRules.findEnabled();
   // Add system rules at the end (lowest priority)
@@ -35,7 +41,7 @@ export function guessCategory(tx) {
 
   // Check rules in priority order using shared matching logic
   for (const r of allRules) {
-    if (matchesRule(r, tx)) {
+    if (matchesRule(r, tx, account)) {
       // Merge existing labels with rule labels, removing duplicates
       const mergedLabels = mergeLabels(tx.labels, r.labels);
       
@@ -223,7 +229,7 @@ export async function reapplyCategories() {
   
   // Get all transactions that are not manually overridden (with all fields needed for matching)
   const transactions = db.prepare(`
-    SELECT id, hash, name, description, amount, category, category_source, category_explain, labels, manual_override
+    SELECT id, account_id, hash, name, description, amount, category, category_source, category_explain, labels, manual_override, inflow
     FROM transactions 
     WHERE manual_override = 0
   `).all();
@@ -234,6 +240,13 @@ export async function reapplyCategories() {
     labels: parseLabels(tx.labels)
   }));
   
+  // Fetch all accounts and create a map for quick lookup
+  const allAccounts = Accounts.all();
+  const accountsMap = {};
+  for (const account of allAccounts) {
+    accountsMap[account.id] = account;
+  }
+  
   // Get all enabled rules (user, autogen, and system)
   const userRules = Rules.findEnabled();
   const autogenRules = AutogenRules.findEnabled();
@@ -243,7 +256,7 @@ export async function reapplyCategories() {
   
   // Use optimized rule matching from common folder (already imported at top)
   // This automatically skips manual_override transactions
-  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, allRules);
+  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, allRules, { accounts: accountsMap });
   
   // Update transactions where category changed
   let updated = 0;

@@ -13,8 +13,8 @@ export const Accounts = {
       field_mapping: account.field_mapping ? JSON.parse(account.field_mapping) : null
     }));
   },
-  create(name) {
-    return db.prepare('INSERT INTO accounts (name) VALUES (?)').run(name);
+  create(name, type = null) {
+    return db.prepare('INSERT INTO accounts (name, type) VALUES (?, ?)').run(name, type);
   },
   findByName(name) {
     const account = db.prepare('SELECT * FROM accounts WHERE name = ?').get(name);
@@ -30,8 +30,8 @@ export const Accounts = {
     }
     return account;
   },
-  update(id, name) {
-    return db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(name, id);
+  update(id, name, type = null) {
+    return db.prepare('UPDATE accounts SET name = ?, type = ? WHERE id = ?').run(name, type, id);
   },
   updateFieldMapping(id, fieldMapping) {
     const mappingJson = fieldMapping ? JSON.stringify(fieldMapping) : null;
