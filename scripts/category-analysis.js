@@ -124,7 +124,7 @@ if (options.showPatterns) {
   const uncategorized = db.prepare(`
     SELECT name, description, COUNT(*) as count
     FROM transactions
-    WHERE category IS NULL OR category = ''
+    WHERE category IS NULL OR category = '' OR category = 'uncategorized'
     GROUP BY name, description
     ORDER BY count DESC
     LIMIT 20

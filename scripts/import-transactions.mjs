@@ -53,6 +53,7 @@ Configuration File Format:
       {
         "name": "Account Name",
         "file": "path/to/transactions.csv",
+        "type": "bank_account",
         "fieldMapping": {
           "0": "date",
           "1": "name",
@@ -63,6 +64,10 @@ Configuration File Format:
       }
     ]
   }
+  
+Account Type:
+  - Optional field: "type" can be "bank_account" or "credit_card"
+  - Defaults to "bank_account" if not specified
 
 Field Mapping:
   - Maps CSV column indices (0-based) to field names
@@ -114,6 +119,12 @@ if (!config.accounts || !Array.isArray(config.accounts) || config.accounts.lengt
 for (const account of config.accounts) {
   if (!account.name || !account.file) {
     console.error('❌ Error: Each account must have "name" and "file" properties');
+    process.exit(1);
+  }
+  
+  // Validate account type if provided
+  if (account.type && !['bank_account', 'credit_card'].includes(account.type)) {
+    console.error(`❌ Error: Invalid account type "${account.type}" for account "${account.name}". Must be "bank_account" or "credit_card"`);
     process.exit(1);
   }
   
@@ -189,10 +200,12 @@ async function importTransactions() {
     // Find or create account
     let account = Accounts.findByName(accountName);
     const hasFieldMapping = accountConfig.fieldMapping && typeof accountConfig.fieldMapping === 'object';
+    // Default to 'bank_account' if type not specified
+    const accountType = accountConfig.type || 'bank_account';
     
     if (!account) {
-      console.log(`   ➕ Creating account: ${accountName}`);
-      Accounts.create(accountName);
+      console.log(`   ➕ Creating account: ${accountName} (type: ${accountType})`);
+      Accounts.create(accountName, accountType);
       account = Accounts.findByName(accountName);
       totalCreated++;
       
@@ -204,6 +217,19 @@ async function importTransactions() {
       }
     } else {
       console.log(`   ✓ Account already exists: ${accountName} (ID: ${account.id})`);
+      
+      // Update account type if:
+      // 1. Account has no type (set to default 'bank_account' or config type)
+      // 2. Config specifies a type that differs from existing type
+      if (!account.type) {
+        console.log(`   🔄 Setting account type to: ${accountType} (was unset)`);
+        Accounts.update(account.id, accountName, accountType);
+        account = Accounts.findByName(accountName); // Refresh to get updated account
+      } else if (accountConfig.type && account.type !== accountConfig.type) {
+        console.log(`   🔄 Updating account type from ${account.type} to: ${accountType}`);
+        Accounts.update(account.id, accountName, accountType);
+        account = Accounts.findByName(accountName); // Refresh to get updated account
+      }
       
       // Update field mapping if provided in config (overrides existing)
       if (hasFieldMapping) {

@@ -67,7 +67,7 @@ export function guessCategory(tx) {
   // ML fallback
   const ml = mlGuess(tx);
   if (ml) return { ...ml, labels: existingLabels, rule_type: 'ml' };
-  return { category: null, labels: existingLabels, source: 'none', explain: 'No match', rule_type: 'none' };
+  return { category: 'uncategorized', labels: existingLabels, source: 'none', explain: 'No match', rule_type: 'none' };
 }
 
 function mlGuess(tx) {

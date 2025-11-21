@@ -12,7 +12,7 @@ console.log('📊 CIAT Database Statistics\n');
 // Basic counts
 const totalTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions').get();
 const totalAccounts = db.prepare('SELECT COUNT(*) as count FROM accounts').get();
-const uncategorizedCount = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE category IS NULL OR category = \'\'').get();
+const uncategorizedCount = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE category IS NULL OR category = \'\' OR category = \'uncategorized\'').get();
 const manualOverrides = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE manual_override = 1').get();
 
 console.log('📈 Basic Statistics:');

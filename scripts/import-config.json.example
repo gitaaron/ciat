@@ -3,6 +3,7 @@
     {
       "name": "chequing",
       "file": "../transactions/chequing.csv",
+      "type": "bank_account",
       "fieldMapping": {
         "0": "date",
         "1": "name",
@@ -13,6 +14,7 @@
     {
       "name": "visa",
       "file": "../transactions/visa.csv",
+      "type": "credit_card",
       "fieldMapping": {
         "0": "date",
         "1": "name",

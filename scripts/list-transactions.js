@@ -150,7 +150,7 @@ if (options.search) {
 }
 
 if (options.showUncategorized) {
-  sql += ' AND (t.category IS NULL OR t.category = \'\')';
+  sql += ' AND (t.category IS NULL OR t.category = \'\' OR t.category = \'uncategorized\')';
 }
 
 if (options.showIncome !== null) {

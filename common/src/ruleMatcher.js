@@ -343,7 +343,7 @@ export function applyRulesToTransactions(transactions, rules, options = {}) {
       
       categorizedTransactions.push({
         ...transaction,
-        category: null,
+        category: 'uncategorized',
         labels: existingLabels,
         category_source: 'none',
         category_explain: 'No match',
@@ -461,7 +461,7 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
       
       categorizedTransactions.push({
         ...transaction,
-        category: null,
+        category: 'uncategorized',
         labels: existingLabels,
         category_source: 'none',
         category_explain: 'No match',
