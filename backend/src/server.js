@@ -5,7 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
-import { Accounts, Transactions } from './models.js';
+import { Accounts, Transactions, BucketListItems } from './models.js';
 import { txHash } from './utils/hash.js';
 import { parseTransactionsCSV, previewCSV } from './utils/parseCSV.js';
 import { parseTransactionsQFX } from './utils/parseQFX.js';
@@ -860,6 +860,73 @@ app.put('/api/category-targets', (req, res) => {
     res.json({ ok: true, targets });
   } catch (error) {
     console.error('Error saving category targets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bucket List Items
+app.get('/api/bucket-list-items', (_req, res) => {
+  try {
+    const items = BucketListItems.all();
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching bucket list items:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/bucket-list-items', (req, res) => {
+  try {
+    const { name, description, estimated_cost } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    const result = BucketListItems.create({
+      name: name.trim(),
+      description: description?.trim() || null,
+      estimated_cost: estimated_cost || null
+    });
+    const item = BucketListItems.findById(result.id);
+    res.json(item);
+  } catch (error) {
+    console.error('Error creating bucket list item:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/bucket-list-items/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, estimated_cost } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    const result = BucketListItems.update(id, {
+      name: name.trim(),
+      description: description?.trim() || null,
+      estimated_cost: estimated_cost || null
+    });
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Bucket list item not found' });
+    }
+    const item = BucketListItems.findById(id);
+    res.json(item);
+  } catch (error) {
+    console.error('Error updating bucket list item:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/bucket-list-items/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = BucketListItems.delete(id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Bucket list item not found' });
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting bucket list item:', error);
     res.status(500).json({ error: error.message });
   }
 });

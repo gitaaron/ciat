@@ -1,6 +1,6 @@
 <template>
   <v-card>
-    <v-card-title class="text-h5 d-flex justify-space-between align-center">
+    <v-card-title class="text-h5 d-flex justify-space-between align-center my-4">
       <div class="d-flex align-center">
         <v-icon left>mdi-format-list-bulleted</v-icon>
         Transactions

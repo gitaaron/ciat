@@ -123,5 +123,30 @@ export default {
   async saveCategoryTargets(targets) {
     const { data } = await axios.put(apiBase + '/category-targets', { targets })
     return data
+  },
+  // Bucket list APIs
+  async getBucketListItems() {
+    const { data } = await axios.get(apiBase + '/bucket-list-items')
+    return data
+  },
+  async createBucketListItem(item) {
+    const { data } = await axios.post(apiBase + '/bucket-list-items', {
+      name: item.name,
+      description: item.description,
+      estimated_cost: item.estimatedCost
+    })
+    return data
+  },
+  async updateBucketListItem(id, item) {
+    const { data } = await axios.put(apiBase + `/bucket-list-items/${id}`, {
+      name: item.name,
+      description: item.description,
+      estimated_cost: item.estimatedCost
+    })
+    return data
+  },
+  async deleteBucketListItem(id) {
+    const { data } = await axios.delete(apiBase + `/bucket-list-items/${id}`)
+    return data
   }
 }

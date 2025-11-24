@@ -57,6 +57,15 @@ CREATE TABLE IF NOT EXISTS rules (
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS bucket_list_items (
+  id TEXT PRIMARY KEY,             -- UUID string
+  name TEXT NOT NULL,
+  description TEXT,
+  estimated_cost REAL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_tx_account ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_tx_cat ON transactions(category);
@@ -92,4 +101,22 @@ try {
 } catch (e) {
   // Column already exists, ignore error
   console.log('Type column already exists in accounts table');
+}
+
+// Migration: Create bucket_list_items table if it doesn't exist (for existing databases)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bucket_list_items (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      estimated_cost REAL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('Bucket list items table ready');
+} catch (e) {
+  // Table already exists, ignore error
+  console.log('Bucket list items table already exists');
 }

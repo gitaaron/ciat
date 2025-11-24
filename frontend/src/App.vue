@@ -7,6 +7,7 @@ import Reports from './components/Reports/Reports.vue'
 import DatabaseVersions from './components/DatabaseVersions/DatabaseVersions.vue'
 import NewCategoryWizard from './components/NewCategoryWizard/NewCategoryWizard.vue'
 import RuleManager from './components/RuleManager/RuleManager.vue'
+import BucketList from './components/BucketList/BucketList.vue'
 import GlobalNotifications from './components/GlobalNotifications.vue'
 import api from './components/api.js'
 
@@ -155,18 +156,22 @@ onMounted(async () => {
 
     <v-main>
       <v-container max-width="1200" class="pa-4">
-        <v-tabs v-if="hasTransactions" v-model="selected" class="mb-4">
-          <v-tab value="reports">
+        <v-tabs v-model="selected" class="mb-4">
+          <v-tab v-if="hasTransactions" value="reports">
             <v-icon left>mdi-chart-pie</v-icon>
             Reports
           </v-tab>
-          <v-tab value="transactions">
+          <v-tab v-if="hasTransactions" value="transactions">
             <v-icon left>mdi-format-list-bulleted</v-icon>
             Transactions
           </v-tab>
-          <v-tab value="manage-rules">
+          <v-tab v-if="hasTransactions" value="manage-rules">
             <v-icon left>mdi-cog</v-icon>
             Manage Rules
+          </v-tab>
+          <v-tab value="bucket-list">
+            <v-icon left>mdi-format-list-checks</v-icon>
+            Bucket List
           </v-tab>
           <v-tab value="import">
             <v-icon left>mdi-upload</v-icon>
@@ -247,6 +252,10 @@ onMounted(async () => {
               v-if="showNewCategoryWizard" 
               @close="showNewCategoryWizard = false" 
             />
+          </v-window-item>
+
+          <v-window-item value="bucket-list">
+            <BucketList />
           </v-window-item>
 
           <v-window-item value="versions">

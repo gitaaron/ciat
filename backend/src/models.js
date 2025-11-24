@@ -327,6 +327,48 @@ export const Rules = {
   }
 };
 
+export const BucketListItems = {
+  all() {
+    return db.prepare('SELECT * FROM bucket_list_items ORDER BY created_at ASC').all();
+  },
+  findById(id) {
+    return db.prepare('SELECT * FROM bucket_list_items WHERE id = ?').get(id);
+  },
+  create(item) {
+    const id = item.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const createdAt = item.created_at || new Date().toISOString();
+    const result = db.prepare(`
+      INSERT INTO bucket_list_items (id, name, description, estimated_cost, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      item.name,
+      item.description || null,
+      item.estimated_cost || null,
+      createdAt,
+      createdAt
+    );
+    return { id, changes: result.changes };
+  },
+  update(id, item) {
+    const result = db.prepare(`
+      UPDATE bucket_list_items
+      SET name = ?, description = ?, estimated_cost = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      item.name,
+      item.description || null,
+      item.estimated_cost || null,
+      id
+    );
+    return { changes: result.changes };
+  },
+  delete(id) {
+    const result = db.prepare('DELETE FROM bucket_list_items WHERE id = ?').run(id);
+    return { changes: result.changes };
+  }
+};
+
 export const AutogenRules = {
   all() {
     const rules = loadAutogenRules();
