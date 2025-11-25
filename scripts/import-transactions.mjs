@@ -168,8 +168,110 @@ for (const account of config.accounts) {
 
 const configDir = path.dirname(path.resolve(configPath));
 
+/**
+ * Find the earliest date in a parsed transaction array
+ * Returns null if no valid dates found
+ */
+function findEarliestDate(transactions) {
+  if (!transactions || transactions.length === 0) {
+    return null;
+  }
+  
+  let earliestDate = null;
+  for (const tx of transactions) {
+    if (tx.date) {
+      const dateStr = tx.date.toString().slice(0, 10); // Ensure YYYY-MM-DD format
+      if (!earliestDate || dateStr < earliestDate) {
+        earliestDate = dateStr;
+      }
+    }
+  }
+  
+  return earliestDate;
+}
+
+/**
+ * Scan all files to find the latest (newest) earliest date
+ * This will be used as the cutoff date for imports
+ */
+async function findCutoffDate() {
+  console.log('🔍 Scanning files to determine cutoff date...\n');
+  
+  const earliestDates = [];
+  
+  for (const accountConfig of config.accounts) {
+    const filePath = accountConfig.file;
+    const resolvedPath = path.isAbsolute(filePath) 
+      ? filePath 
+      : path.join(configDir, filePath);
+    
+    // Check if file exists
+    if (!fs.existsSync(resolvedPath)) {
+      console.log(`   ⚠️  Skipping missing file: ${resolvedPath}`);
+      continue;
+    }
+    
+    try {
+      // Read file
+      const fileBuffer = fs.readFileSync(resolvedPath);
+      const fileName = path.basename(resolvedPath);
+      
+      // Detect file format
+      const format = detectFileFormat(fileName, fileBuffer);
+      
+      if (!isSupportedFormat(format)) {
+        console.log(`   ⚠️  Skipping unsupported format: ${format} (${resolvedPath})`);
+        continue;
+      }
+      
+      // Parse transactions to find earliest date
+      let rows;
+      if (format === 'csv') {
+        // Get account if it exists to use its field mapping
+        const account = Accounts.findByName(accountConfig.name);
+        const fieldMapping = accountConfig.fieldMapping || (account?.field_mapping) || null;
+        rows = parseTransactionsCSV(fileBuffer, fieldMapping);
+      } else if (format === 'qfx') {
+        rows = await parseTransactionsQFX(fileBuffer);
+      }
+      
+      if (rows && rows.length > 0) {
+        const earliestDate = findEarliestDate(rows);
+        if (earliestDate) {
+          earliestDates.push({
+            file: resolvedPath,
+            account: accountConfig.name,
+            earliestDate
+          });
+          console.log(`   📅 ${accountConfig.name}: earliest date ${earliestDate}`);
+        }
+      }
+    } catch (error) {
+      console.log(`   ⚠️  Error scanning file ${resolvedPath}: ${error.message}`);
+    }
+  }
+  
+  if (earliestDates.length === 0) {
+    console.log('   ⚠️  No valid dates found in any files. No cutoff will be applied.\n');
+    return null;
+  }
+  
+  // Find the latest (newest) of all earliest dates
+  const cutoffDate = earliestDates.reduce((latest, item) => {
+    return item.earliestDate > latest ? item.earliestDate : latest;
+  }, earliestDates[0].earliestDate);
+  
+  console.log(`\n   ✂️  Cutoff date determined: ${cutoffDate}`);
+  console.log(`   (Transactions before this date will be excluded)\n`);
+  
+  return cutoffDate;
+}
+
 async function importTransactions() {
   console.log('\n📥 Starting transaction import...\n');
+  
+  // First, determine the cutoff date by scanning all files
+  const cutoffDate = await findCutoffDate();
   
   let totalAccounts = 0;
   let totalCreated = 0;
@@ -177,6 +279,7 @@ async function importTransactions() {
   let totalSaved = 0;
   let totalSkipped = 0;
   let totalErrors = 0;
+  let totalFilteredByCutoff = 0;
   
   for (const accountConfig of config.accounts) {
     const accountName = accountConfig.name;
@@ -289,12 +392,22 @@ async function importTransactions() {
     // Process and save transactions
     let saved = 0;
     let skipped = 0;
+    let filteredByCutoff = 0;
     
     // Prepare transactions for rule application
     const transactionsToCategorize = [];
     
     for (const row of rows) {
       try {
+        // Apply cutoff date filter if one was determined
+        if (cutoffDate) {
+          const txDate = row.date ? row.date.toString().slice(0, 10) : null;
+          if (txDate && txDate < cutoffDate) {
+            filteredByCutoff++;
+            continue;
+          }
+        }
+        
         // Add account_id and hash to each transaction
         const hash = txHash({ ...row, account_id: account.id });
         
@@ -330,6 +443,10 @@ async function importTransactions() {
         console.error(`   ⚠️  Error processing transaction: ${error.message}`);
         totalErrors++;
       }
+    }
+    
+    if (filteredByCutoff > 0) {
+      console.log(`   ✂️  Filtered ${filteredByCutoff} transactions before cutoff date (${cutoffDate})`);
     }
     
     // Apply system rules, user rules, and autogen rules to transactions
@@ -389,6 +506,7 @@ async function importTransactions() {
     totalTransactions += rows.length;
     totalSaved += saved;
     totalSkipped += skipped;
+    totalFilteredByCutoff += filteredByCutoff;
   }
   
   // Print summary
@@ -396,6 +514,9 @@ async function importTransactions() {
   console.log(`   Accounts processed: ${totalAccounts}`);
   console.log(`   Accounts created: ${totalCreated}`);
   console.log(`   Total transactions parsed: ${totalTransactions}`);
+  if (cutoffDate) {
+    console.log(`   Transactions filtered (before ${cutoffDate}): ${totalFilteredByCutoff}`);
+  }
   console.log(`   Transactions saved: ${totalSaved}`);
   console.log(`   Transactions skipped (duplicates): ${totalSkipped}`);
   if (totalErrors > 0) {
