@@ -31,6 +31,8 @@ export default {
     const account = ref('')
     const hideNetZero = ref(false)
     const inflowFilter = ref('both')
+    const minAmount = ref('')
+    const maxAmount = ref('')
     const rows = ref([])
     const loading = ref(false)
     const saving = ref(false)
@@ -104,7 +106,7 @@ export default {
     }
 
     // Watch for filter changes and reload data
-    watch([q, start, end, category, label, account, hideNetZero, inflowFilter], async () => {
+    watch([q, start, end, category, label, account, hideNetZero, inflowFilter, minAmount, maxAmount], async () => {
       await loadTransactions()
     })
 
@@ -136,6 +138,19 @@ export default {
             } else if (inflowFilter.value === 'outflow') {
               return !isInflow
             }
+            return true
+          })
+        }
+        
+        // Apply amount range filter
+        if (minAmount.value || maxAmount.value) {
+          filteredTransactions = filteredTransactions.filter(tx => {
+            const amount = parseFloat(tx.amount) || 0
+            const min = minAmount.value ? parseFloat(minAmount.value) : null
+            const max = maxAmount.value ? parseFloat(maxAmount.value) : null
+            
+            if (min !== null && amount < min) return false
+            if (max !== null && amount > max) return false
             return true
           })
         }
@@ -317,6 +332,8 @@ export default {
       account.value = ''
       hideNetZero.value = false
       inflowFilter.value = 'both'
+      minAmount.value = ''
+      maxAmount.value = ''
     }
 
     async function handleTransactionNameClick(transaction) {
@@ -431,6 +448,8 @@ export default {
       account,
       hideNetZero,
       inflowFilter,
+      minAmount,
+      maxAmount,
       rows,
       loading,
       saving,

@@ -118,6 +118,39 @@
           </v-radio-group>
         </v-col>
         
+        <v-col v-if="showAmountFilter" cols="12" md="4">
+          <v-row>
+            <v-col cols="6">
+              <v-text-field
+                :model-value="minAmount"
+                @update:model-value="$emit('update:minAmount', $event)"
+                label="Min Amount"
+                placeholder="0.00"
+                variant="outlined"
+                density="compact"
+                type="number"
+                prepend-inner-icon="mdi-currency-usd"
+                hide-details
+                clearable
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field
+                :model-value="maxAmount"
+                @update:model-value="$emit('update:maxAmount', $event)"
+                label="Max Amount"
+                placeholder="0.00"
+                variant="outlined"
+                density="compact"
+                type="number"
+                prepend-inner-icon="mdi-currency-usd"
+                hide-details
+                clearable
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+        
         <v-col cols="12" :md="buttonColSize">
           <v-btn
             @click="clearFilters"
@@ -250,6 +283,39 @@
         </v-radio-group>
       </v-col>
       
+      <v-col v-if="showAmountFilter" cols="12" md="4">
+        <v-row>
+          <v-col cols="6">
+            <v-text-field
+              :model-value="minAmount"
+              @update:model-value="$emit('update:minAmount', $event)"
+              label="Min Amount"
+              placeholder="0.00"
+              variant="outlined"
+              density="compact"
+              type="number"
+              prepend-inner-icon="mdi-currency-usd"
+              hide-details
+              clearable
+            />
+          </v-col>
+          <v-col cols="6">
+            <v-text-field
+              :model-value="maxAmount"
+              @update:model-value="$emit('update:maxAmount', $event)"
+              label="Max Amount"
+              placeholder="0.00"
+              variant="outlined"
+              density="compact"
+              type="number"
+              prepend-inner-icon="mdi-currency-usd"
+              hide-details
+              clearable
+            />
+          </v-col>
+        </v-row>
+      </v-col>
+      
       <v-col cols="12" :md="buttonColSize">
         <v-btn
           @click="clearFilters"
@@ -311,6 +377,18 @@ export default {
       type: Boolean,
       default: false
     },
+    minAmount: {
+      type: [String, Number],
+      default: ''
+    },
+    maxAmount: {
+      type: [String, Number],
+      default: ''
+    },
+    showAmountFilter: {
+      type: Boolean,
+      default: false
+    },
     categoryOptions: {
       type: Array,
       default: () => []
@@ -352,7 +430,7 @@ export default {
       default: true
     }
   },
-  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'clear-filters'],
+  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'update:minAmount', 'update:maxAmount', 'clear-filters'],
   setup(props, { emit }) {
     const buttonColSize = computed(() => {
       let visibleFilters = 0
@@ -362,6 +440,7 @@ export default {
       if (props.showDateFilters) visibleFilters += 1 // date filters take 1 column (4/12)
       if (props.showLabelFilter) visibleFilters++
       if (props.showInflowFilter) visibleFilters++
+      if (props.showAmountFilter) visibleFilters += 1 // amount filters take 1 column (4/12)
       
       // Calculate remaining space for button
       const remainingSpace = 12 - visibleFilters
@@ -377,6 +456,8 @@ export default {
       emit('update:selectedLabel', '')
       emit('update:hide-net-zero', false)
       emit('update:inflowFilter', 'both')
+      emit('update:minAmount', '')
+      emit('update:maxAmount', '')
       emit('clear-filters')
     }
 
