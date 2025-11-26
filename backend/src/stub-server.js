@@ -147,8 +147,9 @@ app.post('/api/import/commit', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3108;
-app.listen(PORT, () => {
-  console.log(`Stub API listening on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`Stub API listening on ${HOST}:${PORT}`);
   console.log('Available endpoints:');
   console.log('  POST /api/rules/auto-generate - Returns stub auto rules');
   console.log('  POST /api/import/analyze - File analysis');

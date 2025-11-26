@@ -1,6 +1,27 @@
 
 import axios from 'axios'
-const apiBase = (typeof __API__ !== 'undefined' ? __API__ : 'http://localhost:3108') + '/api'
+
+// Dynamically determine API base URL based on current hostname
+// This allows the app to work from any IP address (e.g., 100.111.18.106)
+function getApiBase() {
+  // If __API__ is defined (from Vite config), use it
+  if (typeof __API__ !== 'undefined' && __API__ !== 'http://localhost:3108') {
+    return __API__ + '/api'
+  }
+  
+  // Otherwise, use the current hostname with port 3108
+  // This works when accessing from any IP (e.g., 100.111.18.106:5175 -> 100.111.18.106:3108)
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol
+    const hostname = window.location.hostname
+    return `${protocol}//${hostname}:3108/api`
+  }
+  
+  // Fallback for SSR or non-browser environments
+  return 'http://localhost:3108/api'
+}
+
+const apiBase = getApiBase()
 
 export default {
   async getAccounts() {
