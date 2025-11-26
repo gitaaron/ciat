@@ -1,4 +1,5 @@
 {
+  "useCutoffDate": false,
   "accounts": [
     {
       "name": "chequing",

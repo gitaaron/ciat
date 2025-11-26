@@ -49,6 +49,7 @@ Configuration File:
 
 Configuration File Format:
   {
+    "useCutoffDate": false,
     "accounts": [
       {
         "name": "Account Name",
@@ -81,6 +82,11 @@ Examples:
 Supported file formats:
   - CSV files (.csv) - comma or tab delimited
   - QFX files (.qfx) - Quicken Financial Exchange format
+
+Configuration Options:
+  - useCutoffDate: (optional, default: false) If true, scans all files to find the
+    latest (newest) earliest date across all files, and excludes transactions before
+    that date. This prevents importing old historical data when adding new accounts.
 
 Notes:
   - Accounts will be created if they don't exist
@@ -270,8 +276,16 @@ async function findCutoffDate() {
 async function importTransactions() {
   console.log('\n📥 Starting transaction import...\n');
   
-  // First, determine the cutoff date by scanning all files
-  const cutoffDate = await findCutoffDate();
+  // Check if cutoff date feature is enabled
+  const useCutoffDate = config.useCutoffDate === true;
+  
+  // First, determine the cutoff date by scanning all files (if enabled)
+  let cutoffDate = null;
+  if (useCutoffDate) {
+    cutoffDate = await findCutoffDate();
+  } else {
+    console.log('ℹ️  Cutoff date feature is disabled (useCutoffDate: false)\n');
+  }
   
   let totalAccounts = 0;
   let totalCreated = 0;
