@@ -162,6 +162,19 @@
             {{ clearButtonText }}
           </v-btn>
         </v-col>
+        
+        <v-col cols="12" :md="buttonColSize">
+          <v-btn
+            @click="handleCreateRule"
+            color="primary"
+            variant="elevated"
+            block
+            :disabled="!hasActiveFilters"
+          >
+            <v-icon left>mdi-filter-plus</v-icon>
+            Create Rule
+          </v-btn>
+        </v-col>
       </v-row>
     </v-card-text>
   </v-card>
@@ -327,6 +340,19 @@
           {{ clearButtonText }}
         </v-btn>
       </v-col>
+      
+      <v-col cols="12" :md="buttonColSize">
+        <v-btn
+          @click="handleCreateRule"
+          color="primary"
+          variant="elevated"
+          block
+          :disabled="!hasActiveFilters"
+        >
+          <v-icon left>mdi-filter-plus</v-icon>
+          Create Rule
+        </v-btn>
+      </v-col>
     </v-row>
   </div>
 </template>
@@ -430,7 +456,7 @@ export default {
       default: true
     }
   },
-  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'update:minAmount', 'update:maxAmount', 'clear-filters'],
+  emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'update:minAmount', 'update:maxAmount', 'clear-filters', 'create-rule'],
   setup(props, { emit }) {
     const buttonColSize = computed(() => {
       let visibleFilters = 0
@@ -461,9 +487,93 @@ export default {
       emit('clear-filters')
     }
 
+    // Check if there are any active filters (excluding hideNetZero)
+    // For rule creation, we need at least a searchQuery or an inflowFilter (not 'both')
+    // Other filters can be additional constraints, but we need at least one of these two
+    const hasActiveFilters = computed(() => {
+      const hasPatternOrInflow = !!(props.searchQuery || (props.inflowFilter && props.inflowFilter !== 'both'))
+      // We need at least a pattern or inflow filter to create a rule
+      // Other filters are additional constraints
+      return hasPatternOrInflow
+    })
+
+    // Map filter fields to rule fields
+    function handleCreateRule() {
+      const ruleData = {}
+      
+      // Map searchQuery to pattern with match_type 'contains'
+      if (props.searchQuery) {
+        ruleData.pattern = props.searchQuery
+        ruleData.match_type = 'contains'
+      }
+      
+      // Map selectedCategory to category
+      if (props.selectedCategory) {
+        ruleData.category = props.selectedCategory
+      }
+      
+      // Map selectedAccount to account_id
+      if (props.selectedAccount) {
+        ruleData.account_id = props.selectedAccount
+      }
+      
+      // Map date range
+      if (props.startDate) {
+        ruleData.start_date = props.startDate
+      }
+      if (props.endDate) {
+        ruleData.end_date = props.endDate
+      }
+      
+      // Map selectedLabel to labels (array)
+      if (props.selectedLabel) {
+        ruleData.labels = [props.selectedLabel]
+      }
+      
+      // Map inflowFilter
+      if (props.inflowFilter && props.inflowFilter !== 'both') {
+        if (props.inflowFilter === 'inflow') {
+          // If only inflow, set match_type to 'inflow' (but only if no searchQuery)
+          if (!props.searchQuery) {
+            ruleData.match_type = 'inflow'
+            // For inflow-only rules, we don't need a pattern
+            ruleData.pattern = ''
+          } else {
+            // If we have both searchQuery and inflow, use the searchQuery pattern and add an inflow flag
+            ruleData.inflow_only = true
+          }
+        } else if (props.inflowFilter === 'outflow') {
+          ruleData.outflow_only = true
+        }
+      }
+      
+      // Map amount range
+      if (props.minAmount) {
+        ruleData.min_amount = parseFloat(props.minAmount)
+      }
+      if (props.maxAmount) {
+        ruleData.max_amount = parseFloat(props.maxAmount)
+      }
+      
+      // Require at least a pattern or an inflow filter to create a rule
+      // (Other filters like category, account, dates, amounts are additional constraints)
+      if (!ruleData.pattern && ruleData.match_type !== 'inflow' && !ruleData.inflow_only && !ruleData.outflow_only) {
+        // If no pattern and no inflow/outflow filter, we can't create a meaningful rule
+        // This shouldn't happen because hasActiveFilters should prevent the button from being enabled
+        // But just in case, we'll emit with a flag to show an error
+        emit('create-rule', { ...ruleData, _error: 'A rule must have at least a search pattern or an inflow/outflow filter' })
+        return
+      }
+      
+      // Emit the rule data
+      emit('create-rule', ruleData)
+    }
+
     return {
       buttonColSize,
-      clearFilters
+      clearFilters,
+      hasActiveFilters,
+      handleCreateRule
     }
   }
 }

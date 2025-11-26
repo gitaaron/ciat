@@ -40,6 +40,7 @@
         search-placeholder="Search name/amount/note"
         clear-button-text="Reset"
         @clear-filters="clearFilters"
+        @create-rule="handleCreateRuleFromFilters"
       />
 
       <!-- Summary Stats -->
@@ -102,17 +103,28 @@
     @save="handleCreateTransaction"
     @cancel="showNewTransactionDialog = false"
   />
+
+  <!-- Create Rule Dialog -->
+  <CreateRuleDialog
+    :show="showCreateRuleDialog"
+    :initial-data="createRuleData"
+    :loading="createRuleLoading"
+    @save="handleCreateRuleSave"
+    @cancel="cancelCreateRule"
+  />
 </template>
 
 <script>
 import TransactionsTableJS from './TransactionsTable.js'
 import NewTransactionDialog from '../shared/NewTransactionDialog.vue'
+import CreateRuleDialog from '../shared/CreateRuleDialog.vue'
 
 export default {
   ...TransactionsTableJS,
   components: {
     ...TransactionsTableJS.components,
-    NewTransactionDialog
+    NewTransactionDialog,
+    CreateRuleDialog
   }
 }
 </script>

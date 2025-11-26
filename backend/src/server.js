@@ -92,6 +92,17 @@ app.put('/api/accounts/:id/field-mapping', (req, res) => {
   }
 });
 
+// Check if account has existing transactions
+app.get('/api/accounts/:id/has-transactions', (req, res) => {
+  const { id } = req.params;
+  try {
+    const transactionCount = Accounts.getTransactionCount(id);
+    res.json({ hasTransactions: transactionCount.count > 0 });
+  } catch (e) {
+    res.status(400).json({ error: String(e) });
+  }
+});
+
 // Transactions list/search/filter/sort
 app.get('/api/transactions', (req, res) => {
   const list = Transactions.list({
@@ -278,9 +289,23 @@ app.post('/api/rules/preview', async (req, res) => {
 
 // Create new rule with confirmation
 app.post('/api/rules', async (req, res) => {
-  const { category, match_type, pattern, explain, labels, priority } = req.body;
+  const { category, match_type, pattern, explain, labels, priority, account_id, start_date, end_date, min_amount, max_amount, inflow_only, outflow_only } = req.body;
   try {
-    const newRule = await addUserRule({ category, match_type, pattern, explain: explain || 'User created rule', labels, priority });
+    const newRule = await addUserRule({ 
+      category, 
+      match_type, 
+      pattern, 
+      explain: explain || 'User created rule', 
+      labels, 
+      priority,
+      account_id,
+      start_date,
+      end_date,
+      min_amount,
+      max_amount,
+      inflow_only,
+      outflow_only
+    });
     res.json(newRule);
   } catch (e) {
     res.status(400).json({ error: String(e) });

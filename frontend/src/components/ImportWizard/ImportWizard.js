@@ -5,8 +5,22 @@ import ManageRules from '../RulesReview/ManageRules.vue'
 import TransactionReview from '../TransactionReview/TransactionReview.vue'
 import AccountManager from '../AccountManager/AccountManager.vue'
 import FieldMapping from '../FieldMapping/FieldMapping.vue'
+import FinalBalanceDialog from '../shared/FinalBalanceDialog.vue'
 import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule } from '../../utils/ruleMatcher.js'
 import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm, showInfoDialog } from '../../utils/notifications.js'
+
+// Simple hash function for transaction hashing (matches backend logic)
+function txHash({ external_id, account_id, date, name, description, amount, inflow }) {
+  const raw = JSON.stringify({ external_id, account_id, date, name, description, amount, inflow })
+  // Simple hash using string manipulation (for browser compatibility)
+  let hash = 0
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).slice(0, 32)
+}
 
 export default {
   name: 'ImportWizard',
@@ -14,7 +28,8 @@ export default {
     ManageRules,
     TransactionReview,
     AccountManager,
-    FieldMapping
+    FieldMapping,
+    FinalBalanceDialog
   },
   props: {
     accounts: Array,
@@ -48,6 +63,11 @@ export default {
     const pendingAccountForProcessing = ref(null) // Account waiting to be processed after field mapping
     const pendingImportResult = ref(null) // Import result stored when checking for new transactions
     const fieldMappingComponent = ref(null) // Reference to FieldMapping component
+    
+    // Final balance dialog state
+    const showFinalBalanceDialog = ref(false)
+    const pendingTransactionsForBalance = ref([]) // Transactions to calculate balance from
+    const initialBalanceTransaction = ref(null) // Calculated initial balance transaction
     
     // Centralized rule matching results
     const existingRuleMatches = ref(new Map())
@@ -547,7 +567,15 @@ export default {
             // Clear the pending result after using it
             pendingImportResult.value = null
             
-            const rawTransactions = res.preview || []
+            let rawTransactions = res.preview || []
+            
+            // Add initial balance transaction if it exists (for first import)
+            if (initialBalanceTransaction.value) {
+              // Insert at the beginning so it's the earliest transaction
+              rawTransactions = [initialBalanceTransaction.value, ...rawTransactions]
+              // Clear it after using
+              initialBalanceTransaction.value = null
+            }
             
             // Load existing rules and system rules from backend
             const existingRules = await api.getRules()
@@ -694,12 +722,38 @@ export default {
         }
       }
       
-      // Hide field mapping step and proceed with processing
+      // Hide field mapping step
       showFieldMappingStep.value = false
       // Wait for the dialog to close before proceeding
       await nextTick()
       // Add a small delay to ensure persistent dialog closes completely
       await new Promise(resolve => setTimeout(resolve, 150))
+      
+      // Check if this is the first import for the account
+      if (pendingAccountForProcessing.value) {
+        try {
+          const hasTransactions = await api.accountHasTransactions(pendingAccountForProcessing.value)
+          if (!hasTransactions.hasTransactions) {
+            // This is the first import - we need to get the transactions first to show the dialog
+            // Import the file to get the transactions
+            const res = await api.importCSV(pendingAccountForProcessing.value, pendingFileForProcessing.value)
+            const rawTransactions = res.preview || []
+            
+            if (rawTransactions.length > 0) {
+              // Store transactions and show final balance dialog
+              pendingTransactionsForBalance.value = rawTransactions
+              pendingImportResult.value = res
+              showFinalBalanceDialog.value = true
+              return // Wait for user to confirm final balance
+            }
+          }
+        } catch (error) {
+          console.error('Error checking if account has transactions:', error)
+          // Continue with normal flow if check fails
+        }
+      }
+      
+      // Not first import or no transactions, proceed normally
       await doProcessAllFiles()
     }
     
@@ -711,7 +765,83 @@ export default {
       await nextTick()
       // Add a small delay to ensure persistent dialog closes completely
       await new Promise(resolve => setTimeout(resolve, 150))
+      
+      // Check if this is the first import for the account
+      if (pendingAccountForProcessing.value) {
+        try {
+          const hasTransactions = await api.accountHasTransactions(pendingAccountForProcessing.value)
+          if (!hasTransactions.hasTransactions) {
+            // This is the first import - we need to get the transactions first to show the dialog
+            // Import the file to get the transactions
+            const res = await api.importCSV(pendingAccountForProcessing.value, pendingFileForProcessing.value)
+            const rawTransactions = res.preview || []
+            
+            if (rawTransactions.length > 0) {
+              // Store transactions and show final balance dialog
+              pendingTransactionsForBalance.value = rawTransactions
+              pendingImportResult.value = res
+              showFinalBalanceDialog.value = true
+              return // Wait for user to confirm final balance
+            }
+          }
+        } catch (error) {
+          console.error('Error checking if account has transactions:', error)
+          // Continue with normal flow if check fails
+        }
+      }
+      
+      // Not first import or no transactions, proceed normally
       await doProcessAllFiles()
+    }
+    
+    async function handleFinalBalanceConfirmed(balanceData) {
+      // Calculate initial balance transaction
+      const { finalBalance, initialBalance, earliestDate } = balanceData
+      
+      // Calculate transaction sum to verify
+      const transactionSum = pendingTransactionsForBalance.value.reduce((sum, tx) => {
+        return sum + (parseFloat(tx.amount) || 0)
+      }, 0)
+      
+      // Create initial balance transaction
+      // The amount should be the initial balance (which is finalBalance - transactionSum)
+      // If initialBalance is positive, it's an inflow; if negative, it's an outflow
+      const initialTx = {
+        account_id: pendingAccountForProcessing.value,
+        date: earliestDate,
+        name: 'Initial Balance',
+        description: 'Initial balance transaction to match final balance',
+        amount: initialBalance, // This will be positive for inflow, negative for outflow
+        inflow: initialBalance >= 0 ? 1 : 0, // 1 for inflow, 0 for outflow
+        category: 'transfer', // Initial balance is typically a transfer
+        category_source: 'manual',
+        category_explain: `Initial balance to achieve final balance of $${finalBalance.toFixed(2)}`,
+        labels: ['initial_balance'],
+        hash: txHash({
+          account_id: pendingAccountForProcessing.value,
+          date: earliestDate,
+          name: 'Initial Balance',
+          amount: initialBalance
+        })
+      }
+      
+      // Store the initial balance transaction
+      initialBalanceTransaction.value = initialTx
+      
+      // Close dialog and proceed with processing
+      showFinalBalanceDialog.value = false
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 150))
+      await doProcessAllFiles()
+    }
+    
+    function handleFinalBalanceCancel() {
+      // User cancelled - reset and go back
+      showFinalBalanceDialog.value = false
+      pendingTransactionsForBalance.value = []
+      pendingImportResult.value = null
+      initialBalanceTransaction.value = null
+      resetImport()
     }
     
     function resetImport() {
@@ -727,6 +857,9 @@ export default {
       pendingFileForProcessing.value = null
       pendingAccountForProcessing.value = null
       pendingImportResult.value = null
+      showFinalBalanceDialog.value = false
+      pendingTransactionsForBalance.value = []
+      initialBalanceTransaction.value = null
       step.value = 1
       currentCategoryStep.value = 0
     }
@@ -1099,7 +1232,11 @@ export default {
       handleFieldMappingConfirmed,
       handleFieldMappingSkip,
       fieldMappingComponent,
-      isFieldMappingComplete
+      isFieldMappingComplete,
+      showFinalBalanceDialog,
+      pendingTransactionsForBalance,
+      handleFinalBalanceConfirmed,
+      handleFinalBalanceCancel
     }
   }
 }

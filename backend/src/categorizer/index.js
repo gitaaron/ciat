@@ -142,7 +142,7 @@ function mlGuess(tx) {
   return null;
 }
 
-export async function addUserRule({ category, match_type, pattern, explain, labels, priority }) {
+export async function addUserRule({ category, match_type, pattern, explain, labels, priority, account_id, start_date, end_date, min_amount, max_amount, inflow_only, outflow_only }) {
   // Use priority if explicitly provided (even if 0), otherwise get next priority
   const rulePriority = (priority !== undefined && priority !== null) ? priority : Rules.getNextPriority();
   const ruleId = `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -153,11 +153,34 @@ export async function addUserRule({ category, match_type, pattern, explain, labe
     pattern, 
     priority: rulePriority, 
     enabled: true, 
-    explain: explain || 'User override',
+    explain: explain || 'User created rule',
     labels: labels || [],
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString() 
+    updated_at: new Date().toISOString()
   };
+  
+  // Add optional fields if provided
+  if (account_id !== undefined && account_id !== null) {
+    newRule.account_id = account_id;
+  }
+  if (start_date !== undefined && start_date !== null) {
+    newRule.start_date = start_date;
+  }
+  if (end_date !== undefined && end_date !== null) {
+    newRule.end_date = end_date;
+  }
+  if (min_amount !== undefined && min_amount !== null) {
+    newRule.min_amount = min_amount;
+  }
+  if (max_amount !== undefined && max_amount !== null) {
+    newRule.max_amount = max_amount;
+  }
+  if (inflow_only !== undefined && inflow_only !== null) {
+    newRule.inflow_only = inflow_only;
+  }
+  if (outflow_only !== undefined && outflow_only !== null) {
+    newRule.outflow_only = outflow_only;
+  }
   
   Rules.create(newRule);
   return newRule;

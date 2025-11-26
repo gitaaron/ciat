@@ -118,11 +118,77 @@ export function matchesRuleOptimized(rule, transaction, account = null) {
     }
   }
   
+  // Check account_id filter if rule has one
+  if (rule.account_id !== undefined && rule.account_id !== null) {
+    if (transaction.account_id !== rule.account_id) {
+      return false;
+    }
+  }
+  
+  // Check date range filters
+  if (rule.start_date) {
+    const txDate = transaction.date;
+    if (!txDate || txDate < rule.start_date) {
+      return false;
+    }
+  }
+  if (rule.end_date) {
+    const txDate = transaction.date;
+    if (!txDate || txDate > rule.end_date) {
+      return false;
+    }
+  }
+  
+  // Check amount range filters
+  if (rule.min_amount !== undefined && rule.min_amount !== null) {
+    const txAmount = Math.abs(Number(transaction.amount) || 0);
+    if (txAmount < rule.min_amount) {
+      return false;
+    }
+  }
+  if (rule.max_amount !== undefined && rule.max_amount !== null) {
+    const txAmount = Math.abs(Number(transaction.amount) || 0);
+    if (txAmount > rule.max_amount) {
+      return false;
+    }
+  }
+  
+  // Check inflow/outflow filters
+  if (rule.inflow_only === 1 || rule.inflow_only === true) {
+    const inflow = transaction.inflow;
+    if (!(inflow === 1 || inflow === true || inflow === '1')) {
+      return false;
+    }
+  }
+  if (rule.outflow_only === 1 || rule.outflow_only === true) {
+    const inflow = transaction.inflow;
+    if (inflow === 1 || inflow === true || inflow === '1') {
+      return false;
+    }
+  }
+  
   // Use pre-normalized values if available
   const normalizedPattern = rule._normalizedPattern;
   const merchantNormalized = transaction._merchantNormalized || '';
   const descriptionNormalized = transaction._descriptionNormalized || '';
   const matchType = rule._matchType || rule.match_type || rule.type || 'contains';
+  
+  // If match_type is 'inflow' and we have no pattern, just check inflow
+  if (matchType === 'inflow' && !rule.pattern) {
+    const inflow = transaction.inflow;
+    return inflow === 1 || inflow === true || inflow === '1';
+  }
+  
+  // If we have inflow_only or outflow_only but no pattern, we've already checked those above
+  // So if we get here and there's no pattern, return true
+  if (!rule.pattern && (rule.inflow_only || rule.outflow_only)) {
+    return true;
+  }
+  
+  // If there's no pattern and no match type that doesn't require a pattern, return false
+  if (!rule.pattern && matchType !== 'inflow') {
+    return false;
+  }
   
   let result = false;
   switch (matchType) {
@@ -190,6 +256,55 @@ export function matchesRule(rule, transaction, account = null) {
     }
   }
   
+  // Check account_id filter if rule has one
+  if (rule.account_id !== undefined && rule.account_id !== null) {
+    if (transaction.account_id !== rule.account_id) {
+      return false;
+    }
+  }
+  
+  // Check date range filters
+  if (rule.start_date) {
+    const txDate = transaction.date;
+    if (!txDate || txDate < rule.start_date) {
+      return false;
+    }
+  }
+  if (rule.end_date) {
+    const txDate = transaction.date;
+    if (!txDate || txDate > rule.end_date) {
+      return false;
+    }
+  }
+  
+  // Check amount range filters
+  if (rule.min_amount !== undefined && rule.min_amount !== null) {
+    const txAmount = Math.abs(Number(transaction.amount) || 0);
+    if (txAmount < rule.min_amount) {
+      return false;
+    }
+  }
+  if (rule.max_amount !== undefined && rule.max_amount !== null) {
+    const txAmount = Math.abs(Number(transaction.amount) || 0);
+    if (txAmount > rule.max_amount) {
+      return false;
+    }
+  }
+  
+  // Check inflow/outflow filters
+  if (rule.inflow_only === 1 || rule.inflow_only === true) {
+    const inflow = transaction.inflow;
+    if (!(inflow === 1 || inflow === true || inflow === '1')) {
+      return false;
+    }
+  }
+  if (rule.outflow_only === 1 || rule.outflow_only === true) {
+    const inflow = transaction.inflow;
+    if (inflow === 1 || inflow === true || inflow === '1') {
+      return false;
+    }
+  }
+  
   // If pre-normalized data is available, use optimized path
   if (rule._normalizedPattern !== undefined && 
       (transaction._merchantNormalized !== undefined || transaction._descriptionNormalized !== undefined)) {
@@ -199,6 +314,23 @@ export function matchesRule(rule, transaction, account = null) {
   // Fallback to original implementation for backward compatibility
   const pattern = rule.pattern || '';
   const matchType = rule.match_type || rule.type || 'contains';
+  
+  // If match_type is 'inflow' and we have no pattern, just check inflow
+  if (matchType === 'inflow' && !pattern) {
+    const inflow = transaction.inflow;
+    return inflow === 1 || inflow === true || inflow === '1';
+  }
+  
+  // If we have inflow_only or outflow_only but no pattern, we've already checked those above
+  // So if we get here and there's no pattern, return true
+  if (!pattern && (rule.inflow_only || rule.outflow_only)) {
+    return true;
+  }
+  
+  // If there's no pattern and no match type that doesn't require a pattern, return false
+  if (!pattern && matchType !== 'inflow') {
+    return false;
+  }
   
   // Normalize the pattern
   const normalizedPattern = normalizeMerchant(pattern).normalized;

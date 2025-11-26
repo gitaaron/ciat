@@ -38,6 +38,14 @@ export default {
     const saving = ref(false)
     const showNewTransactionDialog = ref(false)
     const creatingTransaction = ref(false)
+    const showCreateRuleDialog = ref(false)
+    const createRuleLoading = ref(false)
+    const createRuleData = ref({
+      match_type: 'contains',
+      pattern: '',
+      category: '',
+      labels: []
+    })
     // Track original transaction states to detect changes
     const originalTransactions = ref(new Map()) // Map<id, originalTransaction>
     // Track modified transactions
@@ -438,6 +446,95 @@ export default {
       }
     }
 
+    function handleCreateRuleFromFilters(ruleData) {
+      // Map the rule data from filters to rule format
+      const mappedRuleData = {
+        match_type: ruleData.match_type || 'contains',
+        pattern: ruleData.pattern || '',
+        category: ruleData.category || '',
+        labels: ruleData.labels || [],
+        account_id: ruleData.account_id || null,
+        start_date: ruleData.start_date || null,
+        end_date: ruleData.end_date || null,
+        min_amount: ruleData.min_amount || null,
+        max_amount: ruleData.max_amount || null,
+        inflow_only: ruleData.inflow_only ? 1 : 0,
+        outflow_only: ruleData.outflow_only ? 1 : 0
+      }
+      
+      // Set the initial data for the dialog
+      createRuleData.value = mappedRuleData
+      showCreateRuleDialog.value = true
+    }
+
+    async function handleCreateRuleSave(ruleData) {
+      createRuleLoading.value = true
+      try {
+        // Prepare rule data for API
+        const rulePayload = {
+          match_type: ruleData.match_type || 'contains',
+          pattern: ruleData.pattern || '',
+          category: ruleData.category || '',
+          labels: ruleData.labels || [],
+          priority: 1000 // High priority for user-created rules
+        }
+        
+        // Add optional fields if they exist
+        if (ruleData.account_id) {
+          rulePayload.account_id = ruleData.account_id
+        }
+        if (ruleData.start_date) {
+          rulePayload.start_date = ruleData.start_date
+        }
+        if (ruleData.end_date) {
+          rulePayload.end_date = ruleData.end_date
+        }
+        if (ruleData.min_amount !== null && ruleData.min_amount !== undefined) {
+          rulePayload.min_amount = ruleData.min_amount
+        }
+        if (ruleData.max_amount !== null && ruleData.max_amount !== undefined) {
+          rulePayload.max_amount = ruleData.max_amount
+        }
+        if (ruleData.inflow_only) {
+          rulePayload.inflow_only = 1
+        }
+        if (ruleData.outflow_only) {
+          rulePayload.outflow_only = 1
+        }
+        
+        // Create the rule via API
+        await api.createRule(rulePayload)
+        showSuccess('Rule created successfully')
+        showCreateRuleDialog.value = false
+        createRuleData.value = {
+          match_type: 'contains',
+          pattern: '',
+          category: '',
+          labels: []
+        }
+        
+        // Reload transactions to apply the new rule
+        await loadTransactions()
+        // Emit event to notify parent that rules were updated
+        emit('categories-updated')
+      } catch (error) {
+        console.error('Error creating rule:', error)
+        showError('Error creating rule: ' + (error.response?.data?.error || error.message))
+      } finally {
+        createRuleLoading.value = false
+      }
+    }
+
+    function cancelCreateRule() {
+      showCreateRuleDialog.value = false
+      createRuleData.value = {
+        match_type: 'contains',
+        pattern: '',
+        category: '',
+        labels: []
+      }
+    }
+
     return {
       // Reactive properties
       q,
@@ -457,6 +554,9 @@ export default {
       modifiedTransactionsCount,
       showNewTransactionDialog,
       creatingTransaction,
+      showCreateRuleDialog,
+      createRuleLoading,
+      createRuleData,
       // Computed properties
       categoryFilterOptions,
       categorySelectOptions,
@@ -475,7 +575,10 @@ export default {
       clearFilters,
       handleTransactionNameClick,
       setFilters,
-      handleCreateTransaction
+      handleCreateTransaction,
+      handleCreateRuleFromFilters,
+      handleCreateRuleSave,
+      cancelCreateRule
     }
   }
 }

@@ -120,3 +120,53 @@ try {
   // Table already exists, ignore error
   console.log('Bucket list items table already exists');
 }
+
+// Migration: Add new rule fields for filter-based rule creation
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN account_id INTEGER;');
+  console.log('Added account_id column to rules table');
+} catch (e) {
+  console.log('account_id column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN start_date TEXT;');
+  console.log('Added start_date column to rules table');
+} catch (e) {
+  console.log('start_date column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN end_date TEXT;');
+  console.log('Added end_date column to rules table');
+} catch (e) {
+  console.log('end_date column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN min_amount REAL;');
+  console.log('Added min_amount column to rules table');
+} catch (e) {
+  console.log('min_amount column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN max_amount REAL;');
+  console.log('Added max_amount column to rules table');
+} catch (e) {
+  console.log('max_amount column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN inflow_only INTEGER DEFAULT 0;');
+  console.log('Added inflow_only column to rules table');
+} catch (e) {
+  console.log('inflow_only column already exists in rules table');
+}
+
+try {
+  db.exec('ALTER TABLE rules ADD COLUMN outflow_only INTEGER DEFAULT 0;');
+  console.log('Added outflow_only column to rules table');
+} catch (e) {
+  console.log('outflow_only column already exists in rules table');
+}

@@ -148,5 +148,10 @@ export default {
   async deleteBucketListItem(id) {
     const { data } = await axios.delete(apiBase + `/bucket-list-items/${id}`)
     return data
+  },
+  // Check if account has existing transactions
+  async accountHasTransactions(accountId) {
+    const { data } = await axios.get(apiBase + `/accounts/${accountId}/has-transactions`)
+    return data
   }
 }

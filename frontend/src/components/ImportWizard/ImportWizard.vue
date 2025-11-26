@@ -325,6 +325,17 @@
       </v-card>
     </v-dialog>
 
+    <!-- Final Balance Dialog (shown for first import of an account) -->
+    <FinalBalanceDialog
+      v-if="pendingAccountForProcessing"
+      :show="showFinalBalanceDialog"
+      :account-name="getAccountName(pendingAccountForProcessing)"
+      :transactions="pendingTransactionsForBalance"
+      :loading="processing"
+      @confirm="handleFinalBalanceConfirmed"
+      @cancel="handleFinalBalanceCancel"
+    />
+
   </v-card>
 </template>
 

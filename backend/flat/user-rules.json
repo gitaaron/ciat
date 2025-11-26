@@ -1,4 +1,18 @@
 {
-  "rules": []
+  "rules": [
+    {
+      "id": "rule_1764091853853_g92n4r9qf",
+      "match_type": "contains",
+      "pattern": "inv",
+      "category": "investments",
+      "priority": 1000,
+      "support": 0,
+      "exceptions": null,
+      "enabled": true,
+      "explain": "User created rule",
+      "labels": [],
+      "created_at": "2025-11-25T17:30:53.853Z",
+      "updated_at": "2025-11-25T17:30:53.853Z"
+    }
+  ]
 }
-

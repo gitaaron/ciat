@@ -263,6 +263,29 @@ export const Rules = {
       updated_at: rule.updated_at || new Date().toISOString()
     };
     
+    // Add optional fields if provided
+    if (rule.account_id !== undefined && rule.account_id !== null) {
+      newRule.account_id = rule.account_id;
+    }
+    if (rule.start_date !== undefined && rule.start_date !== null) {
+      newRule.start_date = rule.start_date;
+    }
+    if (rule.end_date !== undefined && rule.end_date !== null) {
+      newRule.end_date = rule.end_date;
+    }
+    if (rule.min_amount !== undefined && rule.min_amount !== null) {
+      newRule.min_amount = rule.min_amount;
+    }
+    if (rule.max_amount !== undefined && rule.max_amount !== null) {
+      newRule.max_amount = rule.max_amount;
+    }
+    if (rule.inflow_only !== undefined && rule.inflow_only !== null) {
+      newRule.inflow_only = rule.inflow_only;
+    }
+    if (rule.outflow_only !== undefined && rule.outflow_only !== null) {
+      newRule.outflow_only = rule.outflow_only;
+    }
+    
     rules.push(newRule);
     saveUserRules(rules);
     
