@@ -39,6 +39,7 @@ export default {
           const inflow = tx.inflow
           return inflow === 1 || inflow === true || inflow === '1'
         })
+        .filter(tx => tx.category !== 'investments')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     
@@ -49,6 +50,7 @@ export default {
           const inflow = tx.inflow
           return !(inflow === 1 || inflow === true || inflow === '1')
         })
+        .filter(tx => tx.category !== 'investments')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     
