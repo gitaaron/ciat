@@ -16,12 +16,49 @@
       
       <template v-slot:item.name="{ item }">
         <div class="d-flex align-center ga-2">
-          <span 
-            :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-            @click="onTransactionNameClick(item)"
+          <v-menu
+            v-model="menuOpen[item.id]"
+            location="bottom start"
+            :close-on-content-click="false"
           >
-            {{ item.name }}
-          </span>
+            <template v-slot:activator="{ props }">
+              <span 
+                class="transaction-name-clickable"
+                v-bind="props"
+                @click="onTransactionNameClick(item, $event)"
+              >
+                {{ item.name }}
+              </span>
+            </template>
+            <v-list>
+              <v-list-item
+                @click="handleManualOverride(item)"
+                :disabled="item.manual_override === 1 || item.manual_override === true"
+              >
+                <v-list-item-title>
+                  <v-icon left size="small">mdi-lock</v-icon>
+                  Manually Override Category
+                  <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                @click="handleOpenRule(item)"
+              >
+                <v-list-item-title>
+                  <v-icon left size="small">mdi-open-in-new</v-icon>
+                  Open Corresponding Rule
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                @click="handleCreateRule(item)"
+              >
+                <v-list-item-title>
+                  <v-icon left size="small">mdi-plus-circle</v-icon>
+                  Create New Rule
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
           <v-chip
             v-if="getLastFourDigits(item.external_id)"
             size="small"
@@ -151,12 +188,49 @@
                   
                   <template v-slot:item.name="{ item }">
                     <div class="d-flex align-center ga-2">
-                      <span 
-                        :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-                        @click="onTransactionNameClick(item)"
+                      <v-menu
+                        v-model="menuOpen[item.id]"
+                        location="bottom start"
+                        :close-on-content-click="false"
                       >
-                        {{ item.name }}
-                      </span>
+                        <template v-slot:activator="{ props }">
+                          <span 
+                            class="transaction-name-clickable"
+                            v-bind="props"
+                            @click="onTransactionNameClick(item, $event)"
+                          >
+                            {{ item.name }}
+                          </span>
+                        </template>
+                        <v-list>
+                          <v-list-item
+                            @click="handleManualOverride(item)"
+                            :disabled="item.manual_override === 1 || item.manual_override === true"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-lock</v-icon>
+                              Manually Override Category
+                              <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            @click="handleOpenRule(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-open-in-new</v-icon>
+                              Open Corresponding Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            @click="handleCreateRule(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-plus-circle</v-icon>
+                              Create New Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                        </v-list>
+                      </v-menu>
                       <v-chip
                         v-if="getLastFourDigits(item.external_id)"
                         size="small"
@@ -289,12 +363,49 @@
                   
                   <template v-slot:item.name="{ item }">
                     <div class="d-flex align-center ga-2">
-                      <span 
-                        :class="{ 'transaction-name-clickable': !(item.manual_override === 1 || item.manual_override === true) }"
-                        @click="onTransactionNameClick(item)"
+                      <v-menu
+                        v-model="menuOpen[item.id]"
+                        location="bottom start"
+                        :close-on-content-click="false"
                       >
-                        {{ item.name }}
-                      </span>
+                        <template v-slot:activator="{ props }">
+                          <span 
+                            class="transaction-name-clickable"
+                            v-bind="props"
+                            @click="onTransactionNameClick(item, $event)"
+                          >
+                            {{ item.name }}
+                          </span>
+                        </template>
+                        <v-list>
+                          <v-list-item
+                            @click="handleManualOverride(item)"
+                            :disabled="item.manual_override === 1 || item.manual_override === true"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-lock</v-icon>
+                              Manually Override Category
+                              <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            @click="handleOpenRule(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-open-in-new</v-icon>
+                              Open Corresponding Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            @click="handleCreateRule(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-plus-circle</v-icon>
+                              Create New Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                        </v-list>
+                      </v-menu>
                       <v-chip
                         v-if="getLastFourDigits(item.external_id)"
                         size="small"
@@ -374,6 +485,7 @@
 </template>
 
 <script>
+import { ref } from 'vue'
 import { getCategoryName, getCategoryIcon, getCategoryColor, CATEGORY_SELECT_OPTIONS } from '../../config/categories.js'
 
 export default {
@@ -428,8 +540,10 @@ export default {
       default: false
     }
   },
-  emits: ['toggle-category', 'save-item', 'row-click', 'category-change', 'transaction-name-click'],
+  emits: ['toggle-category', 'save-item', 'row-click', 'category-change', 'transaction-name-click', 'manual-override', 'open-rule', 'create-rule'],
   setup(props, { emit }) {
+    // Menu state - track which transaction's menu is open
+    const menuOpen = ref({})
     // Helper function to check if transaction is inflow (handles both number and string)
     function isInflow(transaction) {
       if (!transaction || transaction.inflow === undefined || transaction.inflow === null) {
@@ -480,11 +594,24 @@ export default {
       emit('row-click', item)
     }
 
-    function onTransactionNameClick(item) {
-      // Only emit if not manually overridden
-      if (item.manual_override !== 1 && item.manual_override !== true) {
-        emit('transaction-name-click', item)
-      }
+    function onTransactionNameClick(item, event) {
+      // Menu will be opened by v-menu activator
+      // No need to prevent default - menu handles it
+    }
+
+    function handleManualOverride(item) {
+      menuOpen.value[item.id] = false
+      emit('manual-override', item)
+    }
+
+    function handleOpenRule(item) {
+      menuOpen.value[item.id] = false
+      emit('open-rule', item)
+    }
+
+    function handleCreateRule(item) {
+      menuOpen.value[item.id] = false
+      emit('create-rule', item)
     }
 
     function getLastFourDigits(ccNumber) {
@@ -509,7 +636,11 @@ export default {
       onCategoryChange,
       onRowClick,
       onTransactionNameClick,
-      getLastFourDigits
+      getLastFourDigits,
+      menuOpen,
+      handleManualOverride,
+      handleOpenRule,
+      handleCreateRule
     }
   }
 }

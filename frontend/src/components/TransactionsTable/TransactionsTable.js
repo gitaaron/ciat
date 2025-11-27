@@ -40,12 +40,17 @@ export default {
     const creatingTransaction = ref(false)
     const showCreateRuleDialog = ref(false)
     const createRuleLoading = ref(false)
+    const createRuleTransaction = ref(null)
     const createRuleData = ref({
       match_type: 'contains',
       pattern: '',
       category: '',
       labels: []
     })
+    const showManualOverrideDialog = ref(false)
+    const manualOverrideTransaction = ref(null)
+    const manualOverrideCategory = ref('')
+    const manualOverrideLoading = ref(false)
     // Track original transaction states to detect changes
     const originalTransactions = ref(new Map()) // Map<id, originalTransaction>
     // Track modified transactions
@@ -345,11 +350,50 @@ export default {
     }
 
     async function handleTransactionNameClick(transaction) {
-      // Skip if manually overridden
-      if (transaction.manual_override === 1 || transaction.manual_override === true) {
+      // This is now handled by the menu in TransactionTable.vue
+      // Keep for backward compatibility but it shouldn't be called directly
+    }
+
+    async function handleManualOverride(transaction) {
+      manualOverrideTransaction.value = transaction
+      manualOverrideCategory.value = transaction.category || ''
+      showManualOverrideDialog.value = true
+    }
+
+    async function handleSaveManualOverride() {
+      if (!manualOverrideTransaction.value || !manualOverrideCategory.value) {
+        showError('Please select a category')
         return
       }
 
+      manualOverrideLoading.value = true
+      try {
+        await api.updateTransaction(manualOverrideTransaction.value.id, {
+          category: manualOverrideCategory.value,
+          category_explain: 'Manual override'
+        })
+        showSuccess('Transaction category manually overridden')
+        showManualOverrideDialog.value = false
+        manualOverrideTransaction.value = null
+        manualOverrideCategory.value = ''
+        // Reload transactions to show the updated category
+        await loadTransactions()
+        emit('categories-updated')
+      } catch (error) {
+        console.error('Error manually overriding transaction:', error)
+        showError('Error overriding transaction: ' + (error.response?.data?.error || error.message))
+      } finally {
+        manualOverrideLoading.value = false
+      }
+    }
+
+    function handleCancelManualOverride() {
+      showManualOverrideDialog.value = false
+      manualOverrideTransaction.value = null
+      manualOverrideCategory.value = ''
+    }
+
+    async function handleOpenRule(transaction) {
       try {
         // Load all rules
         const rules = await api.getRules()
@@ -379,6 +423,47 @@ export default {
         console.error('Error finding matching rule:', error)
         showError('Error finding matching rule: ' + error.message)
       }
+    }
+
+    function handleCreateRule(transaction) {
+      createRuleTransaction.value = transaction
+      // Find matching rule to pre-fill category if available
+      api.getRules().then(rules => {
+        const sortedRules = [...rules].sort((a, b) => {
+          if (b.priority !== a.priority) return b.priority - a.priority
+          const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+          const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+          return bTime - aTime
+        })
+
+        let matchingRule = null
+        for (const rule of sortedRules) {
+          if (!rule.enabled) continue
+          if (matchesRule(rule, transaction)) {
+            matchingRule = rule
+            break
+          }
+        }
+
+        // Set up create rule dialog with transaction data
+        createRuleData.value = {
+          match_type: 'contains',
+          pattern: transaction.name,
+          category: matchingRule?.category || transaction.category || '',
+          labels: []
+        }
+        showCreateRuleDialog.value = true
+      }).catch(error => {
+        console.error('Error loading rules:', error)
+        // Still show dialog even if rules fail to load
+        createRuleData.value = {
+          match_type: 'contains',
+          pattern: transaction.name,
+          category: transaction.category || '',
+          labels: []
+        }
+        showCreateRuleDialog.value = true
+      })
     }
 
     // Computed properties for category and account options
@@ -536,6 +621,7 @@ export default {
         await api.createRule(rulePayload)
         showSuccess('Rule created successfully')
         showCreateRuleDialog.value = false
+        createRuleTransaction.value = null
         createRuleData.value = {
           match_type: 'contains',
           pattern: '',
@@ -557,6 +643,7 @@ export default {
 
     function cancelCreateRule() {
       showCreateRuleDialog.value = false
+      createRuleTransaction.value = null
       createRuleData.value = {
         match_type: 'contains',
         pattern: '',
@@ -586,7 +673,12 @@ export default {
       creatingTransaction,
       showCreateRuleDialog,
       createRuleLoading,
+      createRuleTransaction,
       createRuleData,
+      showManualOverrideDialog,
+      manualOverrideTransaction,
+      manualOverrideCategory,
+      manualOverrideLoading,
       // Computed properties
       categoryFilterOptions,
       categorySelectOptions,
@@ -604,6 +696,11 @@ export default {
       saveAllChanges,
       clearFilters,
       handleTransactionNameClick,
+      handleManualOverride,
+      handleSaveManualOverride,
+      handleCancelManualOverride,
+      handleOpenRule,
+      handleCreateRule,
       setFilters,
       handleCreateTransaction,
       handleCreateRuleFromFilters,
