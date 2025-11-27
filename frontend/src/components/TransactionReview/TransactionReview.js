@@ -201,8 +201,7 @@ export default {
             ...transactions[index],
             category: item.category,
             category_source: 'manual',
-            category_explain: 'Manual override during import review',
-            manual_override: true
+            category_explain: 'Manual override during import review'
           }
           break
         }

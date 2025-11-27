@@ -47,6 +47,10 @@ export default {
     const { data } = await axios.post(apiBase + '/import/transactions', form, { headers: { 'Content-Type': 'multipart/form-data' } })
     return data
   },
+  async getManualOverrides() {
+    const { data } = await axios.get(apiBase + '/manual-overrides')
+    return data.manualOverrides || {}
+  },
   async commitImport(items) {
     const { data } = await axios.post(apiBase + '/import/commit', { items })
     return data

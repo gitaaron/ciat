@@ -387,7 +387,7 @@ export function matchesRule(rule, transaction, account = null) {
  * @returns {Array} - Array of transactions with category information
  */
 export function applyRulesToTransactions(transactions, rules, options = {}) {
-  const { accounts = null } = options;
+  const { accounts = null, manualOverrides = null } = options;
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   
@@ -423,16 +423,14 @@ export function applyRulesToTransactions(transactions, rules, options = {}) {
   
   // Process each transaction with pre-normalized data
   for (const transaction of normalizedTransactions) {
-    // Skip transactions with manual_override (user overrides should not be recategorized)
-    if (transaction.manual_override === 1 || transaction.manual_override === true) {
-      // Preserve the transaction as-is without applying rules
+    // Check manual overrides from flat file first (highest priority)
+    if (manualOverrides && transaction.hash && manualOverrides[transaction.hash]) {
       categorizedTransactions.push({
         ...transaction,
-        // Keep existing category and source
-        category: transaction.category || null,
+        category: manualOverrides[transaction.hash],
         labels: transaction.labels || [],
-        category_source: transaction.category_source || 'manual',
-        category_explain: transaction.category_explain || 'Manual override',
+        category_source: 'manual',
+        category_explain: 'Manual override (flat file)',
         rule_type: 'manual_override'
       });
       continue;
@@ -496,7 +494,7 @@ export function applyRulesToTransactions(transactions, rules, options = {}) {
  * @returns {Object} - Object with categorized transactions and rule matches
  */
 export function applyRulesWithDetails(transactions, rules, options = {}) {
-  const { skipSort = false, accounts = null } = options;
+  const { skipSort = false, accounts = null, manualOverrides = null } = options;
   const categorizedTransactions = [];
   const coveredTransactions = new Set();
   const ruleMatches = new Map(); // Map of ruleId -> matching transactions
@@ -538,16 +536,14 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
   
   // Process each transaction with pre-normalized data
   for (const transaction of normalizedTransactions) {
-    // Skip transactions with manual_override (user overrides should not be recategorized)
-    if (transaction.manual_override === 1 || transaction.manual_override === true) {
-      // Preserve the transaction as-is without applying rules
+    // Check manual overrides from flat file first (highest priority)
+    if (manualOverrides && transaction.hash && manualOverrides[transaction.hash]) {
       categorizedTransactions.push({
         ...transaction,
-        // Keep existing category and source
-        category: transaction.category || null,
+        category: manualOverrides[transaction.hash],
         labels: transaction.labels || [],
-        category_source: transaction.category_source || 'manual',
-        category_explain: transaction.category_explain || 'Manual override',
+        category_source: 'manual',
+        category_explain: 'Manual override (flat file)',
         rule_type: 'manual_override'
       });
       continue;
@@ -616,9 +612,8 @@ export function applyRulesWithDetails(transactions, rules, options = {}) {
  * @returns {Array} - Array of matching transactions
  */
 export function getTransactionsForRule(rule, transactions) {
-  // Skip transactions with manual_override (user overrides should not be matched)
+  // Manual overrides are now stored in flat file and checked during rule application
   return transactions.filter(tx => {
-    if (tx.manual_override === 1 || tx.manual_override === true) return false;
     return matchesRule(rule, tx);
   });
 }
@@ -665,8 +660,7 @@ export function getUnmatchedTransactions(transactions, rules) {
     if (!rule.enabled) continue;
     
     for (const transaction of normalizedTransactions) {
-      // Skip transactions with manual_override
-      if (transaction.manual_override === 1 || transaction.manual_override === true) continue;
+      // Manual overrides are now stored in flat file and checked during rule application
       if (coveredTransactions.has(transaction.hash)) continue;
       
       // Use optimized matching with pre-normalized data

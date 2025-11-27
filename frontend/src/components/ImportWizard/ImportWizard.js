@@ -54,6 +54,7 @@ export default {
     const newRules = ref([])
     const allTransactions = ref([])
     const systemRules = ref([])
+    const manualOverrides = ref({}) // Store manual overrides for rule application
     
     // Field mapping state
     const csvPreview = ref(null) // { columns: [], preview: [] }
@@ -112,7 +113,11 @@ export default {
 
       // Use centralized rule matching logic
       // Pass skipSort=true since rules are already sorted above
-      const result = applyRulesWithDetails(allTransactions.value, allRules, { skipSort: true });
+      // Include manual overrides if available
+      const result = applyRulesWithDetails(allTransactions.value, allRules, { 
+        skipSort: true,
+        manualOverrides: manualOverrides.value || {}
+      });
       
       // Update previewsByAccount with fully categorized transactions
       // Group categorized transactions by account_id
@@ -582,10 +587,15 @@ export default {
             const systemRulesList = await api.getSystemRules()
             systemRules.value = systemRulesList
             
+            // Load manual overrides from backend (highest priority)
+            manualOverrides.value = await api.getManualOverrides()
+            
             const allRules = [...existingRules, ...systemRulesList]
             
-            // Apply rules to transactions using centralized logic
-            const ruleMatchingResult = applyRulesWithDetails(rawTransactions, allRules)
+            // Apply rules to transactions using centralized logic with manual overrides
+            const ruleMatchingResult = applyRulesWithDetails(rawTransactions, allRules, {
+              manualOverrides: manualOverrides.value || {}
+            })
             const categorizedTransactions = ruleMatchingResult.categorizedTransactions
             
             // Get unmatched transactions for auto rule generation (use allRules to include system rule)
@@ -1040,7 +1050,10 @@ export default {
 
     function addNewRule(rule) {
       // Validate that the rule matches at least one transaction
-      const testMatches = applyRulesWithDetails(allTransactions.value, [rule])
+      // Include manual overrides if available
+      const testMatches = applyRulesWithDetails(allTransactions.value, [rule], {
+        manualOverrides: manualOverrides.value || {}
+      })
       const matchingTransactions = testMatches.ruleMatches.get(rule.id) || []
       
       if (matchingTransactions.length === 0) {

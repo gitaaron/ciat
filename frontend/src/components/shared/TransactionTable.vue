@@ -33,12 +33,11 @@
             <v-list>
               <v-list-item
                 @click="handleManualOverride(item)"
-                :disabled="item.manual_override === 1 || item.manual_override === true"
               >
                 <v-list-item-title>
                   <v-icon left size="small">mdi-lock</v-icon>
                   Manually Override Category
-                  <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
+                  <v-chip v-if="item.has_manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
                 </v-list-item-title>
               </v-list-item>
               <v-list-item
@@ -118,7 +117,7 @@
             >
               No Category
             </v-chip>
-            <v-tooltip v-if="item.manual_override === 1 || item.manual_override === true" location="top">
+            <v-tooltip v-if="item.has_manual_override === true" location="top">
               <template v-slot:activator="{ props }">
                 <v-icon v-bind="props" color="primary" size="small">mdi-lock</v-icon>
               </template>
@@ -205,12 +204,10 @@
                         <v-list>
                           <v-list-item
                             @click="handleManualOverride(item)"
-                            :disabled="item.manual_override === 1 || item.manual_override === true"
                           >
                             <v-list-item-title>
                               <v-icon left size="small">mdi-lock</v-icon>
                               Manually Override Category
-                              <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
                             </v-list-item-title>
                           </v-list-item>
                           <v-list-item
@@ -290,7 +287,7 @@
                         >
                           No Category
                         </v-chip>
-                        <v-tooltip v-if="item.manual_override === 1 || item.manual_override === true" location="top">
+                        <v-tooltip v-if="item.has_manual_override === true" location="top">
                           <template v-slot:activator="{ props }">
                             <v-icon v-bind="props" color="primary" size="small">mdi-lock</v-icon>
                           </template>
@@ -380,12 +377,10 @@
                         <v-list>
                           <v-list-item
                             @click="handleManualOverride(item)"
-                            :disabled="item.manual_override === 1 || item.manual_override === true"
                           >
                             <v-list-item-title>
                               <v-icon left size="small">mdi-lock</v-icon>
                               Manually Override Category
-                              <v-chip v-if="item.manual_override === 1 || item.manual_override === true" size="x-small" class="ml-2">Already Overridden</v-chip>
                             </v-list-item-title>
                           </v-list-item>
                           <v-list-item
@@ -456,6 +451,12 @@
                         >
                           No Category
                         </v-chip>
+                        <v-tooltip v-if="item.has_manual_override === true" location="top">
+                          <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" color="primary" size="small">mdi-lock</v-icon>
+                          </template>
+                          <span>Category manually overridden - will not be recategorized by rules</span>
+                        </v-tooltip>
                       </div>
                     </div>
                   </template>

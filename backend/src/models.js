@@ -53,9 +53,9 @@ export const Transactions = {
     const stmt = db.prepare(`
       INSERT INTO transactions (
         external_id, account_id, date, name, description, amount, inflow,
-        category, category_source, category_explain, labels, note, hash, manual_override
+        category, category_source, category_explain, labels, note, hash
       ) VALUES (@external_id, @account_id, @date, @name, @description, @amount, @inflow,
-        @category, @category_source, @category_explain, @labels, @note, @hash, @manual_override)
+        @category, @category_source, @category_explain, @labels, @note, @hash)
     `);
     const info = stmt.run(tx);
     return { skipped: false, id: info.lastInsertRowid };
@@ -95,19 +95,18 @@ export const Transactions = {
     const labelsJson = labels ? JSON.stringify(labels) : null;
     return db.prepare(`
       UPDATE transactions
-      SET category=?, category_explain=?, category_source=?, manual_override=?, labels=?, updated_at=CURRENT_TIMESTAMP
+      SET category=?, category_explain=?, category_source=?, labels=?, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(category, explain, source, manual ? 1 : 0, labelsJson, id);
+    `).run(category, explain, source, labelsJson, id);
   },
   async previewRuleImpact({ category, match_type, pattern }) {
     // Get all transactions that would be affected by this rule
-    // Skip transactions with manual_override=1 (user overrides should not be affected)
+    // Manual overrides are now stored in flat file and checked during rule application
     // Use LEFT JOIN to handle cases where there might be no accounts
     const allTransactions = db.prepare(`
       SELECT t.*, COALESCE(a.name, 'Unknown Account') as account_name 
       FROM transactions t 
       LEFT JOIN accounts a ON a.id=t.account_id 
-      WHERE t.manual_override = 0
       ORDER BY t.date DESC
     `).all();
     

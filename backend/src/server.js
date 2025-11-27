@@ -104,7 +104,7 @@ app.get('/api/accounts/:id/has-transactions', (req, res) => {
 });
 
 // Transactions list/search/filter/sort
-app.get('/api/transactions', (req, res) => {
+app.get('/api/transactions', async (req, res) => {
   const list = Transactions.list({
     q: req.query.q,
     category: req.query.category,
@@ -115,7 +115,29 @@ app.get('/api/transactions', (req, res) => {
     order: (req.query.order || '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC',
     accountId: req.query.accountId
   });
-  res.json(list);
+  
+  // Load manual overrides from flat file once and create a map for fast lookup
+  const { loadManualOverrides } = await import('./utils/manualOverrides.js');
+  const manualOverrides = loadManualOverrides();
+  
+  // Add has_manual_override field to each transaction
+  const listWithOverrides = list.map(tx => ({
+    ...tx,
+    has_manual_override: tx.hash && manualOverrides[tx.hash] ? true : false
+  }));
+  
+  res.json(listWithOverrides);
+});
+
+// Get manual overrides map
+app.get('/api/manual-overrides', async (req, res) => {
+  try {
+    const { loadManualOverrides } = await import('./utils/manualOverrides.js');
+    const manualOverrides = loadManualOverrides();
+    res.json({ manualOverrides });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
 });
 
 // Get all existing labels
@@ -155,9 +177,20 @@ app.post('/api/transactions/:id/category', async (req, res) => {
   const id = Number(req.params.id);
   const { category, pattern, match_type, explain, labels } = req.body;
   try {
-    // 1) update tx as manual override
-    Transactions.updateCategory(id, category, explain || 'Manual override', 'manual', true, labels);
-    // 2) persist a new user rule that should win in future
+    // Get transaction hash before updating
+    const tx = db.prepare('SELECT hash FROM transactions WHERE id=?').get(id);
+    if (!tx) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+    
+    // 1) Save manual override to flat file (highest priority)
+    const { addManualOverride } = await import('./utils/manualOverrides.js');
+    addManualOverride(tx.hash, category);
+    
+    // 2) update tx category in database
+    Transactions.updateCategory(id, category, explain || 'Manual override', 'manual', false, labels);
+    
+    // 3) persist a new user rule that should win in future
     if (pattern && match_type) {
       await addUserRule({ category, match_type, pattern, explain: explain || 'From user override', labels });
     }
@@ -211,9 +244,14 @@ app.post('/api/transactions', async (req, res) => {
       category_explain: category ? 'Manually created transaction' : null,
       labels: parsedLabels.length > 0 ? JSON.stringify(parsedLabels) : null,
       note: note || null,
-      hash: hash,
-      manual_override: 1 // Manually created transactions are always manual overrides
+      hash: hash
     };
+    
+    // If category is provided, save as manual override in flat file
+    if (category) {
+      const { addManualOverride } = await import('./utils/manualOverrides.js');
+      addManualOverride(hash, category);
+    }
     
     // Use upsert to create the transaction
     const result = Transactions.upsert(tx);
@@ -249,14 +287,21 @@ app.put('/api/transactions/:id', async (req, res) => {
       return res.status(404).json({ error: `Transaction with ID ${id} not found` });
     }
     
-    // When updating category from transactions table, mark as manual override
+    // When updating category from transactions table, save to flat file
     if (category !== undefined) {
+      // Get transaction hash to save manual override
+      const tx = db.prepare('SELECT hash FROM transactions WHERE id=?').get(id);
+      if (tx && tx.hash) {
+        const { addManualOverride } = await import('./utils/manualOverrides.js');
+        addManualOverride(tx.hash, category);
+      }
+      
       const result = Transactions.updateCategory(
         id, 
         category, 
         category_explain || 'Manual override', 
         'manual', 
-        true,  // manual_override = true
+        false,  // manual parameter no longer used
         labels
       );
       
@@ -556,13 +601,24 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
       return true;
     });
     
+    // Load manual overrides from flat file once and create a map for fast lookup
+    const { loadManualOverrides } = await import('./utils/manualOverrides.js');
+    const manualOverrides = loadManualOverrides();
+    
+    // Add has_manual_override field to each preview transaction
+    const previewWithOverrides = deduped.map(tx => ({
+      ...tx,
+      has_manual_override: tx.hash && manualOverrides[tx.hash] ? true : false
+    }));
+    
     res.json({ 
-      preview: deduped,
+      preview: previewWithOverrides,
       format: format,
       formatDisplayName: getFormatDisplayName(format),
       totalTransactions: rows.length,
       newTransactions: deduped.length,
-      duplicatesSkipped: rows.length - deduped.length
+      duplicatesSkipped: rows.length - deduped.length,
+      manualOverrides: manualOverrides // Include full manual overrides map for frontend rule application
     });
     
   } catch (error) {
@@ -619,8 +675,7 @@ app.post('/api/import/commit', (req, res) => {
         category_explain: it.category_explain,
         labels: labels.length > 0 ? JSON.stringify(labels) : null,
         note: it.note || null,
-        hash: it.hash,
-        manual_override: 0
+        hash: it.hash
       };
       
       try {

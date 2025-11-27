@@ -240,7 +240,7 @@ const manualOverrides = db.prepare(`
     category,
     COUNT(*) as count
   FROM transactions
-  WHERE manual_override = 1
+  WHERE category_source = 'manual'
   GROUP BY category
   ORDER BY count DESC
 `).all();

@@ -13,13 +13,23 @@ console.log('📊 CIAT Database Statistics\n');
 const totalTransactions = db.prepare('SELECT COUNT(*) as count FROM transactions').get();
 const totalAccounts = db.prepare('SELECT COUNT(*) as count FROM accounts').get();
 const uncategorizedCount = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE category IS NULL OR category = \'\' OR category = \'uncategorized\'').get();
-const manualOverrides = db.prepare('SELECT COUNT(*) as count FROM transactions WHERE manual_override = 1').get();
+
+// Load manual overrides from flat file
+let manualOverrideCount = 0;
+try {
+  // Use dynamic import for ES module
+  const manualOverridesModule = await import('../backend/src/utils/manualOverrides.js');
+  const overrides = manualOverridesModule.loadManualOverrides();
+  manualOverrideCount = Object.keys(overrides).length;
+} catch (e) {
+  console.log('   Note: Could not load manual overrides count from flat file');
+}
 
 console.log('📈 Basic Statistics:');
 console.log(`   Total Transactions: ${totalTransactions.count.toLocaleString()}`);
 console.log(`   Total Accounts: ${totalAccounts.count}`);
 console.log(`   Uncategorized: ${uncategorizedCount.count.toLocaleString()}`);
-console.log(`   Manual Overrides: ${manualOverrides.count.toLocaleString()}`);
+console.log(`   Manual Overrides (flat file): ${manualOverrideCount.toLocaleString()}`);
 
 // Date range
 const dateRange = db.prepare(`

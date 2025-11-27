@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS transactions (
   hash TEXT UNIQUE,                -- dedupe across imports
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  manual_override INTEGER DEFAULT 0,  -- 1 if user set category manually
   FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
@@ -169,4 +168,13 @@ try {
   console.log('Added outflow_only column to rules table');
 } catch (e) {
   console.log('outflow_only column already exists in rules table');
+}
+
+// Migration: Remove manual_override column (replaced by flat file)
+try {
+  db.exec('ALTER TABLE transactions DROP COLUMN manual_override;');
+  console.log('Removed manual_override column from transactions table');
+} catch (e) {
+  // Column doesn't exist or can't be dropped (SQLite limitation), ignore error
+  console.log('manual_override column removal attempted (may require manual migration)');
 }

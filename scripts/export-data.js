@@ -117,7 +117,6 @@ let sql = `
     t.hash,
     t.created_at,
     t.updated_at,
-    t.manual_override,
     a.name as account_name
   FROM transactions t
   JOIN accounts a ON a.id = t.account_id
@@ -181,8 +180,7 @@ function exportCSV(transactions, options) {
     'Account',
     'Hash',
     'Created At',
-    'Updated At',
-    'Manual Override'
+    'Updated At'
   ];
 
   if (options.includeLabels) {
@@ -209,8 +207,7 @@ function exportCSV(transactions, options) {
       tx.account_name,
       tx.hash,
       tx.created_at,
-      tx.updated_at,
-      tx.manual_override ? 'Yes' : 'No'
+      tx.updated_at
     ];
 
     if (options.includeLabels) {
@@ -256,8 +253,7 @@ function exportJSON(transactions, options) {
       account_name: tx.account_name,
       hash: tx.hash,
       created_at: tx.created_at,
-      updated_at: tx.updated_at,
-      manual_override: tx.manual_override === 1
+      updated_at: tx.updated_at
     }))
   };
 
@@ -285,8 +281,7 @@ function exportXLSX(transactions, options) {
         'Account': tx.account_name,
         'Hash': tx.hash,
         'Created At': tx.created_at,
-        'Updated At': tx.updated_at,
-        'Manual Override': tx.manual_override ? 'Yes' : 'No'
+        'Updated At': tx.updated_at
       };
 
       if (options.includeLabels) {

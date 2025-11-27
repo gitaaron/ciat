@@ -126,7 +126,6 @@ let sql = `
     t.category_source,
     t.labels,
     t.note,
-    t.manual_override,
     a.name as account_name
   FROM transactions t
   JOIN accounts a ON a.id = t.account_id
@@ -227,7 +226,7 @@ results.forEach((tx, index) => {
   const type = tx.inflow ? '💰 Income' : '💸 Expense';
   const category = tx.category || '❓ Uncategorized';
   const labels = tx.labels ? JSON.parse(tx.labels).join(', ') : '';
-  const manualFlag = tx.manual_override ? ' ✋' : '';
+  const manualFlag = '';
   
   console.log(`${index + 1}. ${tx.date} | ${amountStr} | ${type}`);
   console.log(`   ${tx.name}${manualFlag}`);
@@ -243,7 +242,8 @@ results.forEach((tx, index) => {
 const totalAmount = results.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
 const incomeCount = results.filter(tx => tx.inflow).length;
 const expenseCount = results.filter(tx => !tx.inflow).length;
-const manualCount = results.filter(tx => tx.manual_override).length;
+// Manual overrides are now stored in flat file, not in database
+const manualCount = 0;
 
 console.log('📊 Search Summary:');
 console.log(`   Total Amount: $${totalAmount.toFixed(2)}`);

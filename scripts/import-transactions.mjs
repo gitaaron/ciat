@@ -17,6 +17,7 @@ import { txHash } from '../backend/src/utils/hash.js';
 import { parseLabels, applyRulesToTransactions } from '../common/src/ruleMatcher.js';
 import { Rules, AutogenRules } from '../backend/src/models.js';
 import { loadSystemRules } from '../backend/src/utils/systemRules.js';
+import { loadManualOverrides } from '../backend/src/utils/manualOverrides.js';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -449,7 +450,6 @@ async function importTransactions() {
           labels: labels.length > 0 ? JSON.stringify(labels) : null,
           note: null,
           hash: hash,
-          manual_override: 0
         };
         
         transactionsToCategorize.push(tx);
@@ -482,11 +482,17 @@ async function importTransactions() {
         accountsMap[acc.id] = acc;
       }
       
+      // Load manual overrides from flat file (highest priority)
+      const manualOverrides = loadManualOverrides();
+      
       // Combine all rules in priority order
       const allRules = [...userRules, ...autogenRules, ...systemRulesList];
       
-      // Apply rules to transactions with account information
-      const categorizedTransactions = applyRulesToTransactions(transactionsToCategorize, allRules, { accounts: accountsMap });
+      // Apply rules to transactions with account information and manual overrides
+      const categorizedTransactions = applyRulesToTransactions(transactionsToCategorize, allRules, { 
+        accounts: accountsMap,
+        manualOverrides: manualOverrides
+      });
       
       // Save categorized transactions
       for (const tx of categorizedTransactions) {

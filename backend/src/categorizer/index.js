@@ -4,6 +4,7 @@ import { Rules, AutogenRules, Accounts } from '../models.js';
 // Import shared rule matching logic from common folder
 import { normalizeMerchant, matchesRule, applyRulesToTransactions, applyRulesWithDetails, getTransactionsForRule, getUnmatchedTransactions, parseLabels, mergeLabels } from '../../../common/src/ruleMatcher.js';
 import { loadSystemRules } from '../utils/systemRules.js';
+import { loadManualOverrides } from '../utils/manualOverrides.js';
 
 function normalize(s='') {
   // Use the same normalization as auto rule generator for consistency
@@ -250,11 +251,11 @@ export async function reapplyCategories() {
   // Import db here to avoid circular dependency
   const { db } = await import('../db.js');
   
-  // Get all transactions that are not manually overridden (with all fields needed for matching)
+  // Get all transactions (with all fields needed for matching)
+  // Manual overrides from flat file will take priority during rule application
   const transactions = db.prepare(`
-    SELECT id, account_id, hash, name, description, amount, category, category_source, category_explain, labels, manual_override, inflow
-    FROM transactions 
-    WHERE manual_override = 0
+    SELECT id, account_id, hash, name, description, amount, category, category_source, category_explain, labels, inflow
+    FROM transactions
   `).all();
   
   // Parse labels from JSON strings if needed
@@ -270,6 +271,9 @@ export async function reapplyCategories() {
     accountsMap[account.id] = account;
   }
   
+  // Load manual overrides from flat file (highest priority)
+  const manualOverrides = loadManualOverrides();
+  
   // Get all enabled rules (user, autogen, and system)
   const userRules = Rules.findEnabled();
   const autogenRules = AutogenRules.findEnabled();
@@ -278,8 +282,11 @@ export async function reapplyCategories() {
   const allRules = [...userRules, ...autogenRules, ...systemRules];
   
   // Use optimized rule matching from common folder (already imported at top)
-  // This automatically skips manual_override transactions
-  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, allRules, { accounts: accountsMap });
+  // Manual overrides from flat file will take priority over everything
+  const categorizedTransactions = applyRulesToTransactions(transactionsWithParsedLabels, allRules, { 
+    accounts: accountsMap,
+    manualOverrides: manualOverrides
+  });
   
   // Update transactions where category changed
   let updated = 0;
