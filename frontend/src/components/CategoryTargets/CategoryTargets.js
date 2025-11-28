@@ -19,10 +19,11 @@ export default {
     const editing = ref(false)
     const tempTargets = ref({})
     
-    // Calculate total net income from inflow transactions
+    // Calculate total net income from inflow transactions (excluding investments)
     const totalNetIncome = computed(() => {
       return transactions.value
         .filter(tx => tx.inflow === 1)
+        .filter(tx => tx.category !== 'investments')
         .reduce((sum, tx) => sum + Number(tx.amount), 0)
     })
     
