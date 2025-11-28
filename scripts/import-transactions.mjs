@@ -423,8 +423,19 @@ async function importTransactions() {
           }
         }
         
-        // Add account_id and hash to each transaction
-        const hash = txHash({ ...row, account_id: account.id });
+        // Normalize fields for hash computation (must match how hash was originally computed)
+        // Convert empty string to null for description to ensure hash consistency
+        // Use account_name instead of account_id for stable hashing across DB recreations
+        const hashData = {
+          external_id: row.external_id || null,
+          account_name: account.name,
+          date: row.date,
+          name: row.name,
+          description: (row.description && row.description.trim()) || null, // Normalize empty string to null
+          amount: Number(row.amount),
+          inflow: row.inflow ? 1 : 0
+        };
+        const hash = txHash(hashData);
         
         // Check if transaction already exists
         const existing = db.prepare('SELECT id FROM transactions WHERE hash=?').get(hash);
@@ -484,6 +495,23 @@ async function importTransactions() {
       
       // Load manual overrides from flat file (highest priority)
       const manualOverrides = loadManualOverrides();
+      const overrideCount = Object.keys(manualOverrides || {}).length;
+      if (overrideCount > 0) {
+        console.log(`   📝 Loaded ${overrideCount} manual override(s) from flat file`);
+        
+        // Debug: Check if any transaction hashes match the manual overrides
+        const transactionHashes = new Set(transactionsToCategorize.map(tx => tx.hash));
+        const overrideHashes = new Set(Object.keys(manualOverrides));
+        const matchingHashes = [...transactionHashes].filter(hash => overrideHashes.has(hash));
+        
+        if (matchingHashes.length > 0) {
+          console.log(`   🔍 Found ${matchingHashes.length} transaction hash(es) that match manual overrides`);
+        } else {
+          console.log(`   ⚠️  WARNING: No transaction hashes match the manual override hashes!`);
+          console.log(`   🔍 Sample transaction hashes (first 3):`, transactionsToCategorize.slice(0, 3).map(tx => tx.hash));
+          console.log(`   🔍 Sample override hashes (first 3):`, Object.keys(manualOverrides).slice(0, 3));
+        }
+      }
       
       // Combine all rules in priority order
       const allRules = [...userRules, ...autogenRules, ...systemRulesList];
@@ -493,6 +521,14 @@ async function importTransactions() {
         accounts: accountsMap,
         manualOverrides: manualOverrides
       });
+      
+      // Count how many transactions were categorized by manual overrides
+      const manualOverrideMatches = categorizedTransactions.filter(tx => tx.category_source === 'manual').length;
+      if (manualOverrideMatches > 0) {
+        console.log(`   ✅ Applied ${manualOverrideMatches} manual override(s)`);
+      } else if (overrideCount > 0) {
+        console.log(`   ⚠️  WARNING: Manual overrides were loaded but none were applied!`);
+      }
       
       // Save categorized transactions
       for (const tx of categorizedTransactions) {
@@ -527,6 +563,36 @@ async function importTransactions() {
     totalSaved += saved;
     totalSkipped += skipped;
     totalFilteredByCutoff += filteredByCutoff;
+  }
+  
+  // After importing, update existing transactions that have manual overrides
+  console.log(`\n🔄 Checking existing transactions for manual overrides...`);
+  const manualOverrides = loadManualOverrides();
+  const overrideHashes = Object.keys(manualOverrides || {});
+  
+  if (overrideHashes.length > 0) {
+    let updatedExisting = 0;
+    const updateStmt = db.prepare(`
+      UPDATE transactions 
+      SET category=?, category_source=?, category_explain=?, updated_at=CURRENT_TIMESTAMP 
+      WHERE hash=? AND (category IS NULL OR category != ? OR category_source IS NULL OR category_source != 'manual')
+    `);
+    
+    for (const hash of overrideHashes) {
+      const category = manualOverrides[hash];
+      const result = updateStmt.run(category, 'manual', 'Manual override (flat file)', hash, category);
+      if (result.changes > 0) {
+        updatedExisting += result.changes;
+      }
+    }
+    
+    if (updatedExisting > 0) {
+      console.log(`   ✅ Updated ${updatedExisting} existing transaction(s) with manual overrides`);
+    } else {
+      console.log(`   ℹ️  No existing transactions needed updates (already categorized correctly)`);
+    }
+  } else {
+    console.log(`   ℹ️  No manual overrides found in flat file`);
   }
   
   // Print summary
