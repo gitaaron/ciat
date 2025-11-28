@@ -10,8 +10,9 @@ import { getUnmatchedTransactions, applyRulesWithDetails, getTransactionsForRule
 import { showError, showSuccess, showWarning, showInfo, showDeleteConfirm, showInfoDialog } from '../../utils/notifications.js'
 
 // Simple hash function for transaction hashing (matches backend logic)
-function txHash({ external_id, account_id, date, name, description, amount, inflow }) {
-  const raw = JSON.stringify({ external_id, account_id, date, name, description, amount, inflow })
+// Use account_name instead of account_id for stable hashing across DB recreations
+function txHash({ external_id, account_name, date, name, description, amount, inflow }) {
+  const raw = JSON.stringify({ external_id, account_name, date, name, description, amount, inflow })
   // Simple hash using string manipulation (for browser compatibility)
   let hash = 0
   for (let i = 0; i < raw.length; i++) {
@@ -816,6 +817,8 @@ export default {
       // Create initial balance transaction
       // The amount should be the initial balance (which is finalBalance - transactionSum)
       // If initialBalance is positive, it's an inflow; if negative, it's an outflow
+      // Use account_name instead of account_id for stable hashing across DB recreations
+      const accountName = getAccountName(pendingAccountForProcessing.value)
       const initialTx = {
         account_id: pendingAccountForProcessing.value,
         date: earliestDate,
@@ -828,10 +831,13 @@ export default {
         category_explain: `Initial balance to achieve final balance of $${finalBalance.toFixed(2)}`,
         labels: ['initial_balance'],
         hash: txHash({
-          account_id: pendingAccountForProcessing.value,
+          external_id: null,
+          account_name: accountName,
           date: earliestDate,
           name: 'Initial Balance',
-          amount: initialBalance
+          description: 'Initial balance transaction to match final balance',
+          amount: initialBalance,
+          inflow: initialBalance >= 0 ? 1 : 0
         })
       }
       

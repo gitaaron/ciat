@@ -217,9 +217,10 @@ app.post('/api/transactions', async (req, res) => {
     }
     
     // Generate hash for the transaction
+    // Use account_name instead of account_id for stable hashing across DB recreations
     const hash = txHash({
       external_id: null,
-      account_id: Number(account_id),
+      account_name: account.name,
       date: date,
       name: name,
       description: description || null,
@@ -573,10 +574,19 @@ app.post('/api/import/transactions', upload.single('file'), async (req, res) => 
     }
     
     // Add account_id and hash to each transaction
+    // Use account_name instead of account_id for stable hashing across DB recreations
     const processedRows = rows.map(r => ({
       ...r,
       account_id,
-      hash: txHash({ ...r, account_id })
+      hash: txHash({
+        external_id: r.external_id || null,
+        account_name: account.name,
+        date: r.date,
+        name: r.name,
+        description: r.description || null,
+        amount: Number(r.amount),
+        inflow: r.inflow ? 1 : 0
+      })
     }));
 
     // Parse labels for each transaction (preserve existing labels if any)
