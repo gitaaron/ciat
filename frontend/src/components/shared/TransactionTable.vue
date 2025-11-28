@@ -56,6 +56,15 @@
                   Create New Rule
                 </v-list-item-title>
               </v-list-item>
+              <v-list-item
+                v-if="item.hash"
+                @click="handleCopyHash(item)"
+              >
+                <v-list-item-title>
+                  <v-icon left size="small">mdi-content-copy</v-icon>
+                  Copy Hash: {{ truncateHash(item.hash) }}
+                </v-list-item-title>
+              </v-list-item>
             </v-list>
           </v-menu>
           <v-chip
@@ -224,6 +233,15 @@
                             <v-list-item-title>
                               <v-icon left size="small">mdi-plus-circle</v-icon>
                               Create New Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            v-if="item.hash"
+                            @click="handleCopyHash(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-content-copy</v-icon>
+                              Copy Hash: {{ truncateHash(item.hash) }}
                             </v-list-item-title>
                           </v-list-item>
                         </v-list>
@@ -397,6 +415,15 @@
                             <v-list-item-title>
                               <v-icon left size="small">mdi-plus-circle</v-icon>
                               Create New Rule
+                            </v-list-item-title>
+                          </v-list-item>
+                          <v-list-item
+                            v-if="item.hash"
+                            @click="handleCopyHash(item)"
+                          >
+                            <v-list-item-title>
+                              <v-icon left size="small">mdi-content-copy</v-icon>
+                              Copy Hash: {{ truncateHash(item.hash) }}
                             </v-list-item-title>
                           </v-list-item>
                         </v-list>
@@ -615,6 +642,41 @@ export default {
       emit('create-rule', item)
     }
 
+    function truncateHash(hash) {
+      if (!hash) return ''
+      // Show first 8 and last 4 characters for readability
+      if (hash.length > 12) {
+        return `${hash.slice(0, 8)}...${hash.slice(-4)}`
+      }
+      return hash
+    }
+
+    async function handleCopyHash(item) {
+      if (!item.hash) return
+      
+      try {
+        await navigator.clipboard.writeText(item.hash)
+        menuOpen.value[item.id] = false
+        // Optionally show a toast notification here if you have a toast system
+      } catch (err) {
+        console.error('Failed to copy hash to clipboard:', err)
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = item.hash
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+          document.execCommand('copy')
+          menuOpen.value[item.id] = false
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed:', fallbackErr)
+        }
+        document.body.removeChild(textArea)
+      }
+    }
+
     function getLastFourDigits(ccNumber) {
       if (!ccNumber) return null
       const cleaned = String(ccNumber).replace(/\D/g, '') // Remove non-digits
@@ -641,7 +703,9 @@ export default {
       menuOpen,
       handleManualOverride,
       handleOpenRule,
-      handleCreateRule
+      handleCreateRule,
+      truncateHash,
+      handleCopyHash
     }
   }
 }
