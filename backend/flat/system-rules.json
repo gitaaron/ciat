@@ -10,7 +10,8 @@
       "explain": "System rule: All income transactions",
       "labels": [],
       "source": "system",
-      "account_type": "bank_account"
+      "account_type": "bank_account",
+      "max_amount": 20000
     }
   ]
 }
