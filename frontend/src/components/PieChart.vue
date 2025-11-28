@@ -66,12 +66,14 @@ const chartData = computed(() => {
     spending[category] = Math.max(0, difference)
   })
   
-  return CATEGORY_STEPS.map(category => ({
-    category,
-    label: CATEGORY_NAMES[category],
-    value: spending[category],
-    color: colorScale(category)
-  })).filter(d => d.value > 0)
+  return CATEGORY_STEPS
+    .filter(category => category !== 'investments')
+    .map(category => ({
+      category,
+      label: CATEGORY_NAMES[category],
+      value: spending[category],
+      color: colorScale(category)
+    })).filter(d => d.value > 0)
 })
 
 async function draw() {

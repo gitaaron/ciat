@@ -67,24 +67,26 @@ const chartData = computed(() => {
     .sort()
   
   // Create series for each category - calculate outflows - inflows per month
-  const series = CATEGORY_STEPS.map(category => ({
-    key: category,
-    label: CATEGORY_NAMES[category],
-    color: colorScale(category),
-    values: months.map(month => {
-      const monthTransactions = parsed.filter(d => d.category === category && d.month === month)
-      const inflows = monthTransactions
-        .filter(d => d.isInflow)
-        .reduce((sum, d) => sum + d.amount, 0)
-      const outflows = monthTransactions
-        .filter(d => !d.isInflow)
-        .reduce((sum, d) => sum + d.amount, 0)
-      return {
-        month,
-        value: outflows - inflows // Can be negative
-      }
-    })
-  }))
+  const series = CATEGORY_STEPS
+    .filter(category => category !== 'investments')
+    .map(category => ({
+      key: category,
+      label: CATEGORY_NAMES[category],
+      color: colorScale(category),
+      values: months.map(month => {
+        const monthTransactions = parsed.filter(d => d.category === category && d.month === month)
+        const inflows = monthTransactions
+          .filter(d => d.isInflow)
+          .reduce((sum, d) => sum + d.amount, 0)
+        const outflows = monthTransactions
+          .filter(d => !d.isInflow)
+          .reduce((sum, d) => sum + d.amount, 0)
+        return {
+          month,
+          value: outflows - inflows // Can be negative
+        }
+      })
+    }))
   
   return { series, months }
 })
