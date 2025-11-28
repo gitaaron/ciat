@@ -8,11 +8,11 @@ export default {
     const transactions = ref([])
     const loading = ref(true)
     
-    // Calculate total net income from inflow transactions (excluding investments)
+    // Calculate total net income from inflow transactions (only include income)
     const totalNetIncome = computed(() => {
       return transactions.value
         .filter(tx => tx.inflow === 1)
-        .filter(tx => tx.category !== 'investments')
+        .filter(tx => tx.category === 'income')
         .reduce((sum, tx) => sum + Number(tx.amount), 0)
     })
     
@@ -40,7 +40,7 @@ export default {
           const inflow = tx.inflow
           return inflow === 1 || inflow === true || inflow === '1'
         })
-        .filter(tx => tx.category !== 'investments')
+        .filter(tx => tx.category === 'income')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     
@@ -51,7 +51,7 @@ export default {
           const inflow = tx.inflow
           return !(inflow === 1 || inflow === true || inflow === '1')
         })
-        .filter(tx => tx.category !== 'investments')
+        .filter(tx => tx.category === 'income')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     
