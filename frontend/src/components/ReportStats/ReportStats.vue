@@ -49,7 +49,7 @@
 
 <script setup>
 import { computed, watch } from 'vue'
-import NetIncome from './NetIncome.js'
+import ReportStats from './ReportStats.js'
 import { getSurplusDeficitLabel, getSurplusDeficitClass, formatCurrencyValue } from '../../utils/surplusDeficit.js'
 
 const props = defineProps({
@@ -71,7 +71,7 @@ const {
   totalSurplus,
   loadTransactions,
   formatCurrency
-} = NetIncome.setup(props)
+} = ReportStats.setup(props)
 
 // Watch for date changes and reload transactions
 watch([() => props.startDate, () => props.endDate], () => {

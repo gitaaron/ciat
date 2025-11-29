@@ -497,51 +497,24 @@ export default {
     const uncategorizedCount = computed(() => 
       rows.value.filter(transaction => !transaction.category).length
     )
+    // Totals for currently displayed transactions
+    // NOTE: These intentionally have no category-based exceptions or investment handling.
+    // They represent a pure surplus/deficit based only on the visible rows.
     const totalInflow = computed(() => {
-      // When filtering by investments, reverse the logic: outflows count as inflows
-      const isInvestmentsFilter = category.value === 'investments'
-      
-      if (isInvestmentsFilter) {
-        // Count outflows as inflows for investments
-        return rows.value
-          .filter(transaction => {
-            const inflow = transaction.inflow
-            return !(inflow === 1 || inflow === true || inflow === '1')
-          })
-          .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
-      } else {
-        // Normal logic: exclude investments and count inflows
-        return rows.value
-          .filter(transaction => {
-            const inflow = transaction.inflow
-            return inflow === 1 || inflow === true || inflow === '1'
-          })
-          .filter(transaction => transaction.category !== 'investments')
-          .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
-      }
+      return rows.value
+        .filter(transaction => {
+          const inflow = transaction.inflow
+          return inflow === 1 || inflow === true || inflow === '1'
+        })
+        .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
     })
     const totalOutflow = computed(() => {
-      // When filtering by investments, reverse the logic: inflows count as outflows
-      const isInvestmentsFilter = category.value === 'investments'
-      
-      if (isInvestmentsFilter) {
-        // Count inflows as outflows for investments
-        return rows.value
-          .filter(transaction => {
-            const inflow = transaction.inflow
-            return inflow === 1 || inflow === true || inflow === '1'
-          })
-          .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
-      } else {
-        // Normal logic: exclude investments and count outflows
-        return rows.value
-          .filter(transaction => {
-            const inflow = transaction.inflow
-            return !(inflow === 1 || inflow === true || inflow === '1')
-          })
-          .filter(transaction => transaction.category !== 'investments')
-          .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
-      }
+      return rows.value
+        .filter(transaction => {
+          const inflow = transaction.inflow
+          return !(inflow === 1 || inflow === true || inflow === '1')
+        })
+        .reduce((sum, transaction) => sum + (transaction.amount || 0), 0)
     })
 
     function setFilters(filters) {

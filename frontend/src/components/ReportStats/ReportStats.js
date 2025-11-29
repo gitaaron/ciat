@@ -3,7 +3,7 @@ import api from '../api.js'
 import { calculateDateRange } from '../../utils/dateRange.js'
 
 export default {
-  name: 'NetIncome',
+  name: 'ReportStats',
   setup(props = {}) {
     const transactions = ref([])
     const loading = ref(true)
@@ -33,25 +33,27 @@ export default {
       return totalNetIncome.value / dateRange.value.years
     })
     
-    // Calculate total inflow
+    // Calculate total inflow (all non-investment transactions)
     const totalInflow = computed(() => {
       return transactions.value
         .filter(tx => {
           const inflow = tx.inflow
           return inflow === 1 || inflow === true || inflow === '1'
         })
-        .filter(tx => tx.category === 'income')
+        // Exclude investments from reports surplus
+        .filter(tx => tx.category !== 'investments')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     
-    // Calculate total outflow
+    // Calculate total outflow (all non-investment transactions)
     const totalOutflow = computed(() => {
       return transactions.value
         .filter(tx => {
           const inflow = tx.inflow
           return !(inflow === 1 || inflow === true || inflow === '1')
         })
-        .filter(tx => tx.category === 'income')
+        // Exclude investments from reports surplus
+        .filter(tx => tx.category !== 'investments')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
     })
     

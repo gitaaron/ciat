@@ -14,7 +14,7 @@ This document details the events that trigger data refreshes in the application 
 - **Reports**: All charts and visualizations are refreshed to reflect updated category assignments
   - PieChart (category spend breakdown)
   - LineChart (monthly breakdown)
-  - NetIncome component
+  - ReportStats component
   - CategoryTargets component
 
 ---
@@ -29,7 +29,7 @@ This document details the events that trigger data refreshes in the application 
 - **Reports**: All charts and visualizations are refreshed to reflect new category assignments
   - PieChart (category spend breakdown)
   - LineChart (monthly breakdown)
-  - NetIncome component
+  - ReportStats component
   - CategoryTargets component
 
 ---
@@ -44,7 +44,7 @@ This document details the events that trigger data refreshes in the application 
 - **Reports**: All charts and visualizations are refreshed to include new transactions
   - PieChart (category spend breakdown)
   - LineChart (monthly breakdown)
-  - NetIncome component
+  - ReportStats component
   - CategoryTargets component
 
 **Additional Behavior**:
@@ -60,7 +60,7 @@ The `refresh()` method refreshes:
 - Transaction data check
 - PieChart component (via `pieChartRef.refresh()`)
 - LineChart component (via `lineChartRef.refresh()`)
-- NetIncome component (via `netIncomeRef.loadTransactions()`)
+- ReportStats component (via `reportStatsRef.loadTransactions()`)
 - CategoryTargets component (via `categoryTargetsRef.loadTransactions()`)
 
 #### Transactions Table Component (`TransactionsTable.vue`)
