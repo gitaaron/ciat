@@ -19,16 +19,38 @@ export default {
     const editing = ref(false)
     const tempTargets = ref({})
     
-    // Calculate total net income from inflow transactions (excluding investments)
+    // Calculate total net income from transactions categorized as 'income'
     const totalNetIncome = computed(() => {
       return transactions.value
-        .filter(tx => tx.inflow === 1)
-        .filter(tx => tx.category !== 'investments')
+        .filter(tx => tx.category === 'income')
         .reduce((sum, tx) => sum + Number(tx.amount), 0)
     })
     
-    // Calculate date range from all transactions
+    // Calculate date range from selected date range props, or fall back to transactions
     const dateRange = computed(() => {
+      // If startDate and endDate props are provided, calculate range from those
+      if (props?.startDate && props?.endDate) {
+        const startDate = new Date(props.startDate)
+        const endDate = new Date(props.endDate)
+        
+        // Calculate total days between dates
+        const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24) // milliseconds to days
+        
+        // Total months as a decimal (using average days per month: 365.25 / 12 = 30.4375)
+        const totalMonths = totalDays / 30.4375
+        
+        // Total years as a decimal (accounting for leap years)
+        const totalYears = totalDays / 365.25
+        
+        return {
+          start: props.startDate,
+          end: props.endDate,
+          months: Math.max(totalMonths, 0.1), // Minimum 0.1 to avoid division by zero
+          years: Math.max(totalYears, 0.01) // Minimum 0.01 to avoid division by zero
+        }
+      }
+      
+      // Fall back to calculating from transactions
       return calculateDateRange(transactions.value)
     })
     
@@ -45,6 +67,7 @@ export default {
     })
     
     // Calculate total actual spending by category (outflows - inflows, not averaged)
+    // Actual values are now based on percentage of transactions categorized as 'income'
     const totalActual = computed(() => {
       const spending = {}
       CATEGORY_STEPS.forEach(category => {
@@ -92,14 +115,18 @@ export default {
     // Keep targetAmounts for backward compatibility
     const targetAmounts = computed(() => monthlyTarget.value)
     
-    // Calculate surplus/deficit for each category (using monthly values)
+    // Calculate surplus/deficit for each category (using total values for deviation)
     const categoryAnalysis = computed(() => {
       const analysis = {}
       CATEGORY_STEPS.forEach(category => {
-        const actual = monthlyActual.value[category]
-        const target = monthlyTarget.value[category]
-        const difference = target - actual
-        const percentage = monthlyNetIncome.value > 0 ? (actual / monthlyNetIncome.value) * 100 : 0
+        const actual = totalActual.value[category]
+        const target = totalTarget.value[category]
+        let difference = target - actual
+        // For investments, invert the deviation (multiply by -1)
+        if (category === 'investments') {
+          difference = difference * -1
+        }
+        const percentage = totalNetIncome.value > 0 ? (actual / totalNetIncome.value) * 100 : 0
         
         analysis[category] = {
           actual,
