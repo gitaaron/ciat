@@ -176,6 +176,106 @@ for (const account of config.accounts) {
 const configDir = path.dirname(path.resolve(configPath));
 
 /**
+ * Detect pair transactions and categorize them as 'transfer'
+ * Pair transactions are defined as:
+ * - Equal amount (one outflow, one inflow)
+ * - Could be same account or different accounts
+ * - Within 3 months of each other
+ * This takes highest precedence and overrides any existing category
+ */
+function detectAndCategorizePairTransactions() {
+  // Get all transactions ordered by date
+  const allTransactions = db.prepare(`
+    SELECT id, account_id, date, amount, inflow, category, hash, name
+    FROM transactions
+    ORDER BY date ASC, amount ASC
+  `).all();
+  
+  if (allTransactions.length < 2) {
+    return { pairsFound: 0, updated: 0 };
+  }
+  
+  // Group transactions by absolute amount (with small tolerance for floating point precision)
+  // Use rounded amounts to group (round to 2 decimal places for currency)
+  const transactionsByAmount = new Map();
+  for (const tx of allTransactions) {
+    const absAmount = Math.abs(Number(tx.amount));
+    // Round to 2 decimal places to handle floating point precision issues
+    const roundedAmount = Math.round(absAmount * 100) / 100;
+    if (!transactionsByAmount.has(roundedAmount)) {
+      transactionsByAmount.set(roundedAmount, []);
+    }
+    transactionsByAmount.get(roundedAmount).push(tx);
+  }
+  
+  const pairsFound = [];
+  const updatedIds = new Set();
+  
+  // For each amount, find pairs
+  for (const [amount, transactions] of transactionsByAmount.entries()) {
+    // Separate inflows and outflows
+    const inflows = transactions.filter(tx => tx.inflow === 1);
+    const outflows = transactions.filter(tx => tx.inflow === 0);
+    
+    // Try to match each outflow with an inflow
+    for (const outflow of outflows) {
+      if (updatedIds.has(outflow.id)) continue; // Already paired
+      
+      const outflowDate = new Date(outflow.date);
+      const outflowAmount = Math.abs(Number(outflow.amount));
+      
+      // Find matching inflow within 3 months
+      for (const inflow of inflows) {
+        if (updatedIds.has(inflow.id)) continue; // Already paired
+        
+        const inflowDate = new Date(inflow.date);
+        const inflowAmount = Math.abs(Number(inflow.amount));
+        
+        // Check if amounts match (within small tolerance for floating point precision)
+        const amountDiff = Math.abs(outflowAmount - inflowAmount);
+        if (amountDiff > 0.01) continue; // Amounts don't match (tolerance: 1 cent)
+        
+        // Calculate time difference in days
+        const timeDiffMs = Math.abs(inflowDate - outflowDate);
+        const timeDiffDays = timeDiffMs / (1000 * 60 * 60 * 24);
+        
+        // 3 months = 90 days (approximately)
+        const threeMonthsDays = 90;
+        
+        if (timeDiffDays <= threeMonthsDays) {
+          // Found a pair!
+          pairsFound.push({ outflow, inflow });
+          updatedIds.add(outflow.id);
+          updatedIds.add(inflow.id);
+          break; // Each transaction can only be in one pair
+        }
+      }
+    }
+  }
+  
+  // Update all paired transactions to 'transfer' category
+  // This takes highest precedence, so we override any existing category
+  const updateStmt = db.prepare(`
+    UPDATE transactions 
+    SET category=?, category_source=?, category_explain=?, updated_at=CURRENT_TIMESTAMP 
+    WHERE id=?
+  `);
+  
+  let updated = 0;
+  for (const pair of pairsFound) {
+    // Update outflow
+    const result1 = updateStmt.run('transfer', 'pair_detection', 'Pair transaction detected (equal amount, opposite flow, within 3 months)', pair.outflow.id);
+    if (result1.changes > 0) updated++;
+    
+    // Update inflow
+    const result2 = updateStmt.run('transfer', 'pair_detection', 'Pair transaction detected (equal amount, opposite flow, within 3 months)', pair.inflow.id);
+    if (result2.changes > 0) updated++;
+  }
+  
+  return { pairsFound: pairsFound.length, updated, pairs: pairsFound };
+}
+
+/**
  * Find the earliest date in a parsed transaction array
  * Returns null if no valid dates found
  */
@@ -593,6 +693,25 @@ async function importTransactions() {
     }
   } else {
     console.log(`   ℹ️  No manual overrides found in flat file`);
+  }
+  
+  // Final step: Detect and categorize pair transactions (highest precedence)
+  console.log(`\n🔍 Detecting pair transactions (transfer pairs)...`);
+  const pairDetectionResult = detectAndCategorizePairTransactions();
+  if (pairDetectionResult.pairsFound > 0) {
+    console.log(`   ✅ Found ${pairDetectionResult.pairsFound} pair(s) and updated ${pairDetectionResult.updated} transaction(s) to 'transfer' category`);
+    if (pairDetectionResult.pairs && pairDetectionResult.pairs.length > 0) {
+      console.log(`\n   📋 Paired transactions:`);
+      pairDetectionResult.pairs.forEach((pair, index) => {
+        const daysDiff = Math.abs((new Date(pair.inflow.date) - new Date(pair.outflow.date)) / (1000 * 60 * 60 * 24));
+        const sameAccount = pair.outflow.account_id === pair.inflow.account_id;
+        console.log(`   ${index + 1}. ${pair.outflow.date} → ${pair.inflow.date} (${daysDiff.toFixed(0)} days apart, ${sameAccount ? 'same account' : 'different accounts'})`);
+        console.log(`      Outflow: $${Math.abs(Number(pair.outflow.amount)).toFixed(2)} - ${pair.outflow.name || 'N/A'}`);
+        console.log(`      Inflow:  $${Math.abs(Number(pair.inflow.amount)).toFixed(2)} - ${pair.inflow.name || 'N/A'}`);
+      });
+    }
+  } else {
+    console.log(`   ℹ️  No pair transactions found`);
   }
   
   // Print summary
