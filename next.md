@@ -1,18 +1,160 @@
 # Next
 
-In reports:
-
-    * targets
-
-        * when first showing targets and selecting defaults it should do so such that fixed / and guilt free have $0 surplus, investments are 10% and short term savings is remainder from 100% with either surplus or defecit
+* sunlife meds shoud not be considered 'income' should be put under 'short term' with label `health_coverage`
 
 ---
 
-In between account transfers:
+* browser becomes unresponsive after updating controls when clearing category
 
-    * when importing transactions get rid of the logic that adds 'transfer' label and any code that was required to implement it and not used anymore
+---
 
-    * try to apply 'transfer' manually ensuring transfer rules all apply to same category
+When creating an account model an additional field called 'initial balance' should be included.
+
+    The script should accept 'initial balance' for each account in the config.
+
+    The UX should also ask the user for this when creating a new account.
+
+    During the account creation process the initial balance is used to create an initial transaction using the first date from the accompanying transaction file.
+
+---
+
+At the bottom of the reports tab include a new card that contains a list of all accounts along with their 'current balance' based on all transactions for that account.
+
+---
+
+Fix pair finding?
+
+---
+
+Make it so that script import gets right income
+
+    - script needs to categorize proper transactions income
+
+        - account
+
+        - amount range
+
+    - show monthly / annual net salary in reports (maybe hide total income or rename to total income)
+
+    - script should categorize most spends into fixed, short term, guilt free, transfer, investments
+
+---
+
+Bucket list -
+
+    - should be persised to db or flat file in backend
+
+    - total surplus should be based on deviation in short term savings + guilt free + 
+
+    - rows should be drag / droppable
+
+    - show an estimated savings monthly rate at the top (calculated based on savings over time)
+
+    - for each item if the 'remaining' amount is in the hole then show the target date when funds will become available based on the current savings rate
+
+---
+
+---
+
+System level rules should be in their own flat json file.
+
+    - if bank account mark inflow as income automatically
+
+    - if credit card amount mark inflow as transfer and look for matching pair in all bank accounts
+
+    - look for pairs (eg/ 29.95)
+
+---
+
+Create a cmd line script that imports all transactions apply system level rules.
+
+    - accounts is loaded from external config file
+        - account name
+        - account type
+        - path
+        - final balance (to determine initial transaction)
+
+---
+
+When importing 'aventura visa' why are there transactions from 2022 showing up?
+
+---
+
+Instead of having a `match_type` `inflow`, each rule should have another field called 'direction'.  It matches transactions that are inflow only, outflow only, or both.
+
+When a rule is auto generated, it should have the outflow only option as the default.
+
+The 'system level' rule that matches 'inflow' transactions should still be used although it should just exist and not be part of 'autogen' rules instead it should be in a new section at the bottom of the 'rules review' called 'system level'.
+
+---
+
+During import after drag/dropping file next to account selection there should be an option to include a 'start date'.  Any transactions before this start date will not be imported.
+
+If there are already transactions in the system then the start date should be prepopulated with the first transaction in history in the system.  This should use the same function in the start date filter of the reports or transactions tab.
+
+---
+
+When creating a new account specify if it is a 'credit card' or 'bank' account.
+
+When importing transactions for a credit card account that has not had an import done before after reviewing map CSV field, show a dialogue that recommends creation of an initial "balance" transaction to ensure that the account goes to zero.  To calculate the amount  and inflow/outflow of the "balance" transaction calculate the total surplus or deficit of all the transactions in the account and it should be the inverse that takes the account balance to 0.  The date of the "balance" transaction should be the first day of the transactions being imported.
+
+---
+
+Search by amount (< > =)
+
+---
+
+Create / edit rules with amount (< or >)
+
+---
+
+I should be able to search for transactions that are pairs instead of just excluding pairs. The function that excludes pairs should just call the function that produces matching pairs. It then calls another function that takes the inverse (passes full list of transactions with pair transactions and provides all transactions that are not in the pair list).
+
+---
+
+I should be able to create a new rule from a transaction itself in the transaction manager.
+
+---
+
+I should be able to alter the category of a batch of transactions based on filter criteria in transaction management.
+
+After applying, I can save these 'search criteria mappings' and they will get applied after import and after 'reapply' in rules management.
+
+The search criteria mappings are persisted to a flat file (similar to system rules).
+
+I can view the list of 'saved search criteria mappings' (from rules management?) and delete them or click on them to open transactions with same filters to see what has been applied.
+
+---
+
+Create a new category called 'income'.
+
+Also create a system level rule that maps any transaction that has 'inflow' true to this 'income' category.  This system level rule would take the lowest precedence and any other rule (auto or user generated) would take a higher precedence.  However, auto generated rules should only be create from outflow transactions.
+
+For the reports tab nothing should have to change because these transactions in the new category would still have the 'inflow' property set on them and the income category should not show up in the pie or line charts.
+
+For the transactions tab it should show up in the category selection dropdown right above transfers.
+
+In the filter section also add a new radio button with options 'inflow only', 'outflow only', 'both' with 'both' being default.
+
+---
+
+Why is 'hide net zero' changing total defecit?
+
+---
+
+After import why are so many inflow getting assigned to guilt free, fixed cost and short term saving?
+
+---
+
+During import when trying to manually edit category on uncategorized during transaction review it won't let me.
+
+---
+
+Handle case where txns file importing does not import any new txns by just showing message with a button 'back to import' that goes back to screen for adding a txn file and resets everything.
+
+---
+
+when uploading txns for an account i have already uploaded for it is not saving selections (could be if i select defaults)
 
 ---
 
@@ -32,6 +174,10 @@ Transaction amount balancing
 ---
 
 Income and transfers should be their own category?
+
+---
+
+During rules import there are still rules showing up with zero transactions
 
 ---
 

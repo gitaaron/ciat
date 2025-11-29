@@ -117,6 +117,7 @@
                 <thead>
                   <tr>
                     <th class="text-left text-caption"></th>
+                    <th class="text-center text-caption">Last Month</th>
                     <th class="text-center text-caption">Monthly</th>
                     <th class="text-center text-caption">Total</th>
                   </tr>
@@ -124,11 +125,13 @@
                 <tbody>
                   <tr>
                     <td class="text-body-2 font-weight-medium">Target</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(lastMonthTarget[category]) }}</td>
                     <td class="text-center text-body-2">{{ formatCurrency(monthlyTarget[category]) }}</td>
                     <td class="text-center text-body-2">{{ formatCurrency(totalTarget[category]) }}</td>
                   </tr>
                   <tr>
                     <td class="text-body-2 font-weight-medium">Actual</td>
+                    <td class="text-center text-body-2">{{ formatCurrency(lastMonthActual[category]) }}</td>
                     <td class="text-center text-body-2">{{ formatCurrency(monthlyActual[category]) }}</td>
                     <td class="text-center text-body-2">{{ formatCurrency(totalActual[category]) }}</td>
                   </tr>
@@ -212,6 +215,8 @@ const {
   dateRange,
   monthlyActual,
   totalActual,
+  lastMonthActual,
+  lastMonthTarget,
   targetAmounts,
   monthlyTarget,
   totalTarget,

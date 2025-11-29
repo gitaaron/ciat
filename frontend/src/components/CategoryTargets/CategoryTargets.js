@@ -94,6 +94,121 @@ export default {
       return spending
     })
     
+    // Calculate the most recent full month in the date range
+    const lastMonthRange = computed(() => {
+      let endDate
+      if (props?.endDate) {
+        endDate = new Date(props.endDate)
+      } else if (transactions.value.length > 0) {
+        const dates = transactions.value
+          .map(tx => tx.date)
+          .filter(date => date)
+          .sort()
+        if (dates.length > 0) {
+          endDate = new Date(dates[dates.length - 1])
+        }
+      }
+      
+      if (!endDate) return null
+      
+      // Get the last day of the current month (the month that endDate is in)
+      const lastDayOfCurrentMonth = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0)
+      const endDateDay = endDate.getDate()
+      const lastDayOfMonth = lastDayOfCurrentMonth.getDate()
+      
+      // If endDate is the last day of its month, use the current month
+      // Otherwise, use the previous month
+      let lastMonthStart, lastMonthEnd
+      if (endDateDay === lastDayOfMonth) {
+        // Use the current month (it's complete)
+        lastMonthStart = new Date(endDate.getFullYear(), endDate.getMonth(), 1)
+        lastMonthEnd = lastDayOfCurrentMonth
+      } else {
+        // Use the previous month
+        lastMonthStart = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 1)
+        lastMonthEnd = new Date(endDate.getFullYear(), endDate.getMonth(), 0)
+      }
+      
+      // Ensure the month is within the date range
+      const rangeStart = props?.startDate ? new Date(props.startDate) : null
+      if (rangeStart) {
+        const rangeStartDate = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate())
+        const lastMonthStartDate = new Date(lastMonthStart.getFullYear(), lastMonthStart.getMonth(), lastMonthStart.getDate())
+        if (lastMonthStartDate < rangeStartDate) {
+          return null
+        }
+      }
+      
+      return {
+        start: lastMonthStart.toISOString().split('T')[0],
+        end: lastMonthEnd.toISOString().split('T')[0]
+      }
+    })
+    
+    // Calculate last month actual spending per category
+    const lastMonthActual = computed(() => {
+      const spending = {}
+      
+      if (!lastMonthRange.value) {
+        CATEGORY_STEPS.forEach(category => {
+          spending[category] = 0
+        })
+        return spending
+      }
+      
+      const startDate = lastMonthRange.value.start
+      const endDate = lastMonthRange.value.end
+      
+      CATEGORY_STEPS.forEach(category => {
+        // Filter transactions for this category within the last month's date range
+        const categoryTransactions = transactions.value.filter(tx => {
+          if (tx.category !== category) return false
+          const txDate = tx.date
+          if (!txDate) return false
+          // Compare dates as strings (YYYY-MM-DD format) - this works correctly for ISO date strings
+          // txDate, startDate, and endDate are all in YYYY-MM-DD format
+          return txDate >= startDate && txDate <= endDate
+        })
+        
+        const inflows = categoryTransactions
+          .filter(tx => tx.inflow === 1)
+          .reduce((sum, tx) => sum + Number(tx.amount), 0)
+        const outflows = categoryTransactions
+          .filter(tx => tx.inflow === 0)
+          .reduce((sum, tx) => sum + Number(tx.amount), 0)
+        
+        spending[category] = outflows - inflows
+      })
+      
+      return spending
+    })
+    
+    // Calculate last month's net income (income transactions in that specific month)
+    const lastMonthNetIncome = computed(() => {
+      if (!lastMonthRange.value) return 0
+      
+      const startDate = lastMonthRange.value.start
+      const endDate = lastMonthRange.value.end
+      
+      return transactions.value
+        .filter(tx => {
+          if (tx.category !== 'income') return false
+          const txDate = tx.date
+          if (!txDate) return false
+          return txDate >= startDate && txDate <= endDate
+        })
+        .reduce((sum, tx) => sum + Number(tx.amount), 0)
+    })
+    
+    // Calculate last month target amounts based on last month's net income
+    const lastMonthTarget = computed(() => {
+      const amounts = {}
+      CATEGORY_STEPS.forEach(category => {
+        amounts[category] = (lastMonthNetIncome.value * targets.value[category]) / 100
+      })
+      return amounts
+    })
+    
     // Calculate monthly target amounts based on monthly net income
     const monthlyTarget = computed(() => {
       const amounts = {}
@@ -317,6 +432,8 @@ export default {
       dateRange,
       monthlyActual,
       totalActual,
+      lastMonthActual,
+      lastMonthTarget,
       targetAmounts,
       monthlyTarget,
       totalTarget,
