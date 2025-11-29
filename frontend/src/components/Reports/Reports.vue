@@ -11,6 +11,7 @@
           <TransactionFilters
             v-model:start-date="startDate"
             v-model:end-date="endDate"
+            :available-years="availableYears"
             :show-category-filter="false"
             :show-account-filter="false"
             :show-date-filters="true"
@@ -86,6 +87,7 @@ const categoryTargetsRef = ref(null)
 const startDate = ref('')
 const endDate = ref('')
 const datesInitialized = ref(false)
+const availableYears = ref([])
 
 const emit = defineEmits(['navigate-to-import', 'navigate-to-transactions'])
 
@@ -104,7 +106,20 @@ async function initializeDateRange() {
       if (dates.length > 0) {
         const earliestDate = dates[0]
         const latestDate = dates[dates.length - 1]
-        
+
+        // Calculate the list of years that have transactions
+        const yearsSet = new Set(
+          allTransactions
+            .map(tx => tx.date)
+            .filter(date => !!date)
+            .map(date => {
+              const year = new Date(date).getFullYear()
+              return Number.isNaN(year) ? null : year
+            })
+            .filter(year => year !== null)
+        )
+        availableYears.value = Array.from(yearsSet).sort((a, b) => a - b)
+
         // Set dates - the watch will automatically trigger refresh
         datesInitialized.value = true
         startDate.value = earliestDate

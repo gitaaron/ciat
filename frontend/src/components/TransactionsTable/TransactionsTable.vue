@@ -28,6 +28,7 @@
         v-model:inflow-filter="inflowFilter"
         v-model:min-amount="minAmount"
         v-model:max-amount="maxAmount"
+        :available-years="availableYears"
         :category-options="categoryFilterOptions"
         :account-options="accountOptions"
         :show-category-filter="true"

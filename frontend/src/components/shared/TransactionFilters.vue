@@ -46,30 +46,78 @@
         <v-col v-if="showDateFilters" cols="12" md="4">
           <v-row>
             <v-col cols="6">
-              <v-text-field
-                :model-value="startDate"
-                @update:model-value="$emit('update:startDate', $event)"
-                label="Start Date"
-                placeholder="YYYY-MM-DD"
-                variant="outlined"
-                density="compact"
-                type="date"
-                prepend-inner-icon="mdi-calendar"
-                hide-details
-              />
+              <v-menu
+                v-model="startMenu"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+              >
+                <template #activator="{ props: menuProps }">
+                  <v-text-field
+                    v-bind="menuProps"
+                    :model-value="startDate"
+                    @update:model-value="$emit('update:startDate', $event)"
+                    label="Start Date"
+                    placeholder="YYYY-MM-DD"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-calendar"
+                    hide-details
+                    @click="startMenu = true"
+                    @focus="startMenu = true"
+                  />
+                </template>
+                <v-date-picker
+                  :model-value="startDate || null"
+                  @update:model-value="onStartPickerChange"
+                  color="primary"
+                />
+              </v-menu>
             </v-col>
             <v-col cols="6">
-              <v-text-field
-                :model-value="endDate"
-                @update:model-value="$emit('update:endDate', $event)"
-                label="End Date"
-                placeholder="YYYY-MM-DD"
-                variant="outlined"
-                density="compact"
-                type="date"
-                prepend-inner-icon="mdi-calendar"
-                hide-details
-              />
+              <v-menu
+                v-model="endMenu"
+                :close-on-content-click="false"
+                transition="scale-transition"
+                offset-y
+              >
+                <template #activator="{ props: menuProps }">
+                  <v-text-field
+                    v-bind="menuProps"
+                    :model-value="endDate"
+                    @update:model-value="$emit('update:endDate', $event)"
+                    label="End Date"
+                    placeholder="YYYY-MM-DD"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-calendar"
+                    hide-details
+                    @click="endMenu = true"
+                    @focus="endMenu = true"
+                  />
+                </template>
+                <v-date-picker
+                  :model-value="endDate || null"
+                  @update:model-value="onEndPickerChange"
+                  color="primary"
+                />
+              </v-menu>
+            </v-col>
+          </v-row>
+          <v-row v-if="availableYears && availableYears.length" class="mt-2">
+            <v-col cols="12">
+              <div class="d-flex flex-wrap ga-2">
+                <v-btn
+                  v-for="year in availableYears"
+                  :key="year"
+                  size="small"
+                  :color="isYearSelected(year) ? 'primary' : 'default'"
+                  :variant="isYearSelected(year) ? 'elevated' : 'outlined'"
+                  @click="selectYear(year)"
+                >
+                  {{ year }}
+                </v-btn>
+              </div>
             </v-col>
           </v-row>
         </v-col>
@@ -224,30 +272,78 @@
       <v-col v-if="showDateFilters" cols="12" md="4">
         <v-row>
           <v-col cols="6">
-            <v-text-field
-              :model-value="startDate"
-              @update:model-value="$emit('update:startDate', $event)"
-              label="Start Date"
-              placeholder="YYYY-MM-DD"
-              variant="outlined"
-              density="compact"
-              type="date"
-              prepend-inner-icon="mdi-calendar"
-              hide-details
-            />
+            <v-menu
+              v-model="startMenu"
+              :close-on-content-click="false"
+              transition="scale-transition"
+              offset-y
+            >
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  v-bind="menuProps"
+                  :model-value="startDate"
+                  @update:model-value="$emit('update:startDate', $event)"
+                  label="Start Date"
+                  placeholder="YYYY-MM-DD"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-calendar"
+                  hide-details
+                  @click="startMenu = true"
+                  @focus="startMenu = true"
+                />
+              </template>
+              <v-date-picker
+                :model-value="startDate || null"
+                @update:model-value="onStartPickerChange"
+                color="primary"
+              />
+            </v-menu>
           </v-col>
           <v-col cols="6">
-            <v-text-field
-              :model-value="endDate"
-              @update:model-value="$emit('update:endDate', $event)"
-              label="End Date"
-              placeholder="YYYY-MM-DD"
-              variant="outlined"
-              density="compact"
-              type="date"
-              prepend-inner-icon="mdi-calendar"
-              hide-details
-            />
+            <v-menu
+              v-model="endMenu"
+              :close-on-content-click="false"
+              transition="scale-transition"
+              offset-y
+            >
+              <template #activator="{ props: menuProps }">
+                <v-text-field
+                  v-bind="menuProps"
+                  :model-value="endDate"
+                  @update:model-value="$emit('update:endDate', $event)"
+                  label="End Date"
+                  placeholder="YYYY-MM-DD"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-calendar"
+                  hide-details
+                  @click="endMenu = true"
+                  @focus="endMenu = true"
+                />
+              </template>
+              <v-date-picker
+                :model-value="endDate || null"
+                @update:model-value="onEndPickerChange"
+                color="primary"
+              />
+            </v-menu>
+          </v-col>
+        </v-row>
+        <v-row v-if="availableYears && availableYears.length" class="mt-2">
+          <v-col cols="12">
+            <div class="d-flex flex-wrap ga-2">
+              <v-btn
+                v-for="year in availableYears"
+                :key="year"
+                size="small"
+                :color="isYearSelected(year) ? 'primary' : 'default'"
+                :variant="isYearSelected(year) ? 'elevated' : 'outlined'"
+                @click="selectYear(year)"
+              >
+                {{ year }}
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
       </v-col>
@@ -358,7 +454,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export default {
   name: 'TransactionFilters',
@@ -454,10 +550,16 @@ export default {
     showCard: {
       type: Boolean,
       default: true
+    },
+    availableYears: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['update:searchQuery', 'update:selectedCategory', 'update:selectedAccount', 'update:startDate', 'update:endDate', 'update:selectedLabel', 'update:hide-net-zero', 'update:inflowFilter', 'update:minAmount', 'update:maxAmount', 'clear-filters', 'create-rule'],
   setup(props, { emit }) {
+    const startMenu = ref(false)
+    const endMenu = ref(false)
     const buttonColSize = computed(() => {
       let visibleFilters = 0
       if (props.showSearchFilter) visibleFilters++
@@ -485,6 +587,57 @@ export default {
       emit('update:minAmount', '')
       emit('update:maxAmount', '')
       emit('clear-filters')
+    }
+
+    function selectYear(year) {
+      if (!year) return
+      const startOfYear = `${year}-01-01`
+      const endOfYear = `${year}-12-31`
+      emit('update:startDate', startOfYear)
+      emit('update:endDate', endOfYear)
+    }
+
+    function isYearSelected(year) {
+      if (!props.startDate || !props.endDate) return false
+      const startYear = String(props.startDate).slice(0, 4)
+      const endYear = String(props.endDate).slice(0, 4)
+      return (
+        String(year) === startYear &&
+        String(year) === endYear &&
+        String(props.startDate).endsWith('-01-01') &&
+        String(props.endDate).endsWith('-12-31')
+      )
+    }
+
+    function normalizeToYMD(value) {
+      if (!value) return ''
+      // If value is a Date object, convert to YYYY-MM-DD
+      if (value instanceof Date) {
+        const year = value.getFullYear()
+        const month = String(value.getMonth() + 1).padStart(2, '0')
+        const day = String(value.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      const str = String(value)
+      // If it's an ISO string, take the date part
+      if (str.length >= 10 && str[4] === '-' && str[7] === '-') {
+        return str.slice(0, 10)
+      }
+      return str
+    }
+
+    function onStartPickerChange(value) {
+      if (!value) return
+      const formatted = normalizeToYMD(value)
+      emit('update:startDate', formatted)
+      startMenu.value = false
+    }
+
+    function onEndPickerChange(value) {
+      if (!value) return
+      const formatted = normalizeToYMD(value)
+      emit('update:endDate', formatted)
+      endMenu.value = false
     }
 
     // Check if there are any active filters (excluding hideNetZero)
@@ -573,7 +726,13 @@ export default {
       buttonColSize,
       clearFilters,
       hasActiveFilters,
-      handleCreateRule
+      handleCreateRule,
+      startMenu,
+      endMenu,
+      selectYear,
+      isYearSelected,
+      onStartPickerChange,
+      onEndPickerChange
     }
   }
 }

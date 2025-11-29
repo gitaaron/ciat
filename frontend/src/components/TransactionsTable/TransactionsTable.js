@@ -73,6 +73,8 @@ export default {
     // Store initial date values for reset functionality
     const initialStartDate = ref('')
     const initialEndDate = ref('')
+    // Available years for quick year-range selection in filters
+    const availableYears = ref([])
 
     // Load transactions on component mount
     onMounted(async () => {
@@ -101,7 +103,20 @@ export default {
           if (dates.length > 0) {
             const earliestDate = dates[0]
             const latestDate = dates[dates.length - 1]
-            
+
+            // Calculate the list of years that have transactions
+            const yearsSet = new Set(
+              allTransactions
+                .map(tx => tx.date)
+                .filter(date => !!date)
+                .map(date => {
+                  const year = new Date(date).getFullYear()
+                  return Number.isNaN(year) ? null : year
+                })
+                .filter(year => year !== null)
+            )
+            availableYears.value = Array.from(yearsSet).sort((a, b) => a - b)
+
             // Set dates - the watch will automatically trigger loadTransactions()
             // We set datesInitialized first to prevent re-initialization
             datesInitialized.value = true
@@ -705,7 +720,9 @@ export default {
       handleCreateTransaction,
       handleCreateRuleFromFilters,
       handleCreateRuleSave,
-      cancelCreateRule
+      cancelCreateRule,
+      // Year range helpers
+      availableYears
     }
   }
 }
