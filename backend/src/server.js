@@ -800,9 +800,9 @@ const calculateDefaultCategoryTargets = () => {
   const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
   const totalMonths = Math.max(totalDays / 30.4375, 0.1); // Minimum 0.1 to avoid division by zero
   
-  // Calculate total net income (inflows)
+  // Calculate total net income from transactions categorized as 'income'
   const totalNetIncome = allTransactions
-    .filter(tx => tx.inflow === 1)
+    .filter(tx => tx.category === 'income')
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   
   if (totalNetIncome <= 0) {
