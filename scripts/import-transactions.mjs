@@ -630,6 +630,18 @@ async function importTransactions() {
         console.log(`   ⚠️  WARNING: Manual overrides were loaded but none were applied!`);
       }
       
+      // Change any 'uncategorized' transactions to 'short_term_savings'
+      let uncategorizedCount = 0;
+      for (const tx of categorizedTransactions) {
+        if (tx.category === 'uncategorized') {
+          tx.category = 'short_term_savings';
+          uncategorizedCount++;
+        }
+      }
+      if (uncategorizedCount > 0) {
+        console.log(`   🔄 Changed ${uncategorizedCount} uncategorized transaction(s) to 'short_term_savings'`);
+      }
+      
       // Save categorized transactions
       for (const tx of categorizedTransactions) {
         try {
