@@ -112,6 +112,13 @@
           >
             Remaining: {{ formatCurrency(item.remainingSurplus) }}
           </v-list-item-subtitle>
+          
+          <v-list-item-subtitle 
+            v-if="item.monthsToAfford !== null"
+            class="text-error mt-1"
+          >
+            {{ item.monthsToAfford }} {{ item.monthsToAfford === 1 ? 'month' : 'months' }} to afford it
+          </v-list-item-subtitle>
 
           <template v-slot:append>
             <div class="d-flex gap-2">

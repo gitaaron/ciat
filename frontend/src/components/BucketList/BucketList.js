@@ -109,13 +109,20 @@ export default {
         const newRemaining = remainingSurplus - cost
         const canAfford = newRemaining >= 0
         
+        // Calculate months to afford if remaining is negative
+        let monthsToAfford = null
+        if (newRemaining < 0 && targetSavings.value > 0) {
+          monthsToAfford = Math.ceil(Math.abs(newRemaining) / targetSavings.value)
+        }
+        
         // Update remaining for next item
         remainingSurplus = newRemaining
         
         return {
           ...item,
           remainingSurplus: newRemaining,
-          canAfford
+          canAfford,
+          monthsToAfford
         }
       })
     })
