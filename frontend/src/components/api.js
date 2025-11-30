@@ -149,6 +149,15 @@ export default {
     const { data } = await axios.put(apiBase + '/category-targets', { targets })
     return data
   },
+  // Target savings APIs
+  async getTargetSavings() {
+    const { data } = await axios.get(apiBase + '/target-savings')
+    return data
+  },
+  async saveTargetSavings(percentage) {
+    const { data } = await axios.put(apiBase + '/target-savings', { percentage })
+    return data
+  },
   // Bucket list APIs
   async getBucketListItems() {
     const { data } = await axios.get(apiBase + '/bucket-list-items')

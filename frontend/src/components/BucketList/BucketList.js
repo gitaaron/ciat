@@ -19,6 +19,9 @@ export default {
       guilt_free: 40,
       short_term_savings: 15
     })
+    const targetSavingsPercentage = ref(10) // Default 10%
+    const showTargetSavingsDialog = ref(false)
+    const editingTargetSavings = ref(false)
 
     const formData = reactive({
       name: '',
@@ -53,6 +56,50 @@ export default {
       return items.value.reduce((sum, item) => sum + Number(item.estimatedCost || 0), 0)
     })
 
+    // Calculate monthly spend (target short term monthly for last 6 months)
+    const monthlySpend = computed(() => {
+      if (transactions.value.length === 0) return 0
+      
+      // Get the date 6 months ago from today
+      const today = new Date()
+      const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, 1)
+      const startDate = sixMonthsAgo.toISOString().split('T')[0]
+      const endDate = today.toISOString().split('T')[0]
+      
+      // Filter transactions from last 6 months
+      const last6MonthsTransactions = transactions.value.filter(tx => {
+        if (!tx.date) return false
+        return tx.date >= startDate && tx.date <= endDate
+      })
+      
+      if (last6MonthsTransactions.length === 0) return 0
+      
+      // Calculate total net income from income transactions in last 6 months
+      const totalNetIncome = last6MonthsTransactions
+        .filter(tx => tx.category === 'income')
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+      
+      // Calculate actual number of months in the date range (up to 6 months)
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const totalDays = (end - start) / (1000 * 60 * 60 * 24) // milliseconds to days
+      const actualMonths = Math.max(totalDays / 30.4375, 0.1) // Minimum 0.1 to avoid division by zero
+      const months = Math.min(actualMonths, 6) // Cap at 6 months
+      
+      // Calculate monthly net income
+      const monthlyNetIncome = months > 0 ? totalNetIncome / months : 0
+      
+      // Calculate monthly target for short_term_savings
+      const monthlyTarget = (monthlyNetIncome * (targets.value.short_term_savings || 0)) / 100
+      
+      return monthlyTarget
+    })
+
+    // Calculate target savings (monthly spend * targetSavingsPercentage / 100)
+    const targetSavings = computed(() => {
+      return (monthlySpend.value * targetSavingsPercentage.value) / 100
+    })
+
     // Calculate affordability for each item (cascading)
     const itemsWithAffordability = computed(() => {
       let remainingSurplus = totalSurplus.value
@@ -84,6 +131,48 @@ export default {
         console.error('Error loading saved targets:', error)
         // Keep defaults if loading fails
       }
+    }
+
+    // Load target savings percentage
+    async function loadTargetSavings() {
+      try {
+        const saved = await api.getTargetSavings()
+        if (saved && typeof saved.percentage === 'number') {
+          targetSavingsPercentage.value = saved.percentage
+        }
+      } catch (error) {
+        console.error('Error loading target savings:', error)
+        // Keep default if loading fails
+      }
+    }
+
+    // Save target savings percentage
+    async function saveTargetSavings() {
+      try {
+        loading.value = true
+        await api.saveTargetSavings(targetSavingsPercentage.value)
+        editingTargetSavings.value = false
+        showTargetSavingsDialog.value = false
+      } catch (error) {
+        console.error('Error saving target savings:', error)
+        // Keep dialog open on error so user can retry
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // Start editing target savings
+    function startEditingTargetSavings() {
+      editingTargetSavings.value = true
+      showTargetSavingsDialog.value = true
+    }
+
+    // Cancel editing target savings
+    function cancelEditingTargetSavings() {
+      editingTargetSavings.value = false
+      showTargetSavingsDialog.value = false
+      // Reload to reset any changes
+      loadTargetSavings()
     }
 
     // Load transactions to calculate surplus
@@ -242,7 +331,16 @@ export default {
       totalCost,
       itemsWithAffordability,
       loadTransactions,
-      loadTargets
+      loadTargets,
+      monthlySpend,
+      targetSavings,
+      targetSavingsPercentage,
+      showTargetSavingsDialog,
+      editingTargetSavings,
+      loadTargetSavings,
+      saveTargetSavings,
+      startEditingTargetSavings,
+      cancelEditingTargetSavings
     }
   }
 }

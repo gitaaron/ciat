@@ -22,6 +22,7 @@ const __dirname = path.dirname(__filename);
 
 const dataDir = path.join(__dirname, '..', 'data');
 const categoryTargetsPath = path.join(dataDir, 'category-targets.json');
+const targetSavingsPath = path.join(dataDir, 'target-savings.json');
 
 const app = express();
 app.use(cors());
@@ -950,6 +951,45 @@ app.put('/api/category-targets', (req, res) => {
     res.json({ ok: true, targets });
   } catch (error) {
     console.error('Error saving category targets:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Target savings endpoints
+app.get('/api/target-savings', (req, res) => {
+  try {
+    if (fs.existsSync(targetSavingsPath)) {
+      const content = fs.readFileSync(targetSavingsPath, 'utf8');
+      const data = JSON.parse(content);
+      res.json(data);
+    } else {
+      // Return default (10% as a decimal: 0.10)
+      res.json({ percentage: 10 });
+    }
+  } catch (error) {
+    console.error('Error reading target savings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/target-savings', (req, res) => {
+  try {
+    const { percentage } = req.body;
+    
+    if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
+      return res.status(400).json({ error: 'percentage must be a number between 0 and 100' });
+    }
+    
+    // Ensure data directory exists
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    // Write to file
+    fs.writeFileSync(targetSavingsPath, JSON.stringify({ percentage }, null, 2), 'utf8');
+    res.json({ ok: true, percentage });
+  } catch (error) {
+    console.error('Error saving target savings:', error);
     res.status(500).json({ error: error.message });
   }
 });

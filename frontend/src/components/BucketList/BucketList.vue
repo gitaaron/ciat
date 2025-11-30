@@ -35,7 +35,7 @@
         <v-card class="mb-4" variant="outlined">
           <v-card-text>
             <v-row>
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="3">
                 <div class="stat-item">
                   <div 
                     class="stat-value" 
@@ -46,10 +46,33 @@
                   <div class="stat-label">{{ totalSurplus >= 0 ? 'Short Term Surplus' : 'Short Term Deficit' }}</div>
                 </div>
               </v-col>
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="3">
                 <div class="stat-item">
                   <div class="stat-value">{{ formatCurrency(totalCost) }}</div>
                   <div class="stat-label">Total Cost</div>
+                </div>
+              </v-col>
+              <v-col cols="12" md="3">
+                <div class="stat-item">
+                  <div class="stat-value">{{ formatCurrency(monthlySpend) }}</div>
+                  <div class="stat-label">Monthly Spend</div>
+                </div>
+              </v-col>
+              <v-col cols="12" md="3">
+                <div class="stat-item">
+                  <div class="stat-value">{{ formatCurrency(targetSavings) }}</div>
+                  <div class="stat-label d-flex align-center justify-center">
+                    <span>Target Savings</span>
+                    <v-btn
+                      icon
+                      variant="text"
+                      size="x-small"
+                      @click="startEditingTargetSavings"
+                      class="ml-1"
+                    >
+                      <v-icon size="small">mdi-pencil</v-icon>
+                    </v-btn>
+                  </div>
                 </div>
               </v-col>
             </v-row>
@@ -200,6 +223,53 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
+
+      <!-- Target Savings Configuration Dialog -->
+      <v-dialog v-model="showTargetSavingsDialog" max-width="400">
+        <v-card>
+          <v-card-title class="text-h6">
+            Configure Target Savings
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-2 mb-4">
+              Target savings is calculated as a percentage of monthly spend. 
+              Default is 10%.
+            </p>
+            <v-text-field
+              v-model.number="targetSavingsPercentage"
+              label="Target Savings Percentage"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              suffix="%"
+              variant="outlined"
+            ></v-text-field>
+            <div class="mt-2 text-body-2 text-grey">
+              Current monthly spend: {{ formatCurrency(monthlySpend) }}
+            </div>
+            <div class="mt-1 text-body-2 text-grey">
+              Target savings: {{ formatCurrency(targetSavings) }}
+            </div>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              @click="cancelEditingTargetSavings"
+              variant="text"
+            >
+              Cancel
+            </v-btn>
+            <v-btn
+              @click="saveTargetSavings"
+              color="primary"
+              :loading="loading"
+            >
+              Save
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-card-text>
   </v-card>
 </template>
@@ -231,11 +301,21 @@ const {
   totalCost,
   itemsWithAffordability,
   loadTransactions,
-  loadTargets
+  loadTargets,
+  monthlySpend,
+  targetSavings,
+  targetSavingsPercentage,
+  showTargetSavingsDialog,
+  editingTargetSavings,
+  loadTargetSavings,
+  saveTargetSavings,
+  startEditingTargetSavings,
+  cancelEditingTargetSavings
 } = BucketList.setup()
 
 onMounted(async () => {
   await loadTargets()
+  await loadTargetSavings()
   await loadItems()
   await loadTransactions()
 })
