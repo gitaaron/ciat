@@ -2,6 +2,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import api from '../api.js'
 import { CATEGORY_NAMES, CATEGORY_COLORS, CATEGORY_STEPS } from '../../config/categories.js'
 import { calculateDateRange } from '../../utils/dateRange.js'
+import { calculateCategoryDeviations } from '../../utils/shortTermSavingsDeviation.js'
 
 export default {
   name: 'CategoryTargets',
@@ -230,17 +231,18 @@ export default {
     // Keep targetAmounts for backward compatibility
     const targetAmounts = computed(() => monthlyTarget.value)
     
-    // Calculate surplus/deficit for each category (using total values for deviation)
+    // Calculate surplus/deficit for each category (using shared utility function)
     const categoryAnalysis = computed(() => {
+      const dateRangeProps = props?.startDate && props?.endDate 
+        ? { startDate: props.startDate, endDate: props.endDate }
+        : null
+      const deviations = calculateCategoryDeviations(transactions.value, targets.value, dateRangeProps)
+      
       const analysis = {}
       CATEGORY_STEPS.forEach(category => {
         const actual = totalActual.value[category]
         const target = totalTarget.value[category]
-        let difference = target - actual
-        // For investments, invert the deviation (multiply by -1)
-        if (category === 'investments') {
-          difference = difference * -1
-        }
+        const difference = deviations[category]
         const percentage = totalNetIncome.value > 0 ? (actual / totalNetIncome.value) * 100 : 0
         
         analysis[category] = {

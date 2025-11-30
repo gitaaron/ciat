@@ -1,5 +1,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../api.js'
+import { calculateShortTermSavingsDeviation } from '../../utils/shortTermSavingsDeviation.js'
 
 export default {
   setup() {
@@ -12,6 +13,12 @@ export default {
     const formRef = ref(null)
     const transactions = ref([])
     const loading = ref(false)
+    const targets = ref({
+      fixed_costs: 35,
+      investments: 10,
+      guilt_free: 40,
+      short_term_savings: 15
+    })
 
     const formData = reactive({
       name: '',
@@ -36,23 +43,9 @@ export default {
       }).format(amount)
     }
 
-    // Calculate total surplus from transactions
+    // Calculate total surplus using the same calculation as short term savings deviation
     const totalSurplus = computed(() => {
-      const totalInflow = transactions.value
-        .filter(tx => {
-          const inflow = tx.inflow
-          return inflow === 1 || inflow === true || inflow === '1'
-        })
-        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
-      
-      const totalOutflow = transactions.value
-        .filter(tx => {
-          const inflow = tx.inflow
-          return !(inflow === 1 || inflow === true || inflow === '1')
-        })
-        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
-      
-      return totalInflow - totalOutflow
+      return calculateShortTermSavingsDeviation(transactions.value, targets.value)
     })
 
     // Calculate total cost of all bucket list items
@@ -79,6 +72,19 @@ export default {
         }
       })
     })
+
+    // Load category targets
+    async function loadTargets() {
+      try {
+        const saved = await api.getCategoryTargets()
+        if (saved) {
+          targets.value = { ...targets.value, ...saved }
+        }
+      } catch (error) {
+        console.error('Error loading saved targets:', error)
+        // Keep defaults if loading fails
+      }
+    }
 
     // Load transactions to calculate surplus
     async function loadTransactions() {
@@ -235,7 +241,8 @@ export default {
       totalSurplus,
       totalCost,
       itemsWithAffordability,
-      loadTransactions
+      loadTransactions,
+      loadTargets
     }
   }
 }

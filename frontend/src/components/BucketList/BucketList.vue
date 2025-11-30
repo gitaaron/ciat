@@ -43,7 +43,7 @@
                   >
                     {{ formatCurrency(totalSurplus) }}
                   </div>
-                  <div class="stat-label">{{ totalSurplus >= 0 ? 'Total Surplus' : 'Total Deficit' }}</div>
+                  <div class="stat-label">{{ totalSurplus >= 0 ? 'Short Term Surplus' : 'Short Term Deficit' }}</div>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
@@ -230,10 +230,12 @@ const {
   totalSurplus,
   totalCost,
   itemsWithAffordability,
-  loadTransactions
+  loadTransactions,
+  loadTargets
 } = BucketList.setup()
 
 onMounted(async () => {
+  await loadTargets()
   await loadItems()
   await loadTransactions()
 })
