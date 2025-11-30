@@ -5,6 +5,7 @@
       "name": "chequing",
       "file": "../transactions/chequing.csv",
       "type": "bank_account",
+      "currentBalance": 5000.00,
       "fieldMapping": {
         "0": "date",
         "1": "name",

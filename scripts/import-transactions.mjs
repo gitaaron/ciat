@@ -56,6 +56,7 @@ Configuration File Format:
         "name": "Account Name",
         "file": "path/to/transactions.csv",
         "type": "bank_account",
+        "currentBalance": 1234.56,
         "fieldMapping": {
           "0": "date",
           "1": "name",
@@ -70,6 +71,12 @@ Configuration File Format:
 Account Type:
   - Optional field: "type" can be "bank_account" or "credit_card"
   - Defaults to "bank_account" if not specified
+
+Current Balance:
+  - Optional field: "currentBalance" is a number specifying the current account balance
+  - If provided, an initial transaction will be created on the date of the first transaction
+  - The initial transaction amount is calculated so that: currentBalance = initialTransaction + sum(all other transactions)
+  - Transactions are summed with positive values for inflows and negative values for outflows
 
 Field Mapping:
   - Maps CSV column indices (0-based) to field names
@@ -168,6 +175,14 @@ for (const account of config.accounts) {
     }
     if (!mappingValues.includes('outflow')) {
       console.error(`❌ Error: fieldMapping for account "${account.name}" must include "outflow" field`);
+      process.exit(1);
+    }
+  }
+  
+  // Validate currentBalance if provided
+  if (account.currentBalance !== undefined && account.currentBalance !== null) {
+    if (typeof account.currentBalance !== 'number' || isNaN(account.currentBalance)) {
+      console.error(`❌ Error: currentBalance for account "${account.name}" must be a number`);
       process.exit(1);
     }
   }
@@ -510,6 +525,8 @@ async function importTransactions() {
     let filteredByCutoff = 0;
     
     // Prepare transactions for rule application
+    // First pass: filter and process transactions (excluding initial balance for now)
+    // We'll calculate and add the initial balance transaction AFTER we know which transactions were actually saved
     const transactionsToCategorize = [];
     
     for (const row of rows) {
@@ -574,7 +591,7 @@ async function importTransactions() {
       console.log(`   ✂️  Filtered ${filteredByCutoff} transactions before cutoff date (${cutoffDate})`);
     }
     
-    // Apply system rules, user rules, and autogen rules to transactions
+    // Apply rules and save transactions (but NOT the initial balance transaction yet)
     if (transactionsToCategorize.length > 0) {
       console.log(`   🔍 Applying rules to ${transactionsToCategorize.length} transactions...`);
       
@@ -598,19 +615,6 @@ async function importTransactions() {
       const overrideCount = Object.keys(manualOverrides || {}).length;
       if (overrideCount > 0) {
         console.log(`   📝 Loaded ${overrideCount} manual override(s) from flat file`);
-        
-        // Debug: Check if any transaction hashes match the manual overrides
-        const transactionHashes = new Set(transactionsToCategorize.map(tx => tx.hash));
-        const overrideHashes = new Set(Object.keys(manualOverrides));
-        const matchingHashes = [...transactionHashes].filter(hash => overrideHashes.has(hash));
-        
-        if (matchingHashes.length > 0) {
-          console.log(`   🔍 Found ${matchingHashes.length} transaction hash(es) that match manual overrides`);
-        } else {
-          console.log(`   ⚠️  WARNING: No transaction hashes match the manual override hashes!`);
-          console.log(`   🔍 Sample transaction hashes (first 3):`, transactionsToCategorize.slice(0, 3).map(tx => tx.hash));
-          console.log(`   🔍 Sample override hashes (first 3):`, Object.keys(manualOverrides).slice(0, 3));
-        }
       }
       
       // Combine all rules in priority order
@@ -621,14 +625,6 @@ async function importTransactions() {
         accounts: accountsMap,
         manualOverrides: manualOverrides
       });
-      
-      // Count how many transactions were categorized by manual overrides
-      const manualOverrideMatches = categorizedTransactions.filter(tx => tx.category_source === 'manual').length;
-      if (manualOverrideMatches > 0) {
-        console.log(`   ✅ Applied ${manualOverrideMatches} manual override(s)`);
-      } else if (overrideCount > 0) {
-        console.log(`   ⚠️  WARNING: Manual overrides were loaded but none were applied!`);
-      }
       
       // Change any 'uncategorized' transactions to 'short_term_savings'
       let uncategorizedCount = 0;
@@ -668,6 +664,126 @@ async function importTransactions() {
         }
       }
     }
+    
+    // Now calculate and save the initial balance transaction based on what was actually saved
+    if (accountConfig.currentBalance !== undefined && accountConfig.currentBalance !== null) {
+      // Calculate sum of ALL transactions in the database for this account (excluding any existing Initial Balance)
+      // This includes both existing transactions and the ones we just saved
+      const allAccountTransactions = db.prepare(`
+        SELECT amount, inflow, date
+        FROM transactions 
+        WHERE account_id = ? 
+        AND name != 'Initial Balance'
+        ORDER BY date ASC
+      `).all(account.id);
+      
+      // Calculate sum of transactions that were actually saved
+      let actualTransactionSum = 0;
+      let earliestDate = null;
+      
+      for (const tx of allAccountTransactions) {
+        const amount = Math.round((Number(tx.amount) || 0) * 100) / 100; // Round to 2 decimals
+        if (tx.inflow === 1 || tx.inflow === true || tx.inflow === '1') {
+          actualTransactionSum += amount; // Positive for inflow
+        } else {
+          actualTransactionSum -= amount; // Negative for outflow
+        }
+        
+        // Track earliest date
+        if (!earliestDate || tx.date < earliestDate) {
+          earliestDate = tx.date;
+        }
+      }
+      
+      // Round the sum to 2 decimal places
+      actualTransactionSum = Math.round(actualTransactionSum * 100) / 100;
+      
+      // Calculate the date for the initial transaction: one day before the earliest transaction
+      let initialTransactionDate = null;
+      if (earliestDate) {
+        // Parse the date and subtract one day
+        const dateObj = new Date(earliestDate + 'T00:00:00');
+        dateObj.setDate(dateObj.getDate() - 1);
+        // Format back to YYYY-MM-DD
+        initialTransactionDate = dateObj.toISOString().slice(0, 10);
+      }
+      
+      // If cutoff date exists and is before the initial transaction date, use cutoff date - 1 day
+      if (cutoffDate && initialTransactionDate && initialTransactionDate < cutoffDate) {
+        const cutoffDateObj = new Date(cutoffDate + 'T00:00:00');
+        cutoffDateObj.setDate(cutoffDateObj.getDate() - 1);
+        initialTransactionDate = cutoffDateObj.toISOString().slice(0, 10);
+      }
+      
+      if (initialTransactionDate) {
+        // Calculate the initial transaction amount needed
+        // currentBalance = initialTransaction + actualTransactionSum
+        // initialTransaction = currentBalance - actualTransactionSum
+        const currentBalanceRounded = Math.round(Number(accountConfig.currentBalance) * 100) / 100;
+        const initialAmount = Math.round((currentBalanceRounded - actualTransactionSum) * 100) / 100;
+        
+        // Determine if this should be an inflow or outflow
+        const isInflow = initialAmount >= 0;
+        const absoluteAmount = Math.abs(initialAmount);
+        
+        // Check if there's already an "Initial Balance" transaction for this account
+        // If so, we'll delete it and create a new one
+        const existingInitialBalance = db.prepare(`
+          SELECT id FROM transactions 
+          WHERE account_id = ? AND name = 'Initial Balance'
+        `).get(account.id);
+        
+        if (existingInitialBalance) {
+          db.prepare('DELETE FROM transactions WHERE id = ?').run(existingInitialBalance.id);
+          console.log(`   🔄 Removed existing initial balance transaction`);
+        }
+        
+        // Create initial transaction
+        const initialDescription = `Initial balance adjustment to match current balance of $${Number(accountConfig.currentBalance).toFixed(2)}`.trim();
+        const initialHashData = {
+          external_id: null,
+          account_name: account.name,
+          date: initialTransactionDate,
+          name: 'Initial Balance',
+          description: initialDescription,
+          amount: absoluteAmount,
+          inflow: isInflow ? 1 : 0
+        };
+        const initialHash = txHash(initialHashData);
+        
+        const initialTransaction = {
+          external_id: null,
+          account_id: account.id,
+          date: initialTransactionDate,
+          name: 'Initial Balance',
+          description: initialDescription,
+          amount: Math.round(absoluteAmount * 100) / 100, // Round to 2 decimal places
+          inflow: isInflow ? 1 : 0,
+          category: 'short_term_savings',
+          category_source: 'manual',
+          category_explain: 'Initial balance transaction',
+          labels: null,
+          note: null,
+          hash: initialHash,
+        };
+        
+        // Save the initial balance transaction
+        const result = Transactions.upsert(initialTransaction);
+        if (result.skipped) {
+          console.log(`   ⚠️  Initial Balance transaction was SKIPPED (duplicate hash: ${initialHash})`);
+          skipped++;
+        } else {
+          console.log(`   ✅ Initial Balance transaction SAVED successfully (ID: ${result.id})`);
+          saved++;
+        }
+        
+        console.log(`   💰 Calculated and saved initial balance transaction: $${initialAmount.toFixed(2)} on ${initialTransactionDate}`);
+        console.log(`      (Current balance: $${currentBalanceRounded.toFixed(2)}, Actual transaction sum: $${actualTransactionSum.toFixed(2)})`);
+      } else {
+        console.log(`   ⚠️  Could not determine date for initial balance transaction`);
+      }
+    }
+    
     
     console.log(`   ✓ Saved: ${saved}, Skipped (duplicates): ${skipped}`);
     
