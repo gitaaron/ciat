@@ -55,6 +55,11 @@ export default {
       return totalInflow - totalOutflow
     })
 
+    // Calculate total cost of all bucket list items
+    const totalCost = computed(() => {
+      return items.value.reduce((sum, item) => sum + Number(item.estimatedCost || 0), 0)
+    })
+
     // Calculate affordability for each item (cascading)
     const itemsWithAffordability = computed(() => {
       let remainingSurplus = totalSurplus.value
@@ -228,6 +233,7 @@ export default {
       transactions,
       loading,
       totalSurplus,
+      totalCost,
       itemsWithAffordability,
       loadTransactions
     }

@@ -31,12 +31,30 @@
 
       <!-- Items List -->
       <div v-else>
-        <!-- Total Surplus Display -->
-        <v-alert type="info" variant="tonal" class="mb-4">
-          <div class="d-flex align-center">
-            <span class="font-weight-bold">Total Surplus: {{ formatCurrency(totalSurplus) }}</span>
-          </div>
-        </v-alert>
+        <!-- Stats Display -->
+        <v-card class="mb-4" variant="outlined">
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="6">
+                <div class="stat-item">
+                  <div 
+                    class="stat-value" 
+                    :class="totalSurplus >= 0 ? 'stat-surplus' : 'stat-deficit'"
+                  >
+                    {{ formatCurrency(totalSurplus) }}
+                  </div>
+                  <div class="stat-label">{{ totalSurplus >= 0 ? 'Total Surplus' : 'Total Deficit' }}</div>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6">
+                <div class="stat-item">
+                  <div class="stat-value">{{ formatCurrency(totalCost) }}</div>
+                  <div class="stat-label">Total Cost</div>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
 
         <v-list>
         <v-list-item
@@ -210,6 +228,7 @@ const {
   deleteItem,
   loading,
   totalSurplus,
+  totalCost,
   itemsWithAffordability,
   loadTransactions
 } = BucketList.setup()
@@ -223,6 +242,32 @@ onMounted(async () => {
 <style scoped>
 .gap-2 {
   gap: 8px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1976d2;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value.stat-surplus {
+  color: #4caf50;
+}
+
+.stat-value.stat-deficit {
+  color: #f44336;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>
 
