@@ -963,8 +963,8 @@ app.get('/api/target-savings', (req, res) => {
       const data = JSON.parse(content);
       res.json(data);
     } else {
-      // Return default (10% as a decimal: 0.10)
-      res.json({ percentage: 10 });
+      // Return null to indicate no saved value exists (frontend will calculate initial value)
+      res.json(null);
     }
   } catch (error) {
     console.error('Error reading target savings:', error);
@@ -974,10 +974,10 @@ app.get('/api/target-savings', (req, res) => {
 
 app.put('/api/target-savings', (req, res) => {
   try {
-    const { percentage } = req.body;
+    const { amount } = req.body;
     
-    if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
-      return res.status(400).json({ error: 'percentage must be a number between 0 and 100' });
+    if (typeof amount !== 'number' || amount < 0) {
+      return res.status(400).json({ error: 'amount must be a non-negative number' });
     }
     
     // Ensure data directory exists
@@ -986,8 +986,8 @@ app.put('/api/target-savings', (req, res) => {
     }
     
     // Write to file
-    fs.writeFileSync(targetSavingsPath, JSON.stringify({ percentage }, null, 2), 'utf8');
-    res.json({ ok: true, percentage });
+    fs.writeFileSync(targetSavingsPath, JSON.stringify({ amount }, null, 2), 'utf8');
+    res.json({ ok: true, amount });
   } catch (error) {
     console.error('Error saving target savings:', error);
     res.status(500).json({ error: error.message });

@@ -1,6 +1,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../api.js'
-import { calculateShortTermSavingsDeviation } from '../../utils/shortTermSavingsDeviation.js'
+import { 
+  calculateShortTermSavingsDeviation,
+  calculateMonthlyDeviation
+} from '../../utils/shortTermSavingsDeviation.js'
 
 export default {
   setup() {
@@ -19,7 +22,7 @@ export default {
       guilt_free: 40,
       short_term_savings: 15
     })
-    const targetSavingsPercentage = ref(10) // Default 10%
+    const targetSavingsAmount = ref(0) // Dollar amount, not percentage
     const showTargetSavingsDialog = ref(false)
     const editingTargetSavings = ref(false)
 
@@ -46,6 +49,33 @@ export default {
       }).format(amount)
     }
 
+    // Filter transactions to last 12 months from the latest transaction date
+    const last12MonthsTransactions = computed(() => {
+      if (transactions.value.length === 0) return []
+      
+      // Find the latest transaction date
+      const dates = transactions.value
+        .map(tx => tx.date)
+        .filter(date => date)
+        .sort()
+      
+      if (dates.length === 0) return []
+      
+      const lastTransactionDate = new Date(dates[dates.length - 1])
+      const endDate = lastTransactionDate
+      const startDate = new Date(lastTransactionDate)
+      startDate.setMonth(startDate.getMonth() - 12)
+      
+      const startDateStr = startDate.toISOString().split('T')[0]
+      const endDateStr = endDate.toISOString().split('T')[0]
+      
+      // Filter transactions to last 12 months from latest transaction
+      return transactions.value.filter(tx => {
+        if (!tx.date) return false
+        return tx.date >= startDateStr && tx.date <= endDateStr
+      })
+    })
+
     // Calculate total surplus using the same calculation as short term savings deviation
     const totalSurplus = computed(() => {
       return calculateShortTermSavingsDeviation(transactions.value, targets.value)
@@ -56,48 +86,77 @@ export default {
       return items.value.reduce((sum, item) => sum + Number(item.estimatedCost || 0), 0)
     })
 
-    // Calculate monthly spend (target short term monthly for last 6 months)
+    // Calculate monthly spend (target short term monthly for last 12 months)
+    // Uses the same calculation method as CategoryTargets component
     const monthlySpend = computed(() => {
-      if (transactions.value.length === 0) return 0
+      if (last12MonthsTransactions.value.length === 0) return 0
       
-      // Get the date 6 months ago from today
-      const today = new Date()
-      const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, 1)
-      const startDate = sixMonthsAgo.toISOString().split('T')[0]
-      const endDate = today.toISOString().split('T')[0]
-      
-      // Filter transactions from last 6 months
-      const last6MonthsTransactions = transactions.value.filter(tx => {
-        if (!tx.date) return false
-        return tx.date >= startDate && tx.date <= endDate
-      })
-      
-      if (last6MonthsTransactions.length === 0) return 0
-      
-      // Calculate total net income from income transactions in last 6 months
-      const totalNetIncome = last6MonthsTransactions
+      // Calculate total net income from income transactions (same as CategoryTargets)
+      const totalNetIncome = last12MonthsTransactions.value
         .filter(tx => tx.category === 'income')
         .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
       
-      // Calculate actual number of months in the date range (up to 6 months)
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      const totalDays = (end - start) / (1000 * 60 * 60 * 24) // milliseconds to days
-      const actualMonths = Math.max(totalDays / 30.4375, 0.1) // Minimum 0.1 to avoid division by zero
-      const months = Math.min(actualMonths, 6) // Cap at 6 months
+      // Calculate date range from filtered transactions (same method as CategoryTargets)
+      const dates = last12MonthsTransactions.value
+        .map(tx => tx.date)
+        .filter(date => date)
+        .sort()
       
-      // Calculate monthly net income
-      const monthlyNetIncome = months > 0 ? totalNetIncome / months : 0
+      if (dates.length === 0) return 0
       
-      // Calculate monthly target for short_term_savings
+      const startDate = new Date(dates[0])
+      const endDate = new Date(dates[dates.length - 1])
+      const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24)
+      const totalMonths = Math.max(totalDays / 30.4375, 0.1) // Same as CategoryTargets
+      
+      // Calculate monthly net income (same as CategoryTargets)
+      const monthlyNetIncome = totalMonths > 0 ? totalNetIncome / totalMonths : 0
+      
+      // Calculate monthly target for short_term_savings (same as CategoryTargets)
       const monthlyTarget = (monthlyNetIncome * (targets.value.short_term_savings || 0)) / 100
       
       return monthlyTarget
     })
 
-    // Calculate target savings (monthly spend * targetSavingsPercentage / 100)
+    // Calculate max target savings (monthly spend over last 12 months)
+    const maxTargetSavings = computed(() => {
+      return monthlySpend.value
+    })
+
+    // Calculate monthly actual for short_term_savings (same method as CategoryTargets)
+    const monthlyActual = computed(() => {
+      if (last12MonthsTransactions.value.length === 0) return 0
+      
+      // Calculate date range from filtered transactions (same method as CategoryTargets)
+      const dates = last12MonthsTransactions.value
+        .map(tx => tx.date)
+        .filter(date => date)
+        .sort()
+      
+      if (dates.length === 0) return 0
+      
+      const startDate = new Date(dates[0])
+      const endDate = new Date(dates[dates.length - 1])
+      const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24)
+      const totalMonths = Math.max(totalDays / 30.4375, 0.1) // Same as CategoryTargets
+      
+      // Calculate total actual for short_term_savings (outflows - inflows) - same as CategoryTargets
+      const categoryTransactions = last12MonthsTransactions.value.filter(tx => tx.category === 'short_term_savings')
+      const inflows = categoryTransactions
+        .filter(tx => tx.inflow === 1)
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+      const outflows = categoryTransactions
+        .filter(tx => tx.inflow === 0)
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0)
+      const totalActual = outflows - inflows
+      
+      // Calculate monthly actual (same as CategoryTargets: totalActual / months)
+      return totalMonths > 0 ? totalActual / totalMonths : 0
+    })
+
+    // Target savings is the deviation between monthly target and monthly actual
     const targetSavings = computed(() => {
-      return (monthlySpend.value * targetSavingsPercentage.value) / 100
+      return monthlySpend.value - monthlyActual.value
     })
 
     // Calculate affordability for each item (cascading)
@@ -146,24 +205,54 @@ export default {
       }
     }
 
-    // Load target savings percentage
+    // Calculate initial target savings amount based on deviation over last 12 months
+    function calculateInitialTargetSavingsAmount() {
+      if (last12MonthsTransactions.value.length === 0) {
+        console.log('No transactions available in last 12 months, using default 0')
+        return 0
+      }
+      
+      // Calculate monthly deviation over last 12 months (target monthly - actual monthly)
+      // Uses transactions filtered to last 12 months from latest transaction
+      const monthlyDeviation = calculateMonthlyDeviation(last12MonthsTransactions.value, targets.value)
+      
+      console.log('Calculated initial target savings amount:', {
+        monthlyDeviation
+      })
+      
+      // Target savings is the monthly deviation
+      return monthlyDeviation
+    }
+
+    // Load target savings amount
     async function loadTargetSavings() {
       try {
         const saved = await api.getTargetSavings()
-        if (saved && typeof saved.percentage === 'number') {
-          targetSavingsPercentage.value = saved.percentage
+        if (saved && saved !== null && typeof saved.amount === 'number') {
+          targetSavingsAmount.value = saved.amount
+        } else {
+          // No saved value, calculate initial amount based on deviation
+          const calculatedAmount = calculateInitialTargetSavingsAmount()
+          targetSavingsAmount.value = calculatedAmount
+          console.log('Calculated initial target savings amount:', calculatedAmount)
         }
       } catch (error) {
         console.error('Error loading target savings:', error)
-        // Keep default if loading fails
+        // Calculate initial amount even on error
+        const calculatedAmount = calculateInitialTargetSavingsAmount()
+        targetSavingsAmount.value = calculatedAmount
+        console.log('Calculated initial target savings amount (on error):', calculatedAmount)
       }
     }
 
-    // Save target savings percentage
+    // Save target savings amount
     async function saveTargetSavings() {
       try {
         loading.value = true
-        await api.saveTargetSavings(targetSavingsPercentage.value)
+        // Clamp the value to max (monthly spend)
+        const amountToSave = Math.min(targetSavingsAmount.value, maxTargetSavings.value)
+        await api.saveTargetSavings(amountToSave)
+        targetSavingsAmount.value = amountToSave
         editingTargetSavings.value = false
         showTargetSavingsDialog.value = false
       } catch (error) {
@@ -348,7 +437,8 @@ export default {
       targets,
       monthlySpend,
       targetSavings,
-      targetSavingsPercentage,
+      targetSavingsAmount,
+      maxTargetSavings,
       showTargetSavingsDialog,
       editingTargetSavings,
       loadTargetSavings,

@@ -239,24 +239,24 @@
           </v-card-title>
           <v-card-text>
             <p class="text-body-2 mb-4">
-              Target savings is calculated as a percentage of monthly spend. 
-              Default is 10%.
+              Target savings is calculated as the average monthly deviation over the last 12 months.
+              Maximum is the monthly target spend.
             </p>
             <v-text-field
-              v-model.number="targetSavingsPercentage"
-              label="Target Savings Percentage"
+              v-model.number="targetSavingsAmount"
+              label="Target Savings Amount"
               type="number"
               min="0"
-              max="100"
-              step="0.1"
-              suffix="%"
+              :max="maxTargetSavings"
+              step="0.01"
+              prefix="$"
               variant="outlined"
             ></v-text-field>
             <div class="mt-2 text-body-2 text-grey">
-              Current monthly spend: {{ formatCurrency(monthlySpend) }}
+              Monthly target spend: {{ formatCurrency(monthlySpend) }}
             </div>
             <div class="mt-1 text-body-2 text-grey">
-              Target savings: {{ formatCurrency(targetSavings) }}
+              Maximum allowed: {{ formatCurrency(maxTargetSavings) }}
             </div>
           </v-card-text>
           <v-card-actions>
@@ -312,7 +312,8 @@ const {
   targets,
   monthlySpend,
   targetSavings,
-  targetSavingsPercentage,
+  targetSavingsAmount,
+  maxTargetSavings,
   showTargetSavingsDialog,
   editingTargetSavings,
   loadTargetSavings,
@@ -332,9 +333,9 @@ async function refresh() {
 
 onMounted(async () => {
   await loadTargets()
+  await loadTransactions() // Load transactions before calculating initial target savings
   await loadTargetSavings()
   await loadItems()
-  await loadTransactions()
 })
 
 // Expose refresh method to parent components
