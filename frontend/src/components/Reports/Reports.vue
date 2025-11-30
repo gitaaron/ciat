@@ -30,7 +30,7 @@
     
     <!-- Category Targets Section -->
     <div class="mb-6">
-      <CategoryTargets ref="categoryTargetsRef" :start-date="startDate" :end-date="endDate" />
+      <CategoryTargets ref="categoryTargetsRef" :start-date="startDate" :end-date="endDate" @targets-saved="$emit('targets-saved')" />
     </div>
     <!-- Report Stats Section -->
     <div class="mb-6">
@@ -89,7 +89,7 @@ const endDate = ref('')
 const datesInitialized = ref(false)
 const availableYears = ref([])
 
-const emit = defineEmits(['navigate-to-import', 'navigate-to-transactions'])
+const emit = defineEmits(['navigate-to-import', 'navigate-to-transactions', 'targets-saved'])
 
 async function initializeDateRange() {
   try {

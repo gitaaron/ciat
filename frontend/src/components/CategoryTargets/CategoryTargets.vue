@@ -202,6 +202,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['targets-saved'])
+
 const {
   targets,
   tempTargets,
@@ -234,7 +236,7 @@ const {
   formatCurrency,
   formatPercentage,
   loadTransactions
-} = CategoryTargets.setup(props)
+} = CategoryTargets.setup(props, () => emit('targets-saved'))
 
 // Watch for date changes and reload transactions
 watch([() => props.startDate, () => props.endDate], () => {

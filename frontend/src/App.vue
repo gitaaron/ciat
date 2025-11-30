@@ -18,6 +18,7 @@ const showNewCategoryWizard = ref(false)
 const transactionsTableRef = ref(null)
 const reportsRef = ref(null)
 const ruleManagerRef = ref(null)
+const bucketListRef = ref(null)
 const ruleToEdit = ref(null)
 
 // Debug mode - can be enabled via URL parameter ?debug=true
@@ -65,6 +66,17 @@ async function handleCategoriesUpdated() {
   // Refresh reports when transaction categories are updated
   if (reportsRef.value && reportsRef.value.refresh) {
     await reportsRef.value.refresh()
+  }
+}
+
+async function handleTargetsSaved() {
+  // Refresh bucket list stats when category targets are saved
+  console.log('App: handleTargetsSaved called')
+  if (bucketListRef.value && bucketListRef.value.refresh) {
+    console.log('App: Calling bucketListRef.refresh()')
+    await bucketListRef.value.refresh()
+  } else {
+    console.log('App: bucketListRef not available or refresh method missing')
   }
 }
 
@@ -239,7 +251,7 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="reports">
-            <Reports ref="reportsRef" @navigate-to-import="selected = 'import'" @navigate-to-transactions="handleNavigateToTransactions" />
+            <Reports ref="reportsRef" @navigate-to-import="selected = 'import'" @navigate-to-transactions="handleNavigateToTransactions" @targets-saved="handleTargetsSaved" />
           </v-window-item>
 
           <v-window-item value="manage-rules">
@@ -255,7 +267,7 @@ onMounted(async () => {
           </v-window-item>
 
           <v-window-item value="bucket-list">
-            <BucketList />
+            <BucketList ref="bucketListRef" />
           </v-window-item>
 
           <v-window-item value="versions">

@@ -309,6 +309,7 @@ const {
   itemsWithAffordability,
   loadTransactions,
   loadTargets,
+  targets,
   monthlySpend,
   targetSavings,
   targetSavingsPercentage,
@@ -320,11 +321,25 @@ const {
   cancelEditingTargetSavings
 } = BucketList.setup()
 
+// Refresh function to reload targets and recalculate stats
+async function refresh() {
+  console.log('BucketList: Refreshing targets...')
+  await loadTargets()
+  console.log('BucketList: Targets refreshed')
+  // Transactions don't need to be reloaded, but targets do
+  // The computed properties will automatically update when targets change
+}
+
 onMounted(async () => {
   await loadTargets()
   await loadTargetSavings()
   await loadItems()
   await loadTransactions()
+})
+
+// Expose refresh method to parent components
+defineExpose({
+  refresh
 })
 </script>
 

@@ -6,7 +6,7 @@ import { calculateCategoryDeviations } from '../../utils/shortTermSavingsDeviati
 
 export default {
   name: 'CategoryTargets',
-  setup(props = {}) {
+  setup(props = {}, onTargetsSaved = null) {
     const targets = ref({
       fixed_costs: 35,
       investments: 10,
@@ -358,6 +358,12 @@ export default {
           await saveTargets()
           editing.value = false
           tempTargets.value = {}
+          
+          // Emit event to notify parent components that targets were saved
+          if (onTargetsSaved) {
+            console.log('CategoryTargets: Emitting targets-saved event')
+            onTargetsSaved()
+          }
         } catch (error) {
           console.error('Failed to save targets:', error)
           // Optionally show error to user - for now just log it
@@ -380,6 +386,12 @@ export default {
           // If not editing, update targets directly and save
           targets.value = { ...defaults }
           await saveTargets()
+          
+          // Emit event to notify parent components that targets were saved
+          if (onTargetsSaved) {
+            console.log('CategoryTargets: Emitting targets-saved event (reset to defaults)')
+            onTargetsSaved()
+          }
         }
       } catch (error) {
         console.error('Failed to reset to defaults:', error)

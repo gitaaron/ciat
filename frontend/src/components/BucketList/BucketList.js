@@ -132,7 +132,13 @@ export default {
       try {
         const saved = await api.getCategoryTargets()
         if (saved) {
-          targets.value = { ...targets.value, ...saved }
+          // Completely replace the targets object to ensure reactivity
+          targets.value = {
+            fixed_costs: saved.fixed_costs ?? 35,
+            investments: saved.investments ?? 10,
+            guilt_free: saved.guilt_free ?? 40,
+            short_term_savings: saved.short_term_savings ?? 15
+          }
         }
       } catch (error) {
         console.error('Error loading saved targets:', error)
@@ -339,6 +345,7 @@ export default {
       itemsWithAffordability,
       loadTransactions,
       loadTargets,
+      targets,
       monthlySpend,
       targetSavings,
       targetSavingsPercentage,
