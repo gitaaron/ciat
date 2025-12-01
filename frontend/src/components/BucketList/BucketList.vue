@@ -243,14 +243,12 @@
               Maximum is the monthly target spend.
             </p>
             <v-text-field
-              v-model.number="targetSavingsAmount"
+              v-model="formattedTargetSavingsAmount"
               label="Target Savings Amount"
-              type="number"
-              min="0"
-              :max="maxTargetSavings"
-              step="0.01"
+              type="text"
               prefix="$"
               variant="outlined"
+              @blur="formatTargetSavingsOnBlur"
             ></v-text-field>
             <div class="mt-2 text-body-2 text-grey">
               Monthly target spend: {{ formatCurrency(monthlySpend) }}
@@ -313,11 +311,13 @@ const {
   monthlySpend,
   targetSavings,
   targetSavingsAmount,
+  formattedTargetSavingsAmount,
   maxTargetSavings,
   showTargetSavingsDialog,
   editingTargetSavings,
   loadTargetSavings,
   saveTargetSavings,
+  formatTargetSavingsOnBlur,
   startEditingTargetSavings,
   cancelEditingTargetSavings
 } = BucketList.setup()
