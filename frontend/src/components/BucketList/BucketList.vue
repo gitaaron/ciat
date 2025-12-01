@@ -69,7 +69,7 @@
               </v-col>
               <v-col cols="12" md="3">
                 <div class="stat-item">
-                  <div class="stat-value">{{ formatCurrency(targetSavings) }}</div>
+                  <div class="stat-value">{{ formatCurrency(targetSavingsAmount) }}</div>
                   <div class="stat-label d-flex align-center justify-center">
                     <span>Target Savings</span>
                     <v-btn
@@ -273,7 +273,7 @@
               Maximum is the monthly target spend.
             </p>
             <v-text-field
-              v-model="formattedTargetSavingsAmount"
+              v-model="targetSavingsInput"
               label="Target Savings Amount"
               type="text"
               prefix="$"
@@ -288,6 +288,13 @@
             </div>
           </v-card-text>
           <v-card-actions>
+            <v-btn
+              @click="resetTargetSavings"
+              variant="text"
+              color="secondary"
+            >
+              Reset
+            </v-btn>
             <v-spacer></v-spacer>
             <v-btn
               @click="cancelEditingTargetSavings"
@@ -341,13 +348,14 @@ const {
   monthlySpend,
   targetSavings,
   targetSavingsAmount,
-  formattedTargetSavingsAmount,
+  targetSavingsInput,
   maxTargetSavings,
   showTargetSavingsDialog,
   editingTargetSavings,
   loadTargetSavings,
   saveTargetSavings,
   formatTargetSavingsOnBlur,
+  resetTargetSavings,
   startEditingTargetSavings,
   cancelEditingTargetSavings,
   isReorderMode,

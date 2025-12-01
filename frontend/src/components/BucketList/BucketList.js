@@ -23,29 +23,12 @@ export default {
       short_term_savings: 15
     })
     const targetSavingsAmount = ref(0) // Dollar amount, not percentage
+    const targetSavingsInput = ref('0.00') // String input for editing
     const showTargetSavingsDialog = ref(false)
     const editingTargetSavings = ref(false)
     const isReorderMode = ref(false)
     const draggedItemId = ref(null)
     const draggedOverItemId = ref(null)
-
-    // Computed property to format target savings amount with 2 decimal places for display
-    const formattedTargetSavingsAmount = computed({
-      get: () => {
-        if (targetSavingsAmount.value === null || targetSavingsAmount.value === undefined) {
-          return '0.00'
-        }
-        return targetSavingsAmount.value.toFixed(2)
-      },
-      set: (value) => {
-        // Remove any non-numeric characters except decimal point
-        const cleanedValue = String(value).replace(/[^0-9.]/g, '')
-        const numValue = parseFloat(cleanedValue) || 0
-        // Clamp to max and ensure it's a valid number
-        const clampedValue = Math.min(Math.max(0, isNaN(numValue) ? 0 : numValue), maxTargetSavings.value)
-        targetSavingsAmount.value = clampedValue
-      }
-    })
 
     const formData = reactive({
       name: '',
@@ -191,8 +174,8 @@ export default {
         
         // Calculate months to afford if remaining is negative
         let monthsToAfford = null
-        if (newRemaining < 0 && targetSavings.value > 0) {
-          monthsToAfford = Math.ceil(Math.abs(newRemaining) / targetSavings.value)
+        if (newRemaining < 0 && targetSavingsAmount.value > 0) {
+          monthsToAfford = Math.ceil(Math.abs(newRemaining) / targetSavingsAmount.value)
         }
         
         // Update remaining for next item
@@ -270,10 +253,14 @@ export default {
     async function saveTargetSavings() {
       try {
         loading.value = true
+        // Parse the input string and format it
+        const cleanedValue = String(targetSavingsInput.value).replace(/[^0-9.]/g, '')
+        const numValue = parseFloat(cleanedValue) || 0
         // Clamp the value to max (monthly spend) and round to 2 decimal places for currency
-        const amountToSave = Math.round(Math.min(targetSavingsAmount.value, maxTargetSavings.value) * 100) / 100
+        const amountToSave = Math.round(Math.min(Math.max(0, isNaN(numValue) ? 0 : numValue), maxTargetSavings.value) * 100) / 100
         await api.saveTargetSavings(amountToSave)
         targetSavingsAmount.value = amountToSave
+        targetSavingsInput.value = amountToSave.toFixed(2)
         editingTargetSavings.value = false
         showTargetSavingsDialog.value = false
       } catch (error) {
@@ -284,27 +271,39 @@ export default {
       }
     }
 
-    // Format target savings on blur to ensure 2 decimal places and clamp to max
+    // Format target savings input on blur to ensure 2 decimal places and clamp to max
     function formatTargetSavingsOnBlur() {
-      const numValue = parseFloat(targetSavingsAmount.value) || 0
+      // Parse the input string, removing any non-numeric characters except decimal point
+      const cleanedValue = String(targetSavingsInput.value).replace(/[^0-9.]/g, '')
+      const numValue = parseFloat(cleanedValue) || 0
       const clampedValue = Math.min(Math.max(0, isNaN(numValue) ? 0 : numValue), maxTargetSavings.value)
+      // Update both the numeric value and the formatted input string
       targetSavingsAmount.value = parseFloat(clampedValue.toFixed(2))
+      targetSavingsInput.value = clampedValue.toFixed(2)
     }
 
     // Start editing target savings
     function startEditingTargetSavings() {
-      // Ensure value is properly formatted (computed property will handle display)
-      targetSavingsAmount.value = parseFloat(targetSavingsAmount.value.toFixed(2))
+      // Initialize input with formatted value (2 decimal places)
+      targetSavingsInput.value = targetSavingsAmount.value.toFixed(2)
       editingTargetSavings.value = true
       showTargetSavingsDialog.value = true
     }
 
+    // Reset target savings to calculated value
+    function resetTargetSavings() {
+      const calculatedAmount = calculateInitialTargetSavingsAmount()
+      const formattedAmount = parseFloat(calculatedAmount.toFixed(2))
+      targetSavingsAmount.value = formattedAmount
+      targetSavingsInput.value = formattedAmount.toFixed(2)
+    }
+
     // Cancel editing target savings
     function cancelEditingTargetSavings() {
+      // Reset input to current saved value
+      targetSavingsInput.value = targetSavingsAmount.value.toFixed(2)
       editingTargetSavings.value = false
       showTargetSavingsDialog.value = false
-      // Reload to reset any changes
-      loadTargetSavings()
     }
 
     // Reorder functionality
@@ -559,13 +558,14 @@ export default {
       monthlySpend,
       targetSavings,
       targetSavingsAmount,
-      formattedTargetSavingsAmount,
+      targetSavingsInput,
       maxTargetSavings,
       showTargetSavingsDialog,
       editingTargetSavings,
       loadTargetSavings,
       saveTargetSavings,
       formatTargetSavingsOnBlur,
+      resetTargetSavings,
       startEditingTargetSavings,
       cancelEditingTargetSavings,
       isReorderMode,
