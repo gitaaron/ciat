@@ -25,6 +25,9 @@ export default {
     const targetSavingsAmount = ref(0) // Dollar amount, not percentage
     const showTargetSavingsDialog = ref(false)
     const editingTargetSavings = ref(false)
+    const isReorderMode = ref(false)
+    const draggedItemId = ref(null)
+    const draggedOverItemId = ref(null)
 
     // Computed property to format target savings amount with 2 decimal places for display
     const formattedTargetSavingsAmount = computed({
@@ -304,6 +307,94 @@ export default {
       loadTargetSavings()
     }
 
+    // Reorder functionality
+    function toggleReorderMode() {
+      if (isReorderMode.value) {
+        // Save order
+        saveOrder()
+      } else {
+        // Enter reorder mode
+        isReorderMode.value = true
+      }
+    }
+
+    function cancelReorder() {
+      isReorderMode.value = false
+      draggedItemId.value = null
+      draggedOverItemId.value = null
+      // Reload items to reset order
+      loadItems()
+    }
+
+    async function saveOrder() {
+      try {
+        loading.value = true
+        const orderedIds = items.value.map(item => item.id)
+        await api.reorderBucketListItems(orderedIds)
+        isReorderMode.value = false
+        draggedItemId.value = null
+        draggedOverItemId.value = null
+        // Reload items to get updated order from backend
+        await loadItems()
+        // Recalculate affordability
+        await loadTransactions()
+        await loadTargets()
+      } catch (error) {
+        console.error('Error saving order:', error)
+        // Keep in reorder mode on error so user can retry
+      } finally {
+        loading.value = false
+      }
+    }
+
+    function handleDragStart(event, itemId) {
+      draggedItemId.value = itemId
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', itemId)
+    }
+
+    function handleDragOver(event, itemId) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+      if (draggedItemId.value !== itemId) {
+        draggedOverItemId.value = itemId
+      }
+    }
+
+    function handleDragLeave() {
+      draggedOverItemId.value = null
+    }
+
+    function handleDrop(event, targetItemId) {
+      event.preventDefault()
+      if (!draggedItemId.value || draggedItemId.value === targetItemId) {
+        draggedItemId.value = null
+        draggedOverItemId.value = null
+        return
+      }
+
+      const draggedIndex = items.value.findIndex(item => item.id === draggedItemId.value)
+      const targetIndex = items.value.findIndex(item => item.id === targetItemId)
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        draggedItemId.value = null
+        draggedOverItemId.value = null
+        return
+      }
+
+      // Reorder items array
+      const [draggedItem] = items.value.splice(draggedIndex, 1)
+      items.value.splice(targetIndex, 0, draggedItem)
+
+      draggedItemId.value = null
+      draggedOverItemId.value = null
+    }
+
+    function handleDragEnd() {
+      draggedItemId.value = null
+      draggedOverItemId.value = null
+    }
+
     // Load transactions to calculate surplus
     async function loadTransactions() {
       try {
@@ -327,8 +418,11 @@ export default {
           name: item.name,
           description: item.description,
           estimatedCost: item.estimated_cost,
-          createdAt: item.created_at
+          createdAt: item.created_at,
+          order: item.order ?? 0
         }))
+        // Sort by order to ensure correct display
+        items.value.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       } catch (error) {
         console.error('Error loading bucket list items:', error)
         items.value = []
@@ -473,7 +567,18 @@ export default {
       saveTargetSavings,
       formatTargetSavingsOnBlur,
       startEditingTargetSavings,
-      cancelEditingTargetSavings
+      cancelEditingTargetSavings,
+      isReorderMode,
+      draggedItemId,
+      draggedOverItemId,
+      toggleReorderMode,
+      cancelReorder,
+      saveOrder,
+      handleDragStart,
+      handleDragOver,
+      handleDragLeave,
+      handleDrop,
+      handleDragEnd
     }
   }
 }

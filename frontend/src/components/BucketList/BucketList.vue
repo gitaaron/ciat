@@ -5,14 +5,23 @@
         <v-icon left>mdi-format-list-checks</v-icon>
         Bucket List
       </div>
+      <div class="d-flex gap-2">
         <v-btn
+          @click="toggleReorderMode"
+          :color="isReorderMode ? 'success' : 'secondary'"
+          :prepend-icon="isReorderMode ? 'mdi-content-save' : 'mdi-sort'"
+        >
+          {{ isReorderMode ? 'Save' : 'Reorder' }}
+        </v-btn>
+        <v-btn
+          v-if="!isReorderMode"
           @click="openAddDialog"
           color="primary"
           prepend-icon="mdi-plus"
         >
           Add Item
         </v-btn>
-
+      </div>
     </v-card-title>
     
     <v-card-text>
@@ -84,9 +93,29 @@
           v-for="item in itemsWithAffordability"
           :key="item.id"
           class="mb-2"
+          :class="{ 
+            'drag-over': draggedOverItemId === item.id,
+            'dragging': draggedItemId === item.id
+          }"
+          :draggable="isReorderMode"
+          @dragstart="handleDragStart($event, item.id)"
+          @dragover="handleDragOver($event, item.id)"
+          @dragleave="handleDragLeave"
+          @drop="handleDrop($event, item.id)"
+          @dragend="handleDragEnd"
         >
           <template v-slot:prepend>
+            <div v-if="isReorderMode" class="mr-2">
+              <v-icon 
+                color="grey" 
+                size="large"
+                class="drag-handle"
+              >
+                mdi-drag
+              </v-icon>
+            </div>
             <v-icon 
+              v-else
               :color="item.canAfford ? 'success' : 'error'" 
               size="large"
             >
@@ -107,6 +136,7 @@
           </v-list-item-subtitle>
 
           <v-list-item-subtitle 
+            v-if="!isReorderMode"
             :class="item.canAfford ? 'text-success' : 'text-error'"
             class="font-weight-bold"
           >
@@ -114,14 +144,14 @@
           </v-list-item-subtitle>
           
           <v-list-item-subtitle 
-            v-if="item.monthsToAfford !== null"
+            v-if="!isReorderMode && item.monthsToAfford !== null"
             class="text-error mt-1"
           >
             {{ item.monthsToAfford }} {{ item.monthsToAfford === 1 ? 'month' : 'months' }} to afford it
           </v-list-item-subtitle>
 
           <template v-slot:append>
-            <div class="d-flex gap-2">
+            <div v-if="!isReorderMode" class="d-flex gap-2">
               <v-btn
                 icon
                 variant="text"
@@ -319,7 +349,18 @@ const {
   saveTargetSavings,
   formatTargetSavingsOnBlur,
   startEditingTargetSavings,
-  cancelEditingTargetSavings
+  cancelEditingTargetSavings,
+  isReorderMode,
+  draggedItemId,
+  draggedOverItemId,
+  toggleReorderMode,
+  cancelReorder,
+  saveOrder,
+  handleDragStart,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  handleDragEnd
 } = BucketList.setup()
 
 // Refresh function to reload targets and recalculate stats
@@ -373,6 +414,22 @@ defineExpose({
   color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.drag-over {
+  border-top: 2px solid #1976d2;
 }
 </style>
 

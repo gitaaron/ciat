@@ -178,3 +178,22 @@ try {
   // Column doesn't exist or can't be dropped (SQLite limitation), ignore error
   console.log('manual_override column removal attempted (may require manual migration)');
 }
+
+// Migration: Add order column to bucket_list_items table
+try {
+  db.exec('ALTER TABLE bucket_list_items ADD COLUMN `order` INTEGER DEFAULT 0;');
+  console.log('Added order column to bucket_list_items table');
+  // Initialize order based on created_at for existing items
+  db.exec(`
+    UPDATE bucket_list_items 
+    SET \`order\` = (
+      SELECT COUNT(*) 
+      FROM bucket_list_items b2 
+      WHERE b2.created_at <= bucket_list_items.created_at
+    ) - 1
+  `);
+  console.log('Initialized order values for existing bucket_list_items');
+} catch (e) {
+  // Column already exists, ignore error
+  console.log('order column already exists in bucket_list_items table');
+}

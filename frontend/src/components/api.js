@@ -183,6 +183,12 @@ export default {
     const { data } = await axios.delete(apiBase + `/bucket-list-items/${id}`)
     return data
   },
+  async reorderBucketListItems(orderedIds) {
+    const { data } = await axios.post(apiBase + '/bucket-list-items/reorder', {
+      orderedIds
+    })
+    return data
+  },
   // Check if account has existing transactions
   async accountHasTransactions(accountId) {
     const { data } = await axios.get(apiBase + `/accounts/${accountId}/has-transactions`)

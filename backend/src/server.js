@@ -1061,6 +1061,20 @@ app.delete('/api/bucket-list-items/:id', (req, res) => {
   }
 });
 
+app.post('/api/bucket-list-items/reorder', (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ error: 'orderedIds must be an array' });
+    }
+    BucketListItems.reorder(orderedIds);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error reordering bucket list items:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Initialize versioning on server start
 const initializeVersioning = async () => {
   try {

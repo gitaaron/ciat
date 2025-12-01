@@ -351,7 +351,7 @@ export const Rules = {
 
 export const BucketListItems = {
   all() {
-    return db.prepare('SELECT * FROM bucket_list_items ORDER BY created_at ASC').all();
+    return db.prepare('SELECT * FROM bucket_list_items ORDER BY `order` ASC, created_at ASC').all();
   },
   findById(id) {
     return db.prepare('SELECT * FROM bucket_list_items WHERE id = ?').get(id);
@@ -359,16 +359,20 @@ export const BucketListItems = {
   create(item) {
     const id = item.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const createdAt = item.created_at || new Date().toISOString();
+    // Get the max order value and add 1 for new item
+    const maxOrderResult = db.prepare('SELECT MAX(`order`) as max_order FROM bucket_list_items').get();
+    const newOrder = (maxOrderResult?.max_order ?? -1) + 1;
     const result = db.prepare(`
-      INSERT INTO bucket_list_items (id, name, description, estimated_cost, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO bucket_list_items (id, name, description, estimated_cost, created_at, updated_at, \`order\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       item.name,
       item.description || null,
       item.estimated_cost || null,
       createdAt,
-      createdAt
+      createdAt,
+      newOrder
     );
     return { id, changes: result.changes };
   },
@@ -384,6 +388,28 @@ export const BucketListItems = {
       id
     );
     return { changes: result.changes };
+  },
+  updateOrder(id, order) {
+    const result = db.prepare(`
+      UPDATE bucket_list_items
+      SET \`order\` = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(order, id);
+    return { changes: result.changes };
+  },
+  reorder(orderedIds) {
+    const updateStmt = db.prepare(`
+      UPDATE bucket_list_items
+      SET \`order\` = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    const updateMany = db.transaction((ids) => {
+      ids.forEach((id, index) => {
+        updateStmt.run(index, id);
+      });
+    });
+    updateMany(orderedIds);
+    return { ok: true };
   },
   delete(id) {
     const result = db.prepare('DELETE FROM bucket_list_items WHERE id = ?').run(id);
